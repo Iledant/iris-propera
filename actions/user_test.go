@@ -41,13 +41,10 @@ type SentUserCase struct {
 
 // Stored for all tests
 var createdID int
-var adminToken, userToken string
 
 // UserTest includes all tests for users
 func TestUser(t *testing.T) {
 	TestCommons(t)
-	adminToken = testCtx.Admin.Token
-	userToken = testCtx.User.Token
 	t.Run("User", func(t *testing.T) {
 		getUsers(testCtx.E, t)
 		createUser(testCtx.E, t)
@@ -61,11 +58,11 @@ func TestUser(t *testing.T) {
 
 // getUsers test list returned
 func getUsers(e *httpexpect.Expect, t *testing.T) {
-	response := e.GET("/api/users").WithHeader("Authorization", "Bearer "+adminToken).
+	response := e.GET("/api/users").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).
 		Expect()
 	response.Status(http.StatusOK)
 	response.JSON().Object().ContainsKey("user")
-	e.GET("/api/users").WithHeader("Authorization", "Bearer "+userToken).
+	e.GET("/api/users").WithHeader("Authorization", "Bearer "+testCtx.User.Token).
 		Expect().Status(http.StatusUnauthorized)
 }
 
@@ -84,7 +81,7 @@ func createUser(e *httpexpect.Expect, t *testing.T) {
 
 	var response *httpexpect.Response
 	for _, ct := range cts {
-		response = e.POST("/api/users").WithHeader("Authorization", "Bearer "+adminToken).WithJSON(ct.User).Expect()
+		response = e.POST("/api/users").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).WithJSON(ct.User).Expect()
 		response.Body().Contains(ct.BodyContains)
 		response.Status(ct.Status)
 	}
@@ -114,11 +111,11 @@ func updateUser(e *httpexpect.Expect, t *testing.T) {
 
 	for _, ct := range cts {
 		response := e.PUT("/api/users/"+strconv.Itoa(createdID)).
-			WithHeader("Authorization", "Bearer "+adminToken).WithJSON(ct.User).Expect()
+			WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).WithJSON(ct.User).Expect()
 		response.Status(ct.Status).Body().Contains(ct.BodyContains)
 	}
 
-	e.PUT("/post/users/0").WithHeader("Authorization", "Bearer "+adminToken).
+	e.PUT("/post/users/0").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).
 		Expect().Status(http.StatusNotFound)
 }
 
@@ -133,7 +130,7 @@ func chgPwd(e *httpexpect.Expect, t *testing.T) {
 
 	for _, tc := range testCases {
 		response := e.POST("/api/user/password").WithQuery("current_password", tc.Old).WithQuery("password", tc.New).
-			WithHeader("Authorization", "Bearer "+userToken).Expect()
+			WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
 		response.Body().Contains(tc.BodyContains)
 		response.Status(tc.Status)
 	}
@@ -146,10 +143,10 @@ func deleteUser(e *httpexpect.Expect, t *testing.T) {
 		Status        int
 		BodyContains  string
 	}{
-		{Token: userToken, UserID: strconv.Itoa(createdID), Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis"},
-		{Token: adminToken, UserID: "", Status: http.StatusNotFound, BodyContains: ""},
-		{Token: adminToken, UserID: strconv.Itoa(0), Status: http.StatusNotFound, BodyContains: "Utilisateur introuvable"},
-		{Token: adminToken, UserID: strconv.Itoa(createdID), Status: http.StatusOK, BodyContains: "Utilisateur supprimé"},
+		{Token: testCtx.User.Token, UserID: strconv.Itoa(createdID), Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis"},
+		{Token: testCtx.Admin.Token, UserID: "", Status: http.StatusNotFound, BodyContains: ""},
+		{Token: testCtx.Admin.Token, UserID: strconv.Itoa(0), Status: http.StatusNotFound, BodyContains: "Utilisateur introuvable"},
+		{Token: testCtx.Admin.Token, UserID: strconv.Itoa(createdID), Status: http.StatusOK, BodyContains: "Utilisateur supprimé"},
 	}
 
 	for _, tc := range testCases {
@@ -183,11 +180,11 @@ func signupTest(e *httpexpect.Expect, t *testing.T) {
 
 // logoutTest for a connected user
 func logoutTest(e *httpexpect.Expect, t *testing.T) {
-	request := e.POST("/api/logout").WithHeader("Authorization", "Bearer "+userToken).Expect()
+	request := e.POST("/api/logout").WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
 	request.Body().Contains("Utilisateur déconnecté")
 	request.Status(http.StatusOK)
 
-	request = e.POST("/api/logout").WithHeader("Authorization", "Bearer "+userToken).Expect()
+	request = e.POST("/api/logout").WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
 	request.Body().Contains("Token invalide")
 	request.Status(http.StatusInternalServerError)
 

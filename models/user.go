@@ -28,7 +28,7 @@ const (
 	UserRole = "USER"
 )
 
-// TableName ensures table name for users
+// TableName ensures the correct table name for users.
 func (User) TableName() string {
 	return "users"
 }

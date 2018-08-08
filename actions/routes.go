@@ -15,6 +15,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/users", CreateUser)
 	adminParty.Put("/users/{userID:int}", UpdateUser)
 	adminParty.Delete("/users/{userID:int}", DeleteUser)
+	adminParty.Get("/users/{userID:int}/rights", GetRight)
+	adminParty.Post("/users/{userID:int}/rights", SetRight)
+	adminParty.Post("/users/{userID:int}/inherits", InheritRight)
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // change, before located at /user/logout
 	userParty.Post("/user/password", ChangeUserPwd)
