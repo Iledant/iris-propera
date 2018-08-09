@@ -10,7 +10,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	app.Post("/users/signup", setDBMiddleware(db), SignUp)
 	app.Post("/users/signin", setDBMiddleware(db), Login)
 	api := app.Party("/api", setDBMiddleware(db))
+
 	adminParty := api.Party("", AdminMiddleware)
+
 	adminParty.Get("/users", GetUsers)
 	adminParty.Post("/users", CreateUser)
 	adminParty.Put("/users/{userID:int}", UpdateUser)
@@ -18,8 +20,14 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Get("/users/{userID:int}/rights", GetRight)
 	adminParty.Post("/users/{userID:int}/rights", SetRight)
 	adminParty.Post("/users/{userID:int}/inherits", InheritRight)
+
+	adminParty.Post("/physical_ops", CreatePhysicalOp)
+	adminParty.Delete("/physical_ops/{opID:int}", DeletePhysicalOp)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // change, before located at /user/logout
+	userParty.Get("/physical_ops", GetPhysicalOps)
+	userParty.Put("/physical_ops/{opID:int}", UpdatePhysicalOp)
 	userParty.Post("/user/password", ChangeUserPwd)
 }
 

@@ -41,6 +41,10 @@ func (nt NullTime) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implents the unmarshal interface
 func (nt *NullTime) UnmarshalJSON(b []byte) error {
+	if len(b) == 4 && b[0] == 110 && b[1] == 117 && b[2] == 108 && b[3] == 108 {
+		nt.Valid = false
+		return nil
+	}
 	err := json.Unmarshal(b, &nt.Time)
 	nt.Valid = (err == nil)
 	return err
@@ -60,6 +64,10 @@ func (nb NullBool) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implents the unmarshal interface
 func (nb *NullBool) UnmarshalJSON(b []byte) error {
+	if len(b) == 4 && b[0] == 110 && b[1] == 117 && b[2] == 108 && b[3] == 108 {
+		nb.Valid = false
+		return nil
+	}
 	err := json.Unmarshal(b, &nb.Bool)
 	nb.Valid = (err == nil)
 	return err
@@ -97,6 +105,10 @@ func (ni NullInt64) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implents the unmarshal interface
 func (ni *NullInt64) UnmarshalJSON(b []byte) error {
+	if len(b) == 4 && b[0] == 110 && b[1] == 117 && b[2] == 108 && b[3] == 108 {
+		ni.Valid = false
+		return nil
+	}
 	err := json.Unmarshal(b, &ni.Int64)
 	ni.Valid = (err == nil)
 	return err
@@ -134,6 +146,10 @@ func (ns NullString) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implents the unmarshal interface
 func (ns *NullString) UnmarshalJSON(b []byte) error {
+	if len(b) == 4 && b[0] == 110 && b[1] == 117 && b[2] == 108 && b[3] == 108 {
+		ns.Valid = false
+		return nil
+	}
 	err := json.Unmarshal(b, &ns.String)
 	ns.Valid = (err == nil)
 	return err
@@ -171,6 +187,10 @@ func (nf NullFloat64) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implents the unmarshal interface
 func (nf *NullFloat64) UnmarshalJSON(b []byte) error {
+	if len(b) == 4 && b[0] == 110 && b[1] == 117 && b[2] == 108 && b[3] == 108 {
+		nf.Valid = false
+		return nil
+	}
 	err := json.Unmarshal(b, &nf.Float64)
 	nf.Valid = (err == nil)
 	return err

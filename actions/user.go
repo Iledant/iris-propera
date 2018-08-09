@@ -234,7 +234,12 @@ func DeleteUser(ctx iris.Context) {
 		return
 	}
 
-	db.Delete(&user)
+	if err = db.Delete(&user).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{err.Error()})
+		return
+	}
+
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Utilisateur supprimé"})
 }

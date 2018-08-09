@@ -2,7 +2,7 @@ package models
 
 // PhysicalOp is the model for physical operations. Number is unique.
 type PhysicalOp struct {
-	ID             int        `json:"id" db:"id"`
+	ID             int        `json:"id" gorm:"column:id"`
 	Number         string     `json:"number" gorm:"column:number"`
 	Name           string     `json:"name" gorm:"column:name"`
 	Descript       NullString `json:"descript" gorm:"column:descript"`

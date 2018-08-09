@@ -129,7 +129,7 @@ func bearerToUser(ctx iris.Context) (u *customClaims, err error) {
 	if t := time.Now().Unix(); t > claims.ExpiresAt {
 		err = refreshToken(ctx, claims)
 	}
-
+	ctx.Values().Set("claims", claims)
 	return claims, err
 }
 
