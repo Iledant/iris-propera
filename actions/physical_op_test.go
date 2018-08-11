@@ -17,8 +17,9 @@ func TestPhysicalOps(t *testing.T) {
 	t.Run("PhysicalOps", func(t *testing.T) {
 		getPhysicalOpsTest(testCtx.E, t)
 		opID := createPhysicalOpTest(testCtx.E, t)
-		updatePhysicalOpTest(testCtx.E, t)
+		// updatePhysicalOpTest(testCtx.E, t)
 		deletePhysicalOpTest(testCtx.E, t, opID)
+		batchPhysicalOpsTest(testCtx.E, t)
 	})
 }
 
@@ -203,4 +204,88 @@ func updatePhysicalOpTest(e *httpexpect.Expect, t *testing.T) {
 		}
 		response.Status(tc.Status)
 	}
+}
+
+type opIncomplete struct {
+	Number string
+	Isr    bool
+}
+
+type batchIncomplete struct {
+	PhysicalOps []opIncomplete `json:"PhysicalOp"`
+}
+type opPartial struct {
+	Name   string
+	Number string
+	Isr    bool
+}
+
+type batchPartial struct {
+	PhysicalOps []opPartial `json:"PhysicalOp"`
+}
+
+type opComplete struct {
+	Number        string
+	Name          string
+	Descript      string
+	Isr           bool
+	Value         int64
+	Valuedate     time.Time
+	Length        int64
+	Step          string
+	Category      string
+	Tri           int64
+	Van           int64
+	Action        string
+	PaymentTypeID int64 `json:"payment_types_id"`
+	PlanLineID    int64 `json:"plan_line_id"`
+}
+
+type batchComplete struct {
+	PhysicalOps []opComplete `json:"PhysicalOp"`
+}
+
+// batchPhysicalOpsTest tests if route is protected and import passed.
+func batchPhysicalOpsTest(e *httpexpect.Expect, t *testing.T) {
+	inc := []opPartial{{Name: "Essai batch1", Number: "20XX001", Isr: true},
+		{Name: "Essai batch2", Number: "18DI999", Isr: true}}
+	com := []opComplete{{Name: "Essai batch3", Number: "20XX003", Isr: true, Descript: "Description batch3", Value: 123, Valuedate: time.Now(), Length: 123, Step: "Protocole", Category: "Route", Tri: 500, Van: 123, Action: "17700101", PaymentTypeID: 4, PlanLineID: 20}}
+	testCases := []struct {
+		Token        string
+		Incomplete   *batchIncomplete
+		Partial      *batchPartial
+		Complete     *batchComplete
+		Status       int
+		BodyContains string
+	}{
+		{Token: testCtx.User.Token, Incomplete: nil, Partial: nil, Complete: nil, Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis"},
+		{Token: testCtx.Admin.Token, Incomplete: &batchIncomplete{PhysicalOps: []opIncomplete{{Number: "20XX999", Isr: true}}}, Partial: nil, Complete: nil, Status: http.StatusInternalServerError, BodyContains: "Erreur d'insertion"},
+		{Token: testCtx.Admin.Token, Incomplete: nil, Partial: &batchPartial{PhysicalOps: inc}, Complete: nil, Status: http.StatusOK, BodyContains: "Terminé"},
+		{Token: testCtx.Admin.Token, Incomplete: nil, Partial: nil, Complete: &batchComplete{PhysicalOps: com}, Status: http.StatusOK, BodyContains: "Terminé"},
+	}
+
+	for _, tc := range testCases {
+		req := e.POST("/api/physical_ops/array").WithHeader("Authorization", "Bearer "+tc.Token)
+		if tc.Incomplete != nil {
+			req = req.WithJSON(*tc.Incomplete)
+		} else {
+			if tc.Partial != nil {
+				req = req.WithJSON(*tc.Partial)
+			} else {
+				if tc.Complete != nil {
+					req = req.WithJSON(*tc.Complete)
+				}
+			}
+		}
+		response := req.Expect()
+		response.Body().Contains(tc.BodyContains)
+		response.Status(tc.Status)
+	}
+
+	response := e.GET("/api/physical_ops").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).Expect()
+	response.Body().Contains("Essai batch1")
+	response.Body().Contains("Essai batch2")
+	response.Body().Contains("Essai batch3")
+	response.Body().Contains("Description batch3")
+	response.Body().NotContains("20XX999")
 }

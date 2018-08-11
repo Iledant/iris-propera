@@ -22,6 +22,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/users/{userID:int}/inherits", InheritRight)
 
 	adminParty.Post("/physical_ops", CreatePhysicalOp)
+	adminParty.Post("/physical_ops/array", BatchPhysicalOps)
 	adminParty.Delete("/physical_ops/{opID:int}", DeletePhysicalOp)
 
 	userParty := api.Party("", ActiveMiddleware)

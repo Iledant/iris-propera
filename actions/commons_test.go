@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/Iledant/iris_propera/config"
@@ -82,7 +83,7 @@ func restoreTestDB(t *testing.T) {
 
 	cmd := exec.Command("pg_restore", "-cOU", "postgres", "-d", "propera3_test", properaRep)
 	s, err := cmd.CombinedOutput()
-	if err != nil {
+	if err != nil && strings.Contains(string(s), "FATAL") {
 		t.Errorf("Impossible de restaurer la base de test:\n%s\n", string(s))
 		t.FailNow()
 	}
