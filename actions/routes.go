@@ -25,6 +25,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/physical_ops/array", BatchPhysicalOps)
 	adminParty.Delete("/physical_ops/{opID:int}", DeletePhysicalOp)
 
+	adminParty.Get("/beneficiaries", GetBeneficiaries)
+	adminParty.Put("/beneficiaries/{beneficiaryID:int}", UpdateBeneficiary)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // change, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)

@@ -78,7 +78,6 @@ func Logout(ctx iris.Context) {
 	}
 
 	userID, _ := strconv.Atoi(u.Subject)
-
 	delToken(userID)
 
 	ctx.StatusCode(http.StatusOK)
@@ -91,8 +90,9 @@ func GetUsers(ctx iris.Context) {
 	db := ctx.Values().Get("db").(*gorm.DB)
 
 	if err := db.Find(&users).Error; err != nil {
-		ctx.JSON(map[string]string{"Erreur": err.Error()})
+		ctx.JSON(jsonMessage{err.Error()})
 		ctx.StatusCode(http.StatusInternalServerError)
+		return
 	}
 
 	ctx.JSON(struct {
@@ -104,6 +104,7 @@ func GetUsers(ctx iris.Context) {
 // CreateUser handles the creation by admin of a new user and returns the created user.
 func CreateUser(ctx iris.Context) {
 	sent := sentUser{}
+
 	if err := ctx.ReadJSON(&sent); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonMessage{err.Error()})
@@ -118,8 +119,8 @@ func CreateUser(ctx iris.Context) {
 		return
 	}
 
-	newUser := sent.toUser()
-	db := ctx.Values().Get("db").(*gorm.DB)
+	newUser, db := sent.toUser(), ctx.Values().Get("db").(*gorm.DB)
+
 	if err := usrExists(&newUser, db); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{err.Error()})
@@ -359,9 +360,5 @@ func setUserPwd(u *models.User, pwd string) error {
 
 // toUser convert to modes.USer
 func (u sentUser) toUser() models.User {
-	return models.User{
-		Name:   u.Name,
-		Email:  u.Email,
-		Active: u.Active,
-		Role:   u.Role}
+	return models.User{Name: u.Name, Email: u.Email, Active: u.Active, Role: u.Role}
 }

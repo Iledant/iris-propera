@@ -185,7 +185,7 @@ func AdminMiddleware(ctx iris.Context) {
 		ctx.StopExecution()
 	} else if !admin {
 		ctx.StatusCode(http.StatusUnauthorized)
-		ctx.JSON(jsonError{Error: "Droits administrateurs requis"})
+		ctx.JSON(jsonError{Error: "Droits administrateur requis"})
 		ctx.StopExecution()
 	} else {
 		ctx.Next()

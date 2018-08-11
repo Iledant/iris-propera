@@ -12,7 +12,7 @@ type rightTest struct {
 	Right []int `json:"Right"`
 }
 
-// TestRight implements tests par users right handlers.
+// TestRight implements tests for users right handlers.
 func TestRight(t *testing.T) {
 	TestCommons(t)
 	t.Run("Right", func(t *testing.T) {
@@ -30,7 +30,7 @@ func getRightsTest(e *httpexpect.Expect, t *testing.T) {
 		BodyContains  string
 		ArraySize     int
 	}{
-		{UserID: "26", Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis", ArraySize: 0},
+		{UserID: "26", Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
 		{UserID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest, BodyContains: "Utilisateur introuvable", ArraySize: 0},
 		{UserID: "26", Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: "Right", ArraySize: 49},
 	}
@@ -58,7 +58,7 @@ func setRightsTest(e *httpexpect.Expect, t *testing.T) {
 		BodyContains  string
 		ArraySize     int
 	}{
-		{UserID: "26", Token: testCtx.User.Token, Right: rightTest{}, Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis", ArraySize: 0},
+		{UserID: "26", Token: testCtx.User.Token, Right: rightTest{}, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
 		{UserID: "0", Token: testCtx.Admin.Token, Right: rightTest{}, Status: http.StatusBadRequest, BodyContains: "Utilisateur introuvable", ArraySize: 0},
 		{UserID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{}}, Status: http.StatusOK, BodyContains: "Right", ArraySize: 0},
 		{UserID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{0}}, Status: http.StatusBadRequest, BodyContains: "Mauvais identificateur d'opération", ArraySize: 0},
@@ -85,7 +85,7 @@ func inheritsRightsTest(e *httpexpect.Expect, t *testing.T) {
 		BodyContains  string
 		ArraySize     int
 	}{
-		{UserID: "26", Token: testCtx.User.Token, Right: rightTest{}, Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis", ArraySize: 0},
+		{UserID: "26", Token: testCtx.User.Token, Right: rightTest{}, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
 		{UserID: "0", Token: testCtx.Admin.Token, Right: rightTest{}, Status: http.StatusBadRequest, BodyContains: "Utilisateur introuvable", ArraySize: 0},
 		{UserID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{}}, Status: http.StatusOK, BodyContains: "Right", ArraySize: 4},
 		{UserID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{0}}, Status: http.StatusBadRequest, BodyContains: "Mauvais identificateur d'utilisateur", ArraySize: 0},

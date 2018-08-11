@@ -143,7 +143,7 @@ func deleteUser(e *httpexpect.Expect, t *testing.T) {
 		Status        int
 		BodyContains  string
 	}{
-		{Token: testCtx.User.Token, UserID: strconv.Itoa(createdID), Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis"},
+		{Token: testCtx.User.Token, UserID: strconv.Itoa(createdID), Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
 		{Token: testCtx.Admin.Token, UserID: "", Status: http.StatusNotFound, BodyContains: ""},
 		{Token: testCtx.Admin.Token, UserID: strconv.Itoa(0), Status: http.StatusNotFound, BodyContains: "Utilisateur introuvable"},
 		{Token: testCtx.Admin.Token, UserID: strconv.Itoa(createdID), Status: http.StatusOK, BodyContains: "Utilisateur supprimé"},

@@ -17,7 +17,7 @@ func TestPhysicalOps(t *testing.T) {
 	t.Run("PhysicalOps", func(t *testing.T) {
 		getPhysicalOpsTest(testCtx.E, t)
 		opID := createPhysicalOpTest(testCtx.E, t)
-		// updatePhysicalOpTest(testCtx.E, t)
+		updatePhysicalOpTest(testCtx.E, t)
 		deletePhysicalOpTest(testCtx.E, t, opID)
 		batchPhysicalOpsTest(testCtx.E, t)
 	})
@@ -55,7 +55,7 @@ func createPhysicalOpTest(e *httpexpect.Expect, t *testing.T) int {
 		Status       int
 		BodyContains string
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis"},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
 		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, BodyContains: "Mauvais format de numéro d'opération"},
 		{Token: testCtx.Admin.Token, Op: models.PhysicalOp{Number: "99XX001", Name: ""}, Status: http.StatusBadRequest, BodyContains: "Nom de l'opération absent"},
 		{Token: testCtx.Admin.Token,
@@ -116,7 +116,7 @@ func deletePhysicalOpTest(e *httpexpect.Expect, t *testing.T, opID int) {
 		Status       int
 		BodyContains string
 	}{
-		{Token: testCtx.User.Token, OpID: sOpID, Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis"},
+		{Token: testCtx.User.Token, OpID: sOpID, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
 		{Token: testCtx.Admin.Token, OpID: "0", Status: http.StatusNotFound, BodyContains: "Opération introuvable"},
 		{Token: testCtx.Admin.Token, OpID: sOpID, Status: http.StatusOK, BodyContains: "Opération supprimée"},
 	}
@@ -258,7 +258,7 @@ func batchPhysicalOpsTest(e *httpexpect.Expect, t *testing.T) {
 		Status       int
 		BodyContains string
 	}{
-		{Token: testCtx.User.Token, Incomplete: nil, Partial: nil, Complete: nil, Status: http.StatusUnauthorized, BodyContains: "Droits administrateurs requis"},
+		{Token: testCtx.User.Token, Incomplete: nil, Partial: nil, Complete: nil, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
 		{Token: testCtx.Admin.Token, Incomplete: &batchIncomplete{PhysicalOps: []opIncomplete{{Number: "20XX999", Isr: true}}}, Partial: nil, Complete: nil, Status: http.StatusInternalServerError, BodyContains: "Erreur d'insertion"},
 		{Token: testCtx.Admin.Token, Incomplete: nil, Partial: &batchPartial{PhysicalOps: inc}, Complete: nil, Status: http.StatusOK, BodyContains: "Terminé"},
 		{Token: testCtx.Admin.Token, Incomplete: nil, Partial: nil, Complete: &batchComplete{PhysicalOps: com}, Status: http.StatusOK, BodyContains: "Terminé"},
