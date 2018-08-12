@@ -28,6 +28,18 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Get("/beneficiaries", GetBeneficiaries)
 	adminParty.Put("/beneficiaries/{beneficiaryID:int}", UpdateBeneficiary)
 
+	adminParty.Get("/budget_chapters", GetBudgetChapters)
+	adminParty.Post("/budget_chapters", CreateBudgetChapter)
+	adminParty.Put("/budget_chapters/{bcID:int}", ModifyBudgetChapter)
+	adminParty.Delete("/budget_chapters/{bcID:int}", DeleteBudgetChapter)
+
+	adminParty.Get("/budget_actions", GetAllBudgetActions)
+	adminParty.Get("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions", GetProgramBudgetActions)
+	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions", CreateBudgetAction)
+	adminParty.Post("/budget_actions", BatchBudgetActions)
+	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}", ModifyBudgetAction)
+	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}", DeleteBudgetAction)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // change, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
