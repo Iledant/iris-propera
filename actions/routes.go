@@ -33,6 +33,11 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/budget_chapters/{bcID:int}", ModifyBudgetChapter)
 	adminParty.Delete("/budget_chapters/{bcID:int}", DeleteBudgetChapter)
 
+	adminParty.Post("/budget_credits", CreateBudgetCredit)
+	adminParty.Put("/budget_credits/{brID:int}", ModifyBudgetCredit)
+	adminParty.Post("/budget_credits/array", BatchBudgetCredits)
+	adminParty.Delete("/budget_credits/{brID:int}", DeleteBudgetCredit)
+
 	adminParty.Get("/budget_actions", GetAllBudgetActions)
 	adminParty.Get("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions", GetProgramBudgetActions)
 	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions", CreateBudgetAction)
@@ -45,6 +50,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/physical_ops", GetPhysicalOps)
 	userParty.Put("/physical_ops/{opID:int}", UpdatePhysicalOp)
 	userParty.Post("/user/password", ChangeUserPwd)
+
+	userParty.Get("/budget_credits/year", GetLastBudgetCredits)
+	userParty.Get("/budget_credits", GetBudgetCredits)
 }
 
 // setDBMiddleware return a middleware to add db to context values
