@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/Iledant/iris_propera/models"
 	"github.com/iris-contrib/httpexpect"
 )
 
@@ -71,22 +70,21 @@ func createBudgetActionTest(e *httpexpect.Expect, t *testing.T) int {
 	testCases := []struct {
 		Token        string
 		Status       int
-		BudgetAction models.BudgetAction
-		BodyContains string
+		Sent         []byte
+		BodyContains []string
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError, BudgetAction: models.BudgetAction{}, BodyContains: "viole la contrainte"},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BudgetAction: models.BudgetAction{Name: "Essai", SectorID: 3, Code: "999"}, BodyContains: "BudgetAction"},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{}`), BodyContains: []string{"Création d'action budgétaire, champ manquant ou incorrect"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"name":"Essai","sector_id":3,"code":"999"}`), BodyContains: []string{"BudgetAction", `"name":"Essai"`, `"sector_id":3`, `"code":"999"`}},
 	}
 	var baID int
 
 	for _, tc := range testCases {
-		response := e.POST("/api/budget_chapters/1/budget_programs/123/budget_actions").WithHeader("Authorization", "Bearer "+tc.Token).WithJSON(tc.BudgetAction).Expect()
-		response.Body().Contains(tc.BodyContains)
+		response := e.POST("/api/budget_chapters/1/budget_programs/123/budget_actions").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
+		}
 		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("BudgetAction").Object().Value("name").String().Equal(tc.BudgetAction.Name)
-			response.JSON().Object().Value("BudgetAction").Object().Value("code").String().Equal(tc.BudgetAction.Code)
-			response.JSON().Object().Value("BudgetAction").Object().Value("sector_id").Number().Equal(tc.BudgetAction.SectorID)
 			baID = int(response.JSON().Object().Value("BudgetAction").Object().Value("id").Number().Raw())
 		}
 		response.Status(tc.Status)
@@ -99,28 +97,19 @@ func modifyBudgetActionTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []struct {
 		Token        string
 		Status       int
-		BudgetAction models.BudgetAction
-		BodyContains string
+		ID           string
+		Sent         []byte
+		BodyContains []string
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BudgetAction: models.BudgetAction{Name: "Essai tramways", Code: ""}, BodyContains: "BudgetAction"},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BudgetAction: models.BudgetAction{Name: "Essai tramways2", Code: "999"}, BodyContains: "BudgetAction"},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest, BodyContains: []string{"Modification d'action : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "303", Status: http.StatusOK, Sent: []byte(`{"name":"Essai tramways","code":"999"}`), BodyContains: []string{"BudgetAction", `"name":"Essai tramways"`, `"code":"999"`}},
 	}
 
 	for _, tc := range testCases {
-		response := e.PUT("/api/budget_chapters/1/budget_programs/123/budget_actions/303").WithHeader("Authorization", "Bearer "+tc.Token).WithJSON(tc.BudgetAction).Expect()
-		response.Body().Contains(tc.BodyContains)
-		if tc.Status == http.StatusOK {
-			if tc.BudgetAction.Name != "" {
-				response.JSON().Object().Value("BudgetAction").Object().Value("name").String().Equal(tc.BudgetAction.Name)
-			} else {
-				response.JSON().Object().Value("BudgetAction").Object().Value("name").String().NotEqual(tc.BudgetAction.Name)
-			}
-			if tc.BudgetAction.Code != "" {
-				response.JSON().Object().Value("BudgetAction").Object().Value("code").String().Equal(tc.BudgetAction.Code)
-			} else {
-				response.JSON().Object().Value("BudgetAction").Object().Value("code").String().NotEqual(tc.BudgetAction.Code)
-			}
+		response := e.PUT("/api/budget_chapters/1/budget_programs/123/budget_actions/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
 		}
 		response.Status(tc.Status)
 	}
@@ -135,7 +124,7 @@ func deleteBudgetActionTest(e *httpexpect.Expect, t *testing.T, baID int) {
 		BodyContains string
 	}{
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, ID: 0, Status: http.StatusNotFound, BodyContains: "Action introuvable"},
+		{Token: testCtx.Admin.Token, ID: 0, Status: http.StatusNotFound, BodyContains: "Suppression d'action : introuvable"},
 		{Token: testCtx.Admin.Token, ID: baID, Status: http.StatusOK, BodyContains: "Action supprimée"},
 	}
 

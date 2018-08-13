@@ -47,7 +47,7 @@ func UpdateBeneficiary(ctx iris.Context) {
 
 	if req.Name == "" {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Champ name manquant"})
+		ctx.JSON(jsonError{"Modification de bénéficiaire : champ name manquant"})
 		return
 	}
 
@@ -56,7 +56,7 @@ func UpdateBeneficiary(ctx iris.Context) {
 	if err = db.First(&beneficiary, bID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.StatusCode(http.StatusNotFound)
-			ctx.JSON(jsonError{"Bénéficiaire introuvable"})
+			ctx.JSON(jsonError{"Modification de bénéficiaire : introuvable"})
 			return
 		}
 		ctx.StatusCode(http.StatusInternalServerError)

@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/Iledant/iris_propera/models"
 	"github.com/iris-contrib/httpexpect"
 )
 
@@ -45,23 +44,23 @@ func getAllBudgetChapters(e *httpexpect.Expect, t *testing.T) {
 // createBudgetChapterTest tests route is protected and sent action is created.
 func createBudgetChapterTest(e *httpexpect.Expect, t *testing.T) int {
 	testCases := []struct {
-		Token         string
-		Status        int
-		BudgetChapter models.BudgetChapter
-		BodyContains  string
+		Token        string
+		Status       int
+		Sent         []byte
+		BodyContains string
+		JSONRet      string
 	}{
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, BudgetChapter: models.BudgetChapter{}, BodyContains: "mauvais format des paramètres"},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BudgetChapter: models.BudgetChapter{Name: "Essai chapitre", Code: 999}, BodyContains: "BudgetChapter"},
+		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{}`), BodyContains: "mauvais format des paramètres"},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"name":"Essai chapitre","code":999}`), BodyContains: "BudgetChapter", JSONRet: `"name":"Essai chapitre"`},
 	}
 	var bcID int
 
 	for _, tc := range testCases {
-		response := e.POST("/api/budget_chapters").WithHeader("Authorization", "Bearer "+tc.Token).WithJSON(tc.BudgetChapter).Expect()
+		response := e.POST("/api/budget_chapters").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		response.Body().Contains(tc.BodyContains)
 		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("BudgetChapter").Object().Value("name").String().Equal(tc.BudgetChapter.Name)
-			response.JSON().Object().Value("BudgetChapter").Object().Value("code").Number().Equal(tc.BudgetChapter.Code)
+			response.Body().Contains(tc.JSONRet)
 			bcID = int(response.JSON().Object().Value("BudgetChapter").Object().Value("id").Number().Raw())
 		}
 		response.Status(tc.Status)
@@ -72,29 +71,21 @@ func createBudgetChapterTest(e *httpexpect.Expect, t *testing.T) int {
 // modifyBudgetChapterTest tests route is protected and modify work properly.
 func modifyBudgetChapterTest(e *httpexpect.Expect, t *testing.T, bcID int) {
 	testCases := []struct {
-		Token         string
-		ID            int
-		Status        int
-		BudgetChapter models.BudgetChapter
-		BodyContains  string
+		Token        string
+		ID           int
+		Status       int
+		Sent         []byte
+		BodyContains []string
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, ID: 0, Status: http.StatusBadRequest, BudgetChapter: models.BudgetChapter{Name: "Essai chapitre 2", Code: 888}, BodyContains: "Modification d'un chapitre: introuvable"},
-		{Token: testCtx.Admin.Token, ID: bcID, Status: http.StatusOK, BudgetChapter: models.BudgetChapter{Name: "Essai chapitre 2", Code: 0}, BodyContains: "BudgetChapter"},
-		{Token: testCtx.Admin.Token, ID: bcID, Status: http.StatusOK, BudgetChapter: models.BudgetChapter{Name: "", Code: 888}, BodyContains: "BudgetChapter"},
-		{Token: testCtx.Admin.Token, ID: bcID, Status: http.StatusOK, BudgetChapter: models.BudgetChapter{Name: "Essai chapitre 3", Code: 777}, BodyContains: "BudgetChapter"},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, ID: 0, Status: http.StatusBadRequest, Sent: []byte(`{"name":"Essai chapitre 2","code":888}`), BodyContains: []string{`Modification d'un chapitre: introuvable`}},
+		{Token: testCtx.Admin.Token, ID: bcID, Status: http.StatusOK, Sent: []byte(`{"name":"Essai chapitre 2","code":888}`), BodyContains: []string{`BudgetChapter`, `"name":"Essai chapitre 2"`, `"code":888`}},
 	}
 
 	for _, tc := range testCases {
-		response := e.PUT("/api/budget_chapters/"+strconv.Itoa(tc.ID)).WithHeader("Authorization", "Bearer "+tc.Token).WithJSON(tc.BudgetChapter).Expect()
-		response.Body().Contains(tc.BodyContains)
-		if tc.Status == http.StatusOK {
-			if tc.BudgetChapter.Name != "" {
-				response.JSON().Object().Value("BudgetChapter").Object().Value("name").String().Equal(tc.BudgetChapter.Name)
-			}
-			if tc.BudgetChapter.Code != 0 {
-				response.JSON().Object().Value("BudgetChapter").Object().Value("code").Number().Equal(tc.BudgetChapter.Code)
-			}
+		response := e.PUT("/api/budget_chapters/"+strconv.Itoa(tc.ID)).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
 		}
 		response.Status(tc.Status)
 	}

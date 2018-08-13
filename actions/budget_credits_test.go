@@ -3,11 +3,8 @@ package actions
 import (
 	"net/http"
 	"strconv"
-	"strings"
 	"testing"
-	"time"
 
-	"github.com/Iledant/iris_propera/models"
 	"github.com/iris-contrib/httpexpect"
 )
 
@@ -18,7 +15,6 @@ func TestBudgetCredit(t *testing.T) {
 		getBudgetCredits(testCtx.E, t)
 		getLastBudgetCredits(testCtx.E, t)
 		brID := createBudgetCreditTest(testCtx.E, t)
-		t.Logf("brID : %d\n", brID)
 		modifyBudgetCreditTest(testCtx.E, t, brID)
 		deleteBudgetCreditTest(testCtx.E, t, brID)
 		batchBudgetCreditTest(testCtx.E, t)
@@ -72,33 +68,29 @@ func getLastBudgetCredits(e *httpexpect.Expect, t *testing.T) {
 
 // createBudgetCreditTest tests route is protected and sent action is created.
 func createBudgetCreditTest(e *httpexpect.Expect, t *testing.T) int {
-	var p, r, f int64 = 123456, 123, 456
 	testCases := []struct {
 		Token        string
 		Status       int
-		BudgetCredit sentBrReq
+		Sent         []byte
 		BodyContains string
 	}{
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, BudgetCredit: sentBrReq{}, BodyContains: "Création de crédits : champ manquant ou incorrect"},
-		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, BudgetCredit: sentBrReq{
-			CommissionDate: models.NullTime{Valid: true, Time: time.Now()},
-			ChapterID:      models.NullInt64{Valid: true, Int64: 1}}, BodyContains: "Création de crédits : champ manquant ou incorrect"},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BudgetCredit: sentBrReq{
-			CommissionDate: models.NullTime{Valid: true, Time: time.Now()},
-			ChapterID:      models.NullInt64{Valid: true, Int64: 1}, PrimaryCommitment: &p,
-			ReservedCommitment: &r, FrozenCommitment: &f}, BodyContains: "BudgetCredits"},
+		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{}`), BodyContains: "Création de crédits : champ manquant ou incorrect"},
+		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{"commission_date": "2018-04-01T00:00:00.000Z", "chapter": 907}`),
+			BodyContains: "Création de crédits : champ manquant ou incorrect"},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"commission_date": "2018-04-01T00:00:00.000Z", "chapter": 907,"primary_commitment":123456,"reserved_commitment":123,"frozen_commitment":456}`),
+			BodyContains: "BudgetCredits"},
 	}
 	var brID int
 
 	for _, tc := range testCases {
-		response := e.POST("/api/budget_credits").WithHeader("Authorization", "Bearer "+tc.Token).WithJSON(tc.BudgetCredit).Expect()
+		response := e.POST("/api/budget_credits").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		response.Body().Contains(tc.BodyContains)
 		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("BudgetCredits").Object().Value("chapter_id").Number().Equal(tc.BudgetCredit.ChapterID.Int64)
-			response.JSON().Object().Value("BudgetCredits").Object().Value("primary_commitment").Number().Equal(*tc.BudgetCredit.PrimaryCommitment)
-			response.JSON().Object().Value("BudgetCredits").Object().Value("reserved_commitment").Number().Equal(*tc.BudgetCredit.ReservedCommitment)
-			response.JSON().Object().Value("BudgetCredits").Object().Value("frozen_commitment").Number().Equal(*tc.BudgetCredit.FrozenCommitment)
+			response.JSON().Object().Value("BudgetCredits").Object().Value("chapter_id").Number().Equal(3)
+			response.JSON().Object().Value("BudgetCredits").Object().Value("primary_commitment").Number().Equal(123456)
+			response.JSON().Object().Value("BudgetCredits").Object().Value("reserved_commitment").Number().Equal(123)
+			response.JSON().Object().Value("BudgetCredits").Object().Value("frozen_commitment").Number().Equal(456)
 			brID = int(response.JSON().Object().Value("BudgetCredits").Object().Value("id").Number().Raw())
 		}
 		response.Status(tc.Status)
@@ -114,22 +106,22 @@ func modifyBudgetCreditTest(e *httpexpect.Expect, t *testing.T, brID int) {
 		Status       int
 		Sent         []byte
 		BodyContains string
+		JSONRet      string
 	}{
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, ID: 0, Status: http.StatusBadRequest, Sent: []byte("{\"chapter_id\":2}"), BodyContains: "Modification des crédits: introuvable"},
-		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte("{\"chapter_id\":2}"), BodyContains: "BudgetCredits"},
-		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte("{\"commission_date\":\"2018-08-13T09:21:56.132Z\"}"), BodyContains: "BudgetCredits"},
-		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte("{\"primary_commitment\":999}"), BodyContains: "BudgetCredits"},
-		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte("{\"frozen_commitment\":888}"), BodyContains: "BudgetCredits"},
-		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte("{\"reserved_commitment\":777}"), BodyContains: "BudgetCredits"},
+		{Token: testCtx.Admin.Token, ID: 0, Status: http.StatusBadRequest, Sent: []byte(`{"chapter":908}`), BodyContains: "Modification des crédits: introuvable"},
+		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte(`{"chapter":908}`), BodyContains: "BudgetCredits", JSONRet: `"chapter_id":2`},
+		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte(`{"commission_date":"2018-08-13T09:21:56.132Z"}`), BodyContains: "BudgetCredits", JSONRet: `"commission_date":"2018-08-13T09:21:56.132Z"`},
+		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte(`{"primary_commitment":999}`), BodyContains: "BudgetCredits", JSONRet: `"primary_commitment":999`},
+		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte(`{"frozen_commitment":888}`), BodyContains: "BudgetCredits", JSONRet: `"frozen_commitment":888`},
+		{Token: testCtx.Admin.Token, ID: brID, Status: http.StatusOK, Sent: []byte(`{"reserved_commitment":777}`), BodyContains: "BudgetCredits", JSONRet: `"reserved_commitment":777`},
 	}
 
 	for _, tc := range testCases {
 		response := e.PUT("/api/budget_credits/"+strconv.Itoa(tc.ID)).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		response.Body().Contains(tc.BodyContains)
 		if tc.Status == http.StatusOK {
-			s := strings.Trim(strings.Trim(string(tc.Sent), "{"), "}")
-			response.Body().Contains(s)
+			response.Body().Contains(tc.JSONRet)
 		}
 		response.Status(tc.Status)
 	}

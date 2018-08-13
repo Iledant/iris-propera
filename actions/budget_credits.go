@@ -10,11 +10,22 @@ import (
 	"github.com/kataras/iris"
 )
 
-type brrResponse struct {
+// brReq is used to analyse creating or update requests for budget credits.
+type brReq struct {
+	CommissionDate     *time.Time `json:"commission_date"`
+	Chapter            *int64     `json:"chapter"`
+	PrimaryCommitment  *int64     `json:"primary_commitment"`
+	FrozenCommitment   *int64     `json:"frozen_commitment"`
+	ReservedCommitment *int64     `json:"reserved_commitment"`
+}
+
+// brrResp embeddes response for an array of budget credits.
+type brrResp struct {
 	BudgetCredit []models.BudgetCredit `json:"BudgetCredits"`
 }
 
-type brResponse struct {
+// brResp embeddes response for a single budget credits.
+type brResp struct {
 	BudgetCredit models.BudgetCredit `json:"BudgetCredits"`
 }
 
@@ -30,7 +41,7 @@ func GetBudgetCredits(ctx iris.Context) {
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brrResponse{brr})
+	ctx.JSON(brrResp{brr})
 }
 
 // GetLastBudgetCredits handles request for getting the most recent budget credits of current year.
@@ -53,20 +64,12 @@ func GetLastBudgetCredits(ctx iris.Context) {
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brrResponse{brr})
-}
-
-type sentBrReq struct {
-	CommissionDate     models.NullTime  `json:"commission_date"`
-	ChapterID          models.NullInt64 `json:"chapter_id"`
-	PrimaryCommitment  *int64           `json:"primary_commitment"`
-	FrozenCommitment   *int64           `json:"frozen_commitment"`
-	ReservedCommitment *int64           `json:"reserved_commitment"`
+	ctx.JSON(brrResp{brr})
 }
 
 // CreateBudgetCredit handles post request for creating a budget credit.
 func CreateBudgetCredit(ctx iris.Context) {
-	sbr := sentBrReq{}
+	sbr := brReq{}
 
 	if err := ctx.ReadJSON(&sbr); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -74,17 +77,27 @@ func CreateBudgetCredit(ctx iris.Context) {
 		return
 	}
 
-	if sbr.CommissionDate.Valid == false || sbr.ChapterID.Valid == false || sbr.PrimaryCommitment == nil ||
+	if sbr.CommissionDate == nil || sbr.Chapter == nil || sbr.PrimaryCommitment == nil ||
 		sbr.FrozenCommitment == nil || sbr.ReservedCommitment == nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Création de crédits : champ manquant ou incorrect"})
 		return
 	}
 
-	br := models.BudgetCredit{CommissionDate: sbr.CommissionDate, ChapterID: sbr.ChapterID,
+	db := ctx.Values().Get("db").(*gorm.DB)
+	chID := struct{ ID int64 }{}
+
+	if err := db.Raw("SELECT id FROM budget_chapter WHERE code = ?", *sbr.Chapter).Scan(&chID).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Création de crédits, impossible de trouver le chapitre :" + err.Error()})
+		return
+	}
+
+	br := models.BudgetCredit{CommissionDate: models.NullTime{Valid: true, Time: *sbr.CommissionDate},
+		ChapterID:         models.NullInt64{Valid: true, Int64: chID.ID},
 		PrimaryCommitment: *sbr.PrimaryCommitment, FrozenCommitment: *sbr.FrozenCommitment,
 		ReservedCommitment: *sbr.ReservedCommitment}
-	db := ctx.Values().Get("db").(*gorm.DB)
+
 	if err := db.Create(&br).Error; err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
@@ -92,7 +105,7 @@ func CreateBudgetCredit(ctx iris.Context) {
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brResponse{br})
+	ctx.JSON(brResp{br})
 }
 
 // ModifyBudgetCredit handles put request for modifying budget credits.
@@ -104,15 +117,15 @@ func ModifyBudgetCredit(ctx iris.Context) {
 		return
 	}
 
-	sbr := sentBrReq{}
+	sbr := brReq{}
 	if err := ctx.ReadJSON(&sbr); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 
-	br := models.BudgetCredit{}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	br, db := models.BudgetCredit{}, ctx.Values().Get("db").(*gorm.DB)
+
 	if err := db.Find(&br, brID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.StatusCode(http.StatusBadRequest)
@@ -124,12 +137,21 @@ func ModifyBudgetCredit(ctx iris.Context) {
 		return
 	}
 
-	if sbr.ChapterID.Valid == true {
-		br.ChapterID = sbr.ChapterID
+	if sbr.Chapter != nil {
+		chID := struct{ ID int64 }{}
+
+		if err := db.Raw("SELECT id FROM budget_chapter WHERE code = ?", *sbr.Chapter).Scan(&chID).Error; err != nil {
+			ctx.StatusCode(http.StatusInternalServerError)
+			ctx.JSON(jsonError{"Modification de crédits, impossible de trouver le chapitre :" + err.Error()})
+			return
+		}
+		br.ChapterID.Valid = true
+		br.ChapterID.Int64 = chID.ID
 	}
 
-	if sbr.CommissionDate.Valid == true {
-		br.CommissionDate = sbr.CommissionDate
+	if sbr.CommissionDate != nil {
+		br.CommissionDate.Valid = true
+		br.CommissionDate.Time = *sbr.CommissionDate
 	}
 
 	if sbr.PrimaryCommitment != nil {
@@ -151,7 +173,7 @@ func ModifyBudgetCredit(ctx iris.Context) {
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brResponse{br})
+	ctx.JSON(brResp{br})
 }
 
 // DeleteBudgetCredit handles delete request for budget credits.
@@ -186,18 +208,9 @@ func DeleteBudgetCredit(ctx iris.Context) {
 	ctx.JSON(jsonMessage{"Crédits supprimés"})
 }
 
-// batchBr is used for batch import of budget credits
-type batchBr struct {
-	CommissionDate     *time.Time `json:"commission_date"`
-	Chapter            *int       `json:"chapter"`
-	PrimaryCommitment  *int64     `json:"primary_commitment"`
-	ReservedCommitment *int64     `json:"reserved_commitment"`
-	FrozenCommitment   *int64     `json:"frozen_commitment"`
-}
-
 // batchBrr is used to embed batch credits imports
 type batchBrr struct {
-	BudgetCredits []batchBr `json:"BudgetCredits"`
+	BudgetCredits []brReq `json:"BudgetCredits"`
 }
 
 // BatchBudgetCredits handles the post array request for budget credits

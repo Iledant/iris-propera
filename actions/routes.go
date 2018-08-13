@@ -33,6 +33,12 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/budget_chapters/{bcID:int}", ModifyBudgetChapter)
 	adminParty.Delete("/budget_chapters/{bcID:int}", DeleteBudgetChapter)
 
+	adminParty.Get("/budget_programs", GetAllBudgetPrograms)
+	adminParty.Get("/budget_chapters/{chpID:int}/budget_programs", GetChapterBudgetPrograms)
+	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs", CreateBudgetProgram)
+	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}", ModifyBudgetProgram)
+	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}", DeleteBudgetProgram)
+
 	adminParty.Post("/budget_credits", CreateBudgetCredit)
 	adminParty.Put("/budget_credits/{brID:int}", ModifyBudgetCredit)
 	adminParty.Post("/budget_credits/array", BatchBudgetCredits)

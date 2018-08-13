@@ -9,12 +9,18 @@ import (
 	"github.com/kataras/iris"
 )
 
-type baaResponse struct {
+type baaResp struct {
 	BudgetAction []models.BudgetAction `json:"BudgetAction"`
 }
 
-type baResponse struct {
+type baResp struct {
 	BudgetAction models.BudgetAction `json:"BudgetAction"`
+}
+
+type baReq struct {
+	Code     *string `json:"code"`
+	Name     *string `json:"name"`
+	SectorID *int    `json:"sector_id"`
 }
 
 // GetProgramBudgetActions handles request get budget actions of a program.
@@ -35,7 +41,7 @@ func GetProgramBudgetActions(ctx iris.Context) {
 	}
 	defer rows.Close()
 
-	arr, item := baaResponse{}, models.BudgetAction{}
+	arr, item := baaResp{}, models.BudgetAction{}
 	for rows.Next() {
 		rows.Scan(&item)
 		arr.BudgetAction = append(arr.BudgetAction, item)
@@ -57,7 +63,7 @@ func GetAllBudgetActions(ctx iris.Context) {
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(baaResponse{baa})
+	ctx.JSON(baaResp{baa})
 }
 
 // CreateBudgetAction handles request post request to create a new action.
@@ -69,24 +75,36 @@ func CreateBudgetAction(ctx iris.Context) {
 		return
 	}
 
-	ba := models.BudgetAction{}
+	ba := baReq{}
 	if err = ctx.ReadJSON(&ba); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 
-	ba.ProgramID = prgID
+	if ba.Code == nil || *ba.Code == "" || ba.Name == nil || *ba.Name == "" || ba.SectorID == nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Création d'action budgétaire, champ manquant ou incorrect"})
+		return
+	}
 	db := ctx.Values().Get("db").(*gorm.DB)
 
-	if err = db.Create(&ba).Error; err != nil {
+	if db.Raw("SELECT id FROM budget_sector WHERE id = ?", *ba.SectorID).RecordNotFound() {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Création d'action budgétaire, index secteur incorrect"})
+		return
+	}
+
+	newBa := models.BudgetAction{Code: *ba.Code, Name: *ba.Name, ProgramID: prgID, SectorID: *ba.SectorID}
+
+	if err = db.Create(&newBa).Error; err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(baResponse{ba})
+	ctx.JSON(baResp{newBa})
 }
 
 // baSent is used for decoding one line of an array in the budget actions arrays
@@ -175,7 +193,7 @@ func ModifyBudgetAction(ctx iris.Context) {
 	if err = db.First(&ba, baID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonMessage{"Action introuvable"})
+			ctx.JSON(jsonMessage{"Modification d'action : introuvable"})
 			return
 		}
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -183,19 +201,19 @@ func ModifyBudgetAction(ctx iris.Context) {
 		return
 	}
 
-	req := models.BudgetAction{}
+	req := baReq{}
 	if err = ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 
-	if req.Code != "" && len(req.Code) < 4 {
-		ba.Code = req.Code
+	if req.Code != nil && *req.Code != "" && len(*req.Code) < 4 {
+		ba.Code = *req.Code
 	}
 
-	if req.Name != "" && len(req.Name) < 100 {
-		ba.Name = req.Name
+	if req.Name != nil && *req.Name != "" && len(*req.Name) < 100 {
+		ba.Name = *req.Name
 	}
 
 	if err = db.Save(&ba).Error; err != nil {
@@ -205,7 +223,7 @@ func ModifyBudgetAction(ctx iris.Context) {
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(baResponse{ba})
+	ctx.JSON(baResp{ba})
 }
 
 // DeleteBudgetAction handles the request to delete an budget action.
@@ -221,7 +239,7 @@ func DeleteBudgetAction(ctx iris.Context) {
 
 	if err = db.First(&ba, baID).Error; err != nil {
 		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(jsonError{"Action introuvable"})
+		ctx.JSON(jsonError{"Suppression d'action : introuvable"})
 		return
 	}
 
