@@ -33,13 +33,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/budget_chapters/{bcID:int}", ModifyBudgetChapter)
 	adminParty.Delete("/budget_chapters/{bcID:int}", DeleteBudgetChapter)
 
-	adminParty.Get("/budget_sectors", GetBudgetSectors)
 	adminParty.Post("/budget_sectors", CreateBudgetSector)
 	adminParty.Put("/budget_sectors/{bsID:int}", ModifyBudgetSector)
 	adminParty.Delete("/budget_sectors/{bsID:int}", DeleteBudgetSector)
 
-	adminParty.Get("/budget_programs", GetAllBudgetPrograms)
-	adminParty.Get("/budget_chapters/{chpID:int}/budget_programs", GetChapterBudgetPrograms)
 	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs", CreateBudgetProgram)
 	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}", ModifyBudgetProgram)
 	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}", DeleteBudgetProgram)
@@ -49,7 +46,6 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/budget_credits/array", BatchBudgetCredits)
 	adminParty.Delete("/budget_credits/{brID:int}", DeleteBudgetCredit)
 
-	adminParty.Get("/budget_actions", GetAllBudgetActions)
 	adminParty.Get("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions", GetProgramBudgetActions)
 	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions", CreateBudgetAction)
 	adminParty.Post("/budget_actions", BatchBudgetActions)
@@ -61,14 +57,27 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/categories/{caID:int}", ModifyCategory)
 	adminParty.Delete("/categories/{caID:int}", DeleteCategory)
 
+	adminParty.Post("/commissions", CreateCommission)
+	adminParty.Put("/commissions/{coID:int}", ModifyCommission)
+	adminParty.Delete("/commissions/{coID:int}", DeleteCommission)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // change, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
 	userParty.Put("/physical_ops/{opID:int}", UpdatePhysicalOp)
 	userParty.Post("/user/password", ChangeUserPwd)
 
+	userParty.Get("/budget_actions", GetAllBudgetActions)
+
 	userParty.Get("/budget_credits/year", GetLastBudgetCredits)
 	userParty.Get("/budget_credits", GetBudgetCredits)
+
+	userParty.Get("/budget_programs", GetAllBudgetPrograms)
+	userParty.Get("/budget_chapters/{chpID:int}/budget_programs", GetChapterBudgetPrograms)
+
+	userParty.Get("/budget_sectors", GetBudgetSectors)
+
+	userParty.Get("/commissions", GetCommissions)
 }
 
 // setDBMiddleware return a middleware to add db to context values

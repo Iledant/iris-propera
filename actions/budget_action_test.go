@@ -29,7 +29,7 @@ func getAllBudgetActions(e *httpexpect.Expect, t *testing.T) {
 		BodyContains string
 		ArraySize    int
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
+		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: "Token invalide", ArraySize: 0},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: "BudgetAction", ArraySize: 117},
 	}
 

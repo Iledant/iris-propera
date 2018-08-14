@@ -28,8 +28,8 @@ func getAllBudgetProgramsTest(e *httpexpect.Expect, t *testing.T) {
 		BodyContains string
 		ArraySize    int
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: "BudgetProgram", ArraySize: 84},
+		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: "Token invalide", ArraySize: 0},
+		{Token: testCtx.User.Token, Status: http.StatusOK, BodyContains: "BudgetProgram", ArraySize: 84},
 	}
 
 	for _, tc := range testCases {
@@ -50,8 +50,8 @@ func getChapterBudgetProgramsTest(e *httpexpect.Expect, t *testing.T) {
 		BodyContains string
 		ArraySize    int
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: "BudgetProgram", ArraySize: 11},
+		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: "Token invalide", ArraySize: 0},
+		{Token: testCtx.User.Token, Status: http.StatusOK, BodyContains: "BudgetProgram", ArraySize: 11},
 	}
 
 	for _, tc := range testCases {
