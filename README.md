@@ -27,11 +27,22 @@ Compte tenu de son rôle particulier et de la difficulté de faire des tests uni
 
 ### Utilisation d'une base de données de tests
 
-Les tests des handlers ne sont pas réalisés avec des mockers de la base de données pour s'assurer que les requêtes fonctionnent également correctement.
+Les tests des handlers ne sont pas réalisés avec des mockers de la base de données pour s'assurer que les requêtes SQL fonctionnent également correctement.
 
 Pour s'assurer que les tests ne seront pas perturbés par la base de données, une base de données de test, sauvegardée par ailleurs, doit être restaurée. De même, compte tenu de la protection des entrées de l'API par des middlewares, des connexions doivent être réalisées préalablement à tout test.
 
-Ces éléments sont implémentés par la fonction `TestCommons` du fichier `commons_test.go`. Tous les tests des handlers doivent donc appeler cette fonction avant de lancer leurs propres tests.
+Une copie de la base de test a été effectuée. La séquence d'utilitaires postgresql utilisée est la suivante :
+```
+pg_dump -Fc -w -U postgres -f [db_dump] -d [base production]
+create_db -O postgres [db_dump]
+pg_restore -cOU postgres -d [base test] [db_dump]
+```
+
+Le fichier de dump est stocké localement mais non inclus dans le git repository. Son emplacement est stocké dans une variable système.
+
+La fonction `TestCommons` du fichier `commons_test.go` implémente donc la récupération de la configuration en particulier pour la localisation du dump de la base et du nom de la base de test. Elle lance la troisième commande `pg_restore` et ignore les erreurs non `FATAL` qui peuvent être liées au fait que les tests ont altéré la structure de la base de test, par exemple en créant des tables provisoires pour les imports en batch.
+
+Tous les tests des handlers doivent donc appeler cette fonction avant de lancer leurs propres tests.
 
 ### Structure des tests des handlers
 
@@ -47,5 +58,5 @@ Afin de réduire le temps nécessaire pour l'affichage des pages qui est surtout
 
 ## TODO
 
-* Modifier le module de token pour gérer le data race par mise en place d'un mutex
 * Mettre en place une grace period pour les tokens pendant laquelle le refresh token est renvoyé systématiquement
+* Vérifier s'il faut mettre un mutex sur le common test pour éviter les erreurs

@@ -47,8 +47,8 @@ func updateBeneficiaryTest(e *httpexpect.Expect, t *testing.T) {
 		Name                 string
 	}{
 		{BeneficiaryID: "1", Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", Name: ""},
-		{BeneficiaryID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest, BodyContains: "Champ name manquant", Name: ""},
-		{BeneficiaryID: "0", Token: testCtx.Admin.Token, Status: http.StatusNotFound, BodyContains: "Bénéficiaire introuvable", Name: "Essai bénéficiaire"},
+		{BeneficiaryID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest, BodyContains: "Modification de bénéficiaire : champ name manquant", Name: ""},
+		{BeneficiaryID: "0", Token: testCtx.Admin.Token, Status: http.StatusNotFound, BodyContains: "Modification de bénéficiaire : introuvable", Name: "Essai bénéficiaire"},
 		{BeneficiaryID: "1", Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: "Beneficiary", Name: "Essai bénéficiaire"},
 	}
 

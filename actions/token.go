@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Iledant/iris_propera/models"
@@ -42,6 +43,9 @@ var (
 
 // getTokenString store claims and return JWT token string
 func getTokenString(claims *customClaims) (string, error) {
+	mutex := &sync.Mutex{}
+	mutex.Lock()
+	defer mutex.Unlock()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(signingKey)
 
@@ -54,7 +58,6 @@ func getTokenString(claims *customClaims) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	tokens[userID] = *claims
 
 	return tokenString, nil
@@ -72,6 +75,9 @@ func setToken(u *models.User) (string, error) {
 
 // delToken remove user ID from list of stored tokens
 func delToken(userID int) {
+	mutex := &sync.Mutex{}
+	mutex.Lock()
+	defer mutex.Unlock()
 	delete(tokens, userID)
 }
 
@@ -119,7 +125,10 @@ func bearerToUser(ctx iris.Context) (u *customClaims, err error) {
 
 	// Check if previously disconnected or refreshed
 	userID, _ := strconv.Atoi(claims.Subject)
+	mutex := &sync.Mutex{}
+	mutex.Lock()
 	stored, ok := tokens[userID]
+	mutex.Unlock()
 
 	if !ok || stored != *claims {
 		return nil, ErrBadToken
