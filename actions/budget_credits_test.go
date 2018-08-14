@@ -66,7 +66,7 @@ func getLastBudgetCredits(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// createBudgetCreditTest tests route is protected and sent action is created.
+// createBudgetCreditTest tests route is protected and sent credit is created.
 func createBudgetCreditTest(e *httpexpect.Expect, t *testing.T) int {
 	testCases := []struct {
 		Token        string
@@ -127,7 +127,7 @@ func modifyBudgetCreditTest(e *httpexpect.Expect, t *testing.T, brID int) {
 	}
 }
 
-// deleteBudgetCreditTest tests route is protected and modify work properly.
+// deleteBudgetCreditTest tests route is protected and delete work properly.
 func deleteBudgetCreditTest(e *httpexpect.Expect, t *testing.T, brID int) {
 	testCases := []struct {
 		Token        string

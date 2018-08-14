@@ -119,7 +119,7 @@ func CreateBudgetProgram(ctx iris.Context) {
 	ctx.JSON(bpResp{newBp})
 }
 
-// ModifyBudgetProgram handles request put requestion to modify an action.
+// ModifyBudgetProgram handles request put requestion to modify a program.
 func ModifyBudgetProgram(ctx iris.Context) {
 	bpID, err := ctx.Params().GetInt("bpID")
 	if err != nil {
@@ -175,7 +175,7 @@ func ModifyBudgetProgram(ctx iris.Context) {
 	ctx.JSON(bpResp{bp})
 }
 
-// DeleteBudgetProgram handles the request to delete an budget action.
+// DeleteBudgetProgram handles the request to delete an budget program.
 func DeleteBudgetProgram(ctx iris.Context) {
 	bpID, err := ctx.Params().GetInt("bpID")
 	if err != nil {

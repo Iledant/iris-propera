@@ -68,7 +68,7 @@ func CreateBudgetSector(ctx iris.Context) {
 	ctx.JSON(bsResp{newBs})
 }
 
-// ModifyBudgetSector handles request put requestion to modify an action.
+// ModifyBudgetSector handles request put requestion to modify a sector.
 func ModifyBudgetSector(ctx iris.Context) {
 	bsID, err := ctx.Params().GetInt("bsID")
 	if err != nil {
@@ -115,7 +115,7 @@ func ModifyBudgetSector(ctx iris.Context) {
 	ctx.JSON(bsResp{bs})
 }
 
-// DeleteBudgetSector handles the request to delete an budget action.
+// DeleteBudgetSector handles the request to delete an budget sector.
 func DeleteBudgetSector(ctx iris.Context) {
 	bsID, err := ctx.Params().GetInt("bsID")
 	if err != nil {

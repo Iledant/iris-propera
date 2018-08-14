@@ -19,7 +19,7 @@ func TestBudgetSector(t *testing.T) {
 	})
 }
 
-// getBudgetSectorsTest tests route is protected and all programs are sent back.
+// getBudgetSectorsTest tests route is protected and all sectors are sent back.
 func getBudgetSectorsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []struct {
 		Token        string
@@ -41,7 +41,7 @@ func getBudgetSectorsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// createBudgetSectorTest tests route is protected and sent action is created.
+// createBudgetSectorTest tests route is protected and sent sector is created.
 func createBudgetSectorTest(e *httpexpect.Expect, t *testing.T) int {
 	testCases := []struct {
 		Token        string
@@ -91,7 +91,7 @@ func modifyBudgetSectorTest(e *httpexpect.Expect, t *testing.T, bsID int) {
 	}
 }
 
-// deleteBudgetSectorTest tests route is protected and modify work properly.
+// deleteBudgetSectorTest tests route is protected and delete work properly.
 func deleteBudgetSectorTest(e *httpexpect.Expect, t *testing.T, bsID int) {
 	testCases := []struct {
 		Token        string

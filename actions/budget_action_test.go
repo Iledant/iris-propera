@@ -115,7 +115,7 @@ func modifyBudgetActionTest(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// deleteBudgetActionTest tests route is protected and modify work properly.
+// deleteBudgetActionTest tests route is protected and delete work properly.
 func deleteBudgetActionTest(e *httpexpect.Expect, t *testing.T, baID int) {
 	testCases := []struct {
 		Token        string

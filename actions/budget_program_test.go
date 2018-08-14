@@ -42,7 +42,7 @@ func getAllBudgetProgramsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// getChapterBudgetProgramsTest tests route is protected and sent actions linked are sent back.
+// getChapterBudgetProgramsTest tests route is protected and sent programs linked to a chapter are sent back.
 func getChapterBudgetProgramsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []struct {
 		Token        string
@@ -64,7 +64,7 @@ func getChapterBudgetProgramsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// createBudgetProgramTest tests route is protected and sent action is created.
+// createBudgetProgramTest tests route is protected and sent program is created.
 func createBudgetProgramTest(e *httpexpect.Expect, t *testing.T) int {
 	testCases := []struct {
 		Token        string
@@ -116,7 +116,7 @@ func modifyBudgetProgramTest(e *httpexpect.Expect, t *testing.T, bpID int) {
 	}
 }
 
-// deleteBudgetProgramTest tests route is protected and modify work properly.
+// deleteBudgetProgramTest tests route is protected and delete work properly.
 func deleteBudgetProgramTest(e *httpexpect.Expect, t *testing.T, bpID int) {
 	testCases := []struct {
 		Token        string

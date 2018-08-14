@@ -41,7 +41,7 @@ func getAllBudgetChapters(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// createBudgetChapterTest tests route is protected and sent action is created.
+// createBudgetChapterTest tests route is protected and sent chapter is created.
 func createBudgetChapterTest(e *httpexpect.Expect, t *testing.T) int {
 	testCases := []struct {
 		Token        string
@@ -91,7 +91,7 @@ func modifyBudgetChapterTest(e *httpexpect.Expect, t *testing.T, bcID int) {
 	}
 }
 
-// deleteBudgetChapterTest tests route is protected and modify work properly.
+// deleteBudgetChapterTest tests route is protected and delete work properly.
 func deleteBudgetChapterTest(e *httpexpect.Expect, t *testing.T, bcID int) {
 	testCases := []struct {
 		Token        string

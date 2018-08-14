@@ -56,6 +56,11 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}", ModifyBudgetAction)
 	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}", DeleteBudgetAction)
 
+	adminParty.Get("/categories", GetCategories)
+	adminParty.Post("/categories", CreateCategory)
+	adminParty.Put("/categories/{caID:int}", ModifyCategory)
+	adminParty.Delete("/categories/{caID:int}", DeleteCategory)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // change, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
