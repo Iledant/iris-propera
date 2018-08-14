@@ -84,6 +84,12 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Put("/physical_ops/{opID:int}/documents/{doID:int}", ModifyDocument)
 	userParty.Delete("/physical_ops/{opID:int}/documents/{doID:int}", DeleteDocument)
 
+	userParty.Get("/physical_ops/{opID:int}/events", GetEvents)
+	userParty.Get("/events", GetNextMonthEvent)
+	userParty.Post("/physical_ops/{opID:int}/events", CreateEvent)
+	userParty.Put("/physical_ops/{opID:int}/events/{evID:int}", ModifyEvent)
+	userParty.Delete("/physical_ops/{opID:int}/events/{evID:int}", DeleteEvent)
+
 }
 
 // setDBMiddleware return a middleware to add db to context values
