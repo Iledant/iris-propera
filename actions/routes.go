@@ -61,8 +61,16 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/commissions/{coID:int}", ModifyCommission)
 	adminParty.Delete("/commissions/{coID:int}", DeleteCommission)
 
+	adminParty.Get("/financial_commitments", GetUnlinkedFcs)                      // changed, before financialcommitments
+	adminParty.Get("/financial_commitments/linked", GetLinkedFcs)                 // changed, before financialcommitments
+	adminParty.Post("/financial_commitments/physical_ops/{opID:int}", LinkFcToOp) // changed, before financialcommitments
+	adminParty.Post("/financial_commitments/plan_lines/{plID:int}", LinkFcToPl)   // changed, before financialcommitments
+	adminParty.Post("/financial_commitments/unlink", UnlinkFcs)                   // changed, before financialcommitments
+	adminParty.Post("/financial_commitments", BatchFcs)                           // changed, before financialcommitments
+	adminParty.Post("/financial_commitments/attachments", BatchOpFcs)             // changed, before financialcommitments
+
 	userParty := api.Party("", ActiveMiddleware)
-	userParty.Post("/logout", Logout) // change, before located at /user/logout
+	userParty.Post("/logout", Logout) // changed, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
 	userParty.Put("/physical_ops/{opID:int}", UpdatePhysicalOp)
 	userParty.Post("/user/password", ChangeUserPwd)
@@ -85,10 +93,13 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Delete("/physical_ops/{opID:int}/documents/{doID:int}", DeleteDocument)
 
 	userParty.Get("/physical_ops/{opID:int}/events", GetEvents)
+	userParty.Get("/physical_ops/{opID:int}/financial_commitments", GetOpFcs) // changed, before financialcommitments
 	userParty.Get("/events", GetNextMonthEvent)
 	userParty.Post("/physical_ops/{opID:int}/events", CreateEvent)
 	userParty.Put("/physical_ops/{opID:int}/events/{evID:int}", ModifyEvent)
 	userParty.Delete("/physical_ops/{opID:int}/events/{evID:int}", DeleteEvent)
+
+	userParty.Get("/financial_commitments/month", GetMonthFC) // changed, before financialcommitments
 
 }
 
