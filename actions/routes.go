@@ -72,6 +72,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/payment_types/{ptID:int}/payment_ratios", SetPtRatios) // changed, put strictly identical is no longer implemented
 	adminParty.Delete("/payment_types/{ptID:int}/payment_ratios", DeleteRatios)
 
+	adminParty.Post("/payment_types", CreatePaymentType)
+	adminParty.Put("/payment_types/{ptID:int}", ModifyPaymentType)
+	adminParty.Delete("/payment_types/{ptID:int}", DeletePaymentType)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // changed, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
@@ -108,6 +112,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/payment_ratios", GetRatios)
 	userParty.Get("/payment_types/{ptID:int}/payment_ratios", GetPtRatios)
 	userParty.Get("/payment_ratios/year", GetYearRatios)
+
+	userParty.Get("/payment_types", GetPaymentTypes)
+
 }
 
 // setDBMiddleware return a middleware to add db to context values
