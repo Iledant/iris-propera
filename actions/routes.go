@@ -69,6 +69,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/financial_commitments", BatchFcs)                           // changed, before financialcommitments
 	adminParty.Post("/financial_commitments/attachments", BatchOpFcs)             // changed, before financialcommitments
 
+	adminParty.Post("/payment_types/{ptID:int}/payment_ratios", SetPtRatios) // changed, put strictly identical is no longer implemented
+	adminParty.Delete("/payment_types/{ptID:int}/payment_ratios", DeleteRatios)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // changed, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
@@ -102,6 +105,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/financial_commitments/month", GetMonthFC) // changed, before financialcommitments
 	userParty.Get("/import_log", GetImportLogs)
 
+	userParty.Get("/payment_ratios", GetRatios)
+	userParty.Get("/payment_types/{ptID:int}/payment_ratios", GetPtRatios)
+	userParty.Get("/payment_ratios/year", GetYearRatios)
 }
 
 // setDBMiddleware return a middleware to add db to context values
