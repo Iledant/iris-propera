@@ -594,6 +594,7 @@ func BatchFcs(ctx iris.Context) {
 	if err := tx.Exec("UPDATE import_logs SET last_date = ? WHERE category = 'FinancialCommitments'", time.Now()).Error; err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
+		tx.Rollback()
 		return
 	}
 	tx.Commit()

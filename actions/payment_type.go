@@ -41,7 +41,6 @@ type sentPt struct {
 // CreatePaymentType handles post request for creating a payment type.
 func CreatePaymentType(ctx iris.Context) {
 	req := sentPt{}
-
 	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
@@ -54,16 +53,16 @@ func CreatePaymentType(ctx iris.Context) {
 		return
 	}
 
-	pt := models.PaymentType{Name: req.Name}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := db.Create(&pt).Error; err != nil {
+	resp, db := ptResp{}, ctx.Values().Get("db").(*gorm.DB)
+	resp.PaymentType.Name = req.Name
+	if err := db.Create(&resp.PaymentType).Error; err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'une chronique : " + err.Error()})
 		return
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(ptResp{pt})
+	ctx.JSON(resp)
 }
 
 // ModifyPaymentType handles put request for modifying a payment type.

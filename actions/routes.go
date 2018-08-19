@@ -76,6 +76,8 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/payment_types/{ptID:int}", ModifyPaymentType)
 	adminParty.Delete("/payment_types/{ptID:int}", DeletePaymentType)
 
+	adminParty.Post("/payments", BatchPayments)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // changed, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
@@ -100,7 +102,8 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Delete("/physical_ops/{opID:int}/documents/{doID:int}", DeleteDocument)
 
 	userParty.Get("/physical_ops/{opID:int}/events", GetEvents)
-	userParty.Get("/physical_ops/{opID:int}/financial_commitments", GetOpFcs) // changed, before financialcommitments
+	userParty.Get("/physical_ops/{opID:int}/financial_commitments", GetOpFcs)                         // changed, before financialcommitments
+	userParty.Get("/physical_ops/{opID:int}/financial_commitments/{fcID:int}/payments", GetFcPayment) // changed, before financialcommitments
 	userParty.Get("/events", GetNextMonthEvent)
 	userParty.Post("/physical_ops/{opID:int}/events", CreateEvent)
 	userParty.Put("/physical_ops/{opID:int}/events/{evID:int}", ModifyEvent)
@@ -114,6 +117,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/payment_ratios/year", GetYearRatios)
 
 	userParty.Get("/payment_types", GetPaymentTypes)
+	userParty.Get("/payments/month", GetPaymentsPerMonth)
+	userParty.Get("/payments/prevision_realized", GetPrevisionRealized)
+	userParty.Get("/payments/cumulated", GetCumulatedMonthPayment)
 
 }
 
