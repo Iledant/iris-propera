@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/Iledant/iris_propera/config"
@@ -42,6 +43,9 @@ var testCtx *TestContext
 
 // Init initialize the database for testing by creating a test database, connecting to it and launching
 func TestCommons(t *testing.T) {
+	mutex := &sync.Mutex{}
+	mutex.Lock()
+	defer mutex.Unlock()
 	if testCtx == nil {
 		restoreTestDB(t)
 
@@ -99,9 +103,7 @@ func fetchLoginResponse(e *httpexpect.Expect, t *testing.T, c *config.Credential
 		t.FailNow()
 		return nil
 	}
-	response.Status(http.StatusOK).Body()
-	response.Body().Contains("token")
-	response.Body().Contains(role)
+	response.Status(http.StatusOK).Body().Contains("token").Contains(role)
 
 	return &lr
 }
