@@ -76,6 +76,13 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/payment_types/{ptID:int}", ModifyPaymentType)
 	adminParty.Delete("/payment_types/{ptID:int}", DeletePaymentType)
 
+	adminParty.Get("/pending_commitments/unlinked", GetUnlinkedPendings)
+	adminParty.Get("/pending_commitments/linked", GetLinkedPendings)
+	adminParty.Post("/pending_commitments/physical_ops/{opID:int}", LinkPcToOp)
+	adminParty.Post("/pending_commitments/physical_ops/{opID:int}", LinkPcToOp)
+	adminParty.Post("/pending_commitments/unlink", UnlinkPCs)
+	adminParty.Post("/pending_commitments", BatchPendings)
+
 	adminParty.Post("/payments", BatchPayments)
 
 	userParty := api.Party("", ActiveMiddleware)
@@ -121,6 +128,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/payments/prevision_realized", GetPrevisionRealized)
 	userParty.Get("/payments/cumulated", GetCumulatedMonthPayment)
 
+	userParty.Get("/pending_commitments", GetPendings)
 }
 
 // setDBMiddleware return a middleware to add db to context values

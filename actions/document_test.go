@@ -24,15 +24,17 @@ func getDocumentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []struct {
 		Token        string
 		Status       int
+		OpID         string
 		BodyContains string
 		ArraySize    int
 	}{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: "Token invalide", ArraySize: 0},
-		{Token: testCtx.User.Token, Status: http.StatusOK, BodyContains: "Document", ArraySize: 1},
+		{Token: "fake", OpID: "0", Status: http.StatusInternalServerError, BodyContains: "Token invalide", ArraySize: 0},
+		{Token: testCtx.User.Token, OpID: "0", Status: http.StatusBadRequest, BodyContains: "Liste des documents : opération introuvable", ArraySize: 0},
+		{Token: testCtx.User.Token, OpID: "403", Status: http.StatusOK, BodyContains: "Document", ArraySize: 1},
 	}
 
 	for _, tc := range testCases {
-		response := e.GET("/api/physical_ops/403/documents").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		response := e.GET("/api/physical_ops/"+tc.OpID+"/documents").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		response.Body().Contains(tc.BodyContains)
 		if tc.ArraySize > 0 {
 			response.JSON().Object().Value("Document").Array().Length().Equal(tc.ArraySize)

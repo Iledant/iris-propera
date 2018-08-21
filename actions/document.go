@@ -38,7 +38,7 @@ func GetDocuments(ctx iris.Context) {
 	if err = db.First(&op, opID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonMessage{"Liste des documents : opération introuvable"})
+			ctx.JSON(jsonError{"Liste des documents : opération introuvable"})
 			return
 		}
 		ctx.StatusCode(http.StatusInternalServerError)
