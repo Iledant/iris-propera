@@ -69,7 +69,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/financial_commitments", BatchFcs)                           // changed, before financialcommitments
 	adminParty.Post("/financial_commitments/attachments", BatchOpFcs)             // changed, before financialcommitments
 
-	adminParty.Post("/payment_types/{ptID:int}/payment_ratios", SetPtRatios) // changed, put strictly identical is no longer implemented
+	adminParty.Post("/payment_types/{ptID:int}/payment_ratios", SetPtRatios) // changed, put strictly identical to post is no longer implemented
 	adminParty.Delete("/payment_types/{ptID:int}/payment_ratios", DeleteRatios)
 
 	adminParty.Post("/payment_types", CreatePaymentType)
@@ -84,6 +84,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/pending_commitments", BatchPendings)
 
 	adminParty.Post("/payments", BatchPayments)
+
+	adminParty.Post("/plans/{pID:int}/planlines", CreatePlanLine)
+	adminParty.Put("/plans/{pID:int}/planlines/{plID:int}", ModifyPlanLine)
+	adminParty.Delete("/plans/{pID:int}/planlines/{plID:int}", DeletePlanLine)
 
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // changed, before located at /user/logout
@@ -129,6 +133,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/payments/cumulated", GetCumulatedMonthPayment)
 
 	userParty.Get("/pending_commitments", GetPendings)
+
+	userParty.Get("/plans/{pID:int}/planlines", GetPlanLines)
+	userParty.Get("/plans/{pID:int}/planlines/detailed", GetDetailedPlanLines)
 }
 
 // setDBMiddleware return a middleware to add db to context values

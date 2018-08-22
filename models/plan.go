@@ -2,7 +2,7 @@ package models
 
 // Plan model
 type Plan struct {
-	ID        int        `json:"id" gorm:"column:id"`
+	ID        int64      `json:"id" gorm:"column:id"`
 	Name      string     `json:"name" gorm:"column:name"`
 	Descript  NullString `json:"descript" gorm:"column:descript"`
 	FirstYear NullInt64  `json:"first_year" gorm:"column:first_year"`

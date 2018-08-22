@@ -2,8 +2,8 @@ package models
 
 // PlanLine model
 type PlanLine struct {
-	ID         int        `json:"id" gorm:"column:id"`
-	PlanID     int        `json:"plan_id" gorm:"column:plan_id"`
+	ID         int64      `json:"id" gorm:"column:id"`
+	PlanID     int64      `json:"plan_id" gorm:"column:plan_id"`
 	Name       string     `json:"name" gorm:"column:name"`
 	Descript   NullString `json:"descript" gorm:"column:descript"`
 	Value      int64      `json:"value" gorm:"column:value"`
