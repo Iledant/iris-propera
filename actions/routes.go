@@ -89,6 +89,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/plans/{pID:int}/planlines/{plID:int}", ModifyPlanLine)
 	adminParty.Delete("/plans/{pID:int}/planlines/{plID:int}", DeletePlanLine)
 
+	adminParty.Post("/plans", CreatePlan)
+	adminParty.Put("/plans/{pID:int}", ModifyPlan)
+	adminParty.Delete("/plans/{pID:int}", DeletePlan)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // changed, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
@@ -136,6 +140,8 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 
 	userParty.Get("/plans/{pID:int}/planlines", GetPlanLines)
 	userParty.Get("/plans/{pID:int}/planlines/detailed", GetDetailedPlanLines)
+
+	userParty.Get("/plans", GetPlans)
 }
 
 // setDBMiddleware return a middleware to add db to context values
