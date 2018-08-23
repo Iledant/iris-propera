@@ -93,6 +93,8 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/plans/{pID:int}", ModifyPlan)
 	adminParty.Delete("/plans/{pID:int}", DeletePlan)
 
+	adminParty.Post("/prev_commitments", BatchPrevCommitments)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // changed, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
