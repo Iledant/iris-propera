@@ -142,6 +142,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/plans/{pID:int}/planlines/detailed", GetDetailedPlanLines)
 
 	userParty.Get("/plans", GetPlans)
+
+	userParty.Get("/pre_programmings", GetPreProgrammings)
+	userParty.Post("/pre_programmings", BatchPreProgrammings)
 }
 
 // setDBMiddleware return a middleware to add db to context values
