@@ -126,6 +126,8 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Put("/physical_ops/{opID:int}/events/{evID:int}", ModifyEvent)
 	userParty.Delete("/physical_ops/{opID:int}/events/{evID:int}", DeleteEvent)
 
+	userParty.Get("/physical_ops/{opID:int}/previsions", GetPrevisions)
+
 	userParty.Get("/financial_commitments/month", GetMonthFC) // changed, before financialcommitments
 	userParty.Get("/import_log", GetImportLogs)
 

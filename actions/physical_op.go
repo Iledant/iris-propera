@@ -385,3 +385,157 @@ func opNumberCnt(db *gorm.DB, number string) (int, error) {
 
 	return count.Count, nil
 }
+
+// opPrevFc is used to decode dedicated financial commitments for previsions request.
+type opPrevFc struct {
+	ID          int64           `json:"id"`
+	Date        time.Time       `json:"date"`
+	IrisCode    string          `json:"iris_code"`
+	Name        string          `json:"name"`
+	Beneficiary string          `json:"beneficiary"`
+	Value       int64           `json:"value"`
+	LapseDate   models.NullTime `json:"lapse_date"`
+	Available   int64           `json:"available"`
+}
+
+// opPrevPayment is used to decode dedicated payment for previsions request.
+type opPrevPayment struct {
+	Date        time.Time `json:"date"`
+	Value       int64     `json:"value"`
+	Beneficiary string    `json:"beneficiary"`
+	IrisCode    string    `json:"iris_code"`
+}
+
+// opPrevFcPerBeneficiary is used te decode dedicated payment per beneficiary for previsions request.
+type opPrevFcPerBeneficiary struct {
+	Beneficiary string `json:"beneficiary"`
+	Value       int64  `json:"value"`
+}
+
+// getPrevisionsResp embeddes all datas for the physical operation's previsions
+type getPrevisionsResp struct {
+	PrevCommitment                    []models.PrevCommitment  `json:"PrevCommitment"`
+	PrevPayment                       []models.PrevPayment     `json:"PrevPayment"`
+	FinancialCommitment               []opPrevFc               `json:"FinancialCommitment"`
+	PendingCommitment                 models.NullInt64         `json:"PendingCommitment"`
+	Payment                           []opPrevPayment          `json:"Payment"`
+	PaymentPerBeneficiary             []opPrevFcPerBeneficiary `json:"PaymentPerBeneficiary"`
+	FinancialCommitmentPerBeneficiary []opPrevFcPerBeneficiary `json:"FinancialCommitmentPerBeneficiary"`
+	ImportLog                         []models.ImportLog       `json:"ImportLog"`
+}
+
+// GetPrevisions handles the get request to fetch commitments and payments prevision for a physical operation.
+func GetPrevisions(ctx iris.Context) {
+	opID, err := ctx.Params().GetInt64("opID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, erreur décodage identificateur : " + err.Error()})
+		return
+	}
+	year, err := ctx.URLParamInt64("year")
+	if err != nil {
+		year = int64(time.Now().Year())
+	}
+	op, db := models.PhysicalOp{}, ctx.Values().Get("db").(*gorm.DB)
+	if err = db.First(&op, opID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(jsonError{"Prevision d'opération, opération introuvable"})
+			return
+		}
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, erreur select : " + err.Error()})
+		return
+	}
+
+	resp, db := getPrevisionsResp{}, ctx.Values().Get("db").(*gorm.DB)
+	if err = db.Where("year >= ?", year).Where("physical_op_id = ?", op.ID).Find(&resp.PrevCommitment).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, requête prévision engagements : " + err.Error()})
+		return
+	}
+	if err = db.Where("year >= ?", year).Where("physical_op_id = ?", op.ID).Find(&resp.PrevPayment).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, requête prévision paiements : " + err.Error()})
+		return
+	}
+	rows, err := db.Raw(`SELECT f.id, f.date, f.iris_code, f.name AS name, b.name AS beneficiary, f.value, 
+		f.lapse_date, f.value - COALESCE(SUM(p.value - p.cancelled_value),0) AS available
+		FROM financial_commitment f
+		JOIN beneficiary b ON b.code = f.beneficiary_code
+		LEFT JOIN payment p ON p.financial_commitment_id = f.id
+		WHERE f.physical_op_id = ? GROUP BY 1,2,3,5,6,7 ORDER BY 2`, op.ID).Rows()
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, requête engagements : " + err.Error()})
+		return
+	}
+	defer rows.Close()
+	fc := opPrevFc{}
+	for rows.Next() {
+		db.ScanRows(rows, &fc)
+		resp.FinancialCommitment = append(resp.FinancialCommitment, fc)
+	}
+	err = db.Raw(`SELECT SUM(proposed_value) AS value FROM pending_commitments 
+	WHERE physical_op_id = ? AND EXTRACT(YEAR from commission_date)=?`, op.ID, year).Scan(&resp.PendingCommitment).Error
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, requête pending : " + err.Error()})
+		return
+	}
+	rows, err = db.Raw(`SELECT p.date, (p.value - p.cancelled_value) AS value, b.name AS beneficiary, 
+	f.iris_code FROM payment p 
+	JOIN financial_commitment f ON p.financial_commitment_id = f.id 
+	JOIN beneficiary b ON b.code = f.beneficiary_code 
+	WHERE p.financial_commitment_id IN 
+	(SELECT f.id FROM financial_commitment f WHERE f.physical_op_id = ?)`, op.ID).Rows()
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, requête payment : " + err.Error()})
+		return
+	}
+	defer rows.Close()
+	payment := opPrevPayment{}
+	for rows.Next() {
+		db.ScanRows(rows, &payment)
+		resp.Payment = append(resp.Payment, payment)
+	}
+	rows, err = db.Raw(`SELECT b.name AS beneficiary, SUM(p.value - p.cancelled_value) AS value
+	FROM payment p, financial_commitment f, beneficiary b
+	WHERE p.financial_commitment_id = f.id AND b.code = f.beneficiary_code AND
+	p.financial_commitment_id IN (SELECT f.id FROM financial_commitment f WHERE f.physical_op_id = ?)
+	GROUP BY b.name`, op.ID).Rows()
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, requête payment par bénéficiaire : " + err.Error()})
+		return
+	}
+	defer rows.Close()
+	fcPerBen := opPrevFcPerBeneficiary{}
+	for rows.Next() {
+		db.ScanRows(rows, &fcPerBen)
+		resp.PaymentPerBeneficiary = append(resp.PaymentPerBeneficiary, fcPerBen)
+	}
+	rows, err = db.Raw(`SELECT b.name AS beneficiary, SUM(f.value) AS value FROM financial_commitment f  
+	JOIN beneficiary b ON b.code=f.beneficiary_code WHERE f.physical_op_id = ? GROUP BY b.name`, op.ID).Rows()
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, requête engagement par bénéficiaire : " + err.Error()})
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		db.ScanRows(rows, &fcPerBen)
+		resp.FinancialCommitmentPerBeneficiary = append(resp.FinancialCommitmentPerBeneficiary, fcPerBen)
+	}
+	if err = db.Find(&resp.ImportLog).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, requête import logs : " + err.Error()})
+		return
+	}
+
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
+// TODO : implémenter BatchPrevisions et GetAPCPSeries
