@@ -19,6 +19,7 @@ func TestPhysicalOps(t *testing.T) {
 		deletePhysicalOpTest(testCtx.E, t, opID)
 		batchPhysicalOpsTest(testCtx.E, t)
 		getPrevisionsTests(testCtx.E, t)
+		setOpPrevisionsTests(testCtx.E, t)
 	})
 }
 
@@ -188,7 +189,41 @@ func getPrevisionsTests(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetPrevisions[%d] : attendu %s et reçu\n%s", i, s, content)
+				t.Errorf("GetOpPrevisions[%d] : attendu %s et reçu\n%s", i, s, content)
+			}
+		}
+		response.Status(tc.Status)
+	}
+}
+
+// setOpPrevisionsTests check if route is protected and datas sent back correspond to post ones.
+func setOpPrevisionsTests(e *httpexpect.Expect, t *testing.T) {
+	testCases := []struct {
+		Token        string
+		Status       int
+		opID         string
+		Sent         []byte
+		BodyContains []string
+	}{
+		{Token: "fake", opID: "0", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, opID: "0", Sent: []byte(`{Prev}`), Status: http.StatusInternalServerError,
+			BodyContains: []string{"Fixation prévision d'opération, erreur décodage payload"}},
+		{Token: testCtx.User.Token, opID: "0", Sent: []byte(`{"PrevCommitment":[],"PrevPayment":[]}`), Status: http.StatusBadRequest,
+			BodyContains: []string{"Fixation prévision d'opération, opération introuvable"}},
+		{Token: testCtx.User.Token, opID: "10", Status: http.StatusOK,
+			Sent: []byte(`{"PrevCommitment":[{"year":2019,"value":100000000,"descript":null,"total_value":null,"state_ratio":null},
+		{"year":2020,"value":200000000,"descript":"essai de description","total_value":400000000,"state_ratio":0.5}],
+		"PrevPayment":[{"year":2019,"value":3000000,"descript":null},{"year":2020,"value":5000000,"descript":"autre essai description"}]}`),
+			BodyContains: []string{"PrevCommitment", "PrevPayment", `"year":2020`, `"year":2019`, `"value":100000000`, `"descript":null`,
+				`"descript":"autre essai description"`, `"value":200000000`, `"descript":"essai de description"`, `"total_value":400000000`,
+				`"total_value":null`, `"value":3000000`}},
+	}
+	for i, tc := range testCases {
+		response := e.POST("/api/physical_ops/"+tc.opID+"/previsions").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("SetOpPrevisions[%d] : attendu %s et reçu\n%s", i, s, content)
 			}
 		}
 		response.Status(tc.Status)

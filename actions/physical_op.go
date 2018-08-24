@@ -424,8 +424,8 @@ type getPrevisionsResp struct {
 	ImportLog                         []models.ImportLog       `json:"ImportLog"`
 }
 
-// GetPrevisions handles the get request to fetch commitments and payments prevision for a physical operation.
-func GetPrevisions(ctx iris.Context) {
+// GetOpPrevisions handles the get request to fetch commitments and payments prevision for a physical operation.
+func GetOpPrevisions(ctx iris.Context) {
 	opID, err := ctx.Params().GetInt64("opID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -538,4 +538,104 @@ func GetPrevisions(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
-// TODO : implémenter BatchPrevisions et GetAPCPSeries
+// setOpPc is used to decode a row of sent financial commitment for prevision.
+type setOpPc struct {
+	Year       int64              `json:"year"`
+	Value      int64              `json:"value"`
+	Descript   models.NullString  `json:"descript"`
+	TotalValue models.NullInt64   `json:"total_value"`
+	StateRatio models.NullFloat64 `json:"state_ratio"`
+}
+
+// setOpPayment is used to decode a row of sent payment for prevision.
+type setOpPayment struct {
+	Year     int64             `json:"year"`
+	Value    int64             `json:"value"`
+	Descript models.NullString `json:"descript"`
+}
+
+// setOpReq is used to decode sent data to the post request setting previsons of a physical operation.
+type setOpReq struct {
+	PrevCommitment []setOpPc      `json:"PrevCommitment"`
+	PrevPayment    []setOpPayment `json:"PrevPayment"`
+}
+
+// setOpPrevResp embeddes arrays of financial commitments and payments previsions
+type setOpPrevResp struct {
+	PrevCommitment []models.PrevCommitment `json:"PrevCommitment"`
+	PrevPayment    []models.PrevPayment    `json:"PrevPayment"`
+}
+
+// SetOpPrevisions handles the post request to set financial commitments and payments previsions
+func SetOpPrevisions(ctx iris.Context) {
+	opID, err := ctx.Params().GetInt64("opID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Fixation prévision d'opération, erreur décodage identificateur : " + err.Error()})
+		return
+	}
+	req := setOpReq{}
+	if err = ctx.ReadJSON(&req); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Fixation prévision d'opération, erreur décodage payload : " + err.Error()})
+		return
+	}
+	op, db := models.PhysicalOp{}, ctx.Values().Get("db").(*gorm.DB)
+	if err = db.First(&op, opID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(jsonError{"Fixation prévision d'opération, opération introuvable"})
+			return
+		}
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Fixation prévision d'opération, erreur select : " + err.Error()})
+		return
+	}
+
+	tx := db.Begin()
+	if err = tx.Exec("delete from prev_commitment where physical_op_id = ?", opID).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Fixation prévision d'opération, erreur delete : " + err.Error()})
+		tx.Rollback()
+		return
+	}
+	if err = tx.Exec("delete from prev_payment where physical_op_id = ?", opID).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Fixation prévision d'opération, erreur delete : " + err.Error()})
+		tx.Rollback()
+		return
+	}
+	for _, pc := range req.PrevCommitment {
+		if err = tx.Exec("insert into prev_commitment (year, value, descript, total_value, state_ratio, physical_op_id) values (?, ?, ?, ?, ?, ?)",
+			pc.Year, pc.Value, pc.Descript, pc.TotalValue, pc.StateRatio, opID).Error; err != nil {
+			ctx.StatusCode(http.StatusInternalServerError)
+			ctx.JSON(jsonError{"Fixation prévision d'opération, erreur insert prev_commitment : " + err.Error()})
+			tx.Rollback()
+			return
+		}
+	}
+	for _, p := range req.PrevPayment {
+		if err = tx.Exec("insert into prev_payment (year, value, descript, physical_op_id) values (?, ?, ?, ?)",
+			p.Year, p.Value, p.Descript, opID).Error; err != nil {
+			ctx.StatusCode(http.StatusInternalServerError)
+			ctx.JSON(jsonError{"Fixation prévision d'opération, erreur insert prev_payment : " + err.Error()})
+			tx.Rollback()
+			return
+		}
+	}
+	tx.Commit()
+
+	resp := setOpPrevResp{}
+	if err = db.Where("physical_op_id = ?", opID).Find(&resp.PrevCommitment).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Fixation prévision d'opération, requête get prévision engagements : " + err.Error()})
+		return
+	}
+	if err = db.Where("physical_op_id = ?", opID).Find(&resp.PrevPayment).Error; err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Fixation prévision d'opération, requête get prévision paiements : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
