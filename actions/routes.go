@@ -95,6 +95,8 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 
 	adminParty.Post("/prev_commitments", BatchPrevCommitments)
 
+	adminParty.Post("/programmings", BatchProgrammings)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // changed, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
@@ -150,6 +152,17 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 
 	userParty.Get("/pre_programmings", GetPreProgrammings)
 	userParty.Post("/pre_programmings", BatchPreProgrammings)
+
+	userParty.Get("/programmings", GetProgrammings)
+	userParty.Get("/programmings/years", GetProgrammingsYear)
+
+	// TODO :
+	// summaries
+	// programmings
+	// today message
+	// import_log
+	// settings
+	// steps
 }
 
 // setDBMiddleware return a middleware to add db to context values
