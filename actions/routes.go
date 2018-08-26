@@ -97,6 +97,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 
 	adminParty.Post("/programmings", BatchProgrammings)
 
+	adminParty.Post("/steps", CreateStep)
+	adminParty.Put("/steps/{stID:int}", ModifyStep)
+	adminParty.Delete("/steps/{stID:int}", DeleteStep)
+
 	adminParty.Post("/today_message", SetTodayMessage)
 
 	userParty := api.Party("", ActiveMiddleware)
@@ -169,10 +173,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 
 	userParty.Get("/today_message", GetTodayMessage)
 
+	userParty.Get("/steps", GetSteps)
+
 	// TODO :
-	// today message
 	// settings
-	// steps
 }
 
 // setDBMiddleware return a middleware to add db to context values
