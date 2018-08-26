@@ -156,9 +156,16 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/programmings", GetProgrammings)
 	userParty.Get("/programmings/years", GetProgrammingsYear)
 
+	userParty.Get("/summaries/multiannual_programmation", GetMultiannualProgrammation)
+	userParty.Get("/summaries/annual_programmation", GetAnnualProgrammation)
+	userParty.Get("/summaries/programmation_prevision", GetProgrammingAndPrevisions)
+	userParty.Get("/summaries/budget_action_programmation", GetActionProgrammation)
+	userParty.Get("/summaries/commitment_per_budget_action", GetActionCommitment)
+	userParty.Get("/summaries/detailed_commitment_per_budget_action", GetDetailedActionCommitment)
+	userParty.Get("/summaries/payment_per_budget_action", GetActionPayment)
+	userParty.Get("/summaries/detailed_payment_per_budget_action", GetDetailedActionPayment)
+
 	// TODO :
-	// summaries
-	// programmings
 	// today message
 	// import_log
 	// settings
