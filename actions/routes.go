@@ -97,6 +97,8 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 
 	adminParty.Post("/programmings", BatchProgrammings)
 
+	adminParty.Post("/today_message", SetTodayMessage)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/logout", Logout) // changed, before located at /user/logout
 	userParty.Get("/physical_ops", GetPhysicalOps)
@@ -165,9 +167,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/summaries/payment_per_budget_action", GetActionPayment)
 	userParty.Get("/summaries/detailed_payment_per_budget_action", GetDetailedActionPayment)
 
+	userParty.Get("/today_message", GetTodayMessage)
+
 	// TODO :
 	// today message
-	// import_log
 	// settings
 	// steps
 }
