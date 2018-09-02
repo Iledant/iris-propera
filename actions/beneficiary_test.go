@@ -18,19 +18,18 @@ func TestBeneficiary(t *testing.T) {
 
 // getBeneficiariesTest test route is protected and the response fits.
 func getBeneficiariesTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains string
-		ArraySize    int
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: "Beneficiary", ArraySize: 530},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}, ArraySize: 0},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			BodyContains: []string{"Beneficiary"}, ArraySize: 530},
 	}
 
 	for _, tc := range testCases {
 		response := e.GET("/api/beneficiaries").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		response.Body().Contains(tc.BodyContains)
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
+		}
 		if tc.ArraySize > 0 {
 			response.JSON().Object().Value("Beneficiary").Array().Length().Equal(tc.ArraySize)
 		}
@@ -40,24 +39,24 @@ func getBeneficiariesTest(e *httpexpect.Expect, t *testing.T) {
 
 // updateBeneficiaryTest test route is protected and name changed works
 func updateBeneficiaryTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		BeneficiaryID, Token string
-		Status               int
-		BodyContains         string
-		Name                 string
-	}{
-		{BeneficiaryID: "1", Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", Name: ""},
-		{BeneficiaryID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest, BodyContains: "Modification de bénéficiaire : champ name manquant", Name: ""},
-		{BeneficiaryID: "0", Token: testCtx.Admin.Token, Status: http.StatusNotFound, BodyContains: "Modification de bénéficiaire : introuvable", Name: "Essai bénéficiaire"},
-		{BeneficiaryID: "1", Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: "Beneficiary", Name: "Essai bénéficiaire"},
+	testCases := []testCase{
+		{ID: "1", Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{ID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
+			BodyContains: []string{"Modification de bénéficiaire : champ name manquant"},
+			Sent:         []byte("{}")},
+		{ID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
+			BodyContains: []string{"Modification de bénéficiaire : introuvable"},
+			Sent:         []byte(`{"Name":"Essai bénéficiaire"}`)},
+		{ID: "1", Token: testCtx.Admin.Token, Status: http.StatusOK,
+			BodyContains: []string{"Beneficiary", `"name":"Essai bénéficiaire"`},
+			Sent:         []byte(`{"Name":"Essai bénéficiaire"}`)},
 	}
 
 	for _, tc := range testCases {
-		response := e.PUT("/api/beneficiaries/"+tc.BeneficiaryID).WithHeader("Authorization", "Bearer "+tc.Token).WithJSON(struct{ Name string }{tc.Name}).Expect()
-		response.Body().Contains(tc.BodyContains)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().ContainsKey("Beneficiary")
-			response.JSON().Object().Value("Beneficiary").Object().Value("name").String().Equal(tc.Name)
+		response := e.PUT("/api/beneficiaries/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
 		}
 		response.Status(tc.Status)
 	}

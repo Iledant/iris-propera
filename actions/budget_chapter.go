@@ -14,17 +14,16 @@ type bccResponse struct {
 
 // GetBudgetChapters handles request get all budget chapters.
 func GetBudgetChapters(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
-	bcc := []models.BudgetChapter{}
+	db, bcc := ctx.Values().Get("db").(*gorm.DB), bccResponse{}
 
-	if err := db.Find(&bcc).Error; err != nil {
+	if err := db.Find(&bcc.BudgetChapter).Error; err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(bccResponse{bcc})
+	ctx.JSON(bcc)
 }
 
 type bcResponse struct {
@@ -32,27 +31,27 @@ type bcResponse struct {
 }
 
 type sentBcReq struct {
-	Code int
-	Name string
+	Code *int
+	Name *string
 }
 
 // CreateBudgetChapter handles post request for creating a budget chapter.
 func CreateBudgetChapter(ctx iris.Context) {
-	sentBc := sentBcReq{}
+	req := sentBcReq{}
 
-	if err := ctx.ReadJSON(&sentBc); err != nil {
+	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 
-	if sentBc.Name == "" || len(sentBc.Name) > 100 {
+	if req.Name == nil || *req.Name == "" || len(*req.Name) > 100 || req.Code == nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Création d'un chapitre : mauvais format des paramètres"})
 		return
 	}
 
-	bc := models.BudgetChapter{Code: sentBc.Code, Name: sentBc.Name}
+	bc := models.BudgetChapter{Code: *req.Code, Name: *req.Name}
 	db := ctx.Values().Get("db").(*gorm.DB)
 	if err := db.Create(&bc).Error; err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -66,44 +65,35 @@ func CreateBudgetChapter(ctx iris.Context) {
 
 // ModifyBudgetChapter handles put request for modifying a budget chapter.
 func ModifyBudgetChapter(ctx iris.Context) {
-	bcID, err := ctx.Params().GetInt("bcID")
+	bcID, err := ctx.Params().GetInt64("bcID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'un chapitre, décodage : " + err.Error()})
 		return
 	}
 
-	sentBc := sentBcReq{}
-	if err := ctx.ReadJSON(&sentBc); err != nil {
+	req := sentBcReq{}
+	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 
-	bc := models.BudgetChapter{}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := db.Find(&bc, bcID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonError{"Modification d'un chapitre: introuvable"})
-			return
-		}
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+	bc, db := models.BudgetChapter{}, ctx.Values().Get("db").(*gorm.DB)
+	if bc.GetByID(ctx, db, "Modification d'un chapitre", bcID) != nil {
 		return
 	}
 
-	if sentBc.Name != "" {
-		bc.Name = sentBc.Name
+	if req.Name != nil && *req.Name != "" && len(*req.Name) < 100 {
+		bc.Name = *req.Name
 	}
-
-	if sentBc.Code != 0 {
-		bc.Code = sentBc.Code
+	if req.Code != nil {
+		bc.Code = *req.Code
 	}
 
 	if err = db.Save(&bc).Error; err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'un chapitre, save : " + err.Error()})
 		return
 	}
 
@@ -113,23 +103,15 @@ func ModifyBudgetChapter(ctx iris.Context) {
 
 // DeleteBudgetChapter handles delete request for a budget chapter.
 func DeleteBudgetChapter(ctx iris.Context) {
-	bcID, err := ctx.Params().GetInt("bcID")
+	bcID, err := ctx.Params().GetInt64("bcID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Suppression d'un chapitre, décodage : " + err.Error()})
 		return
 	}
 
-	bc := models.BudgetChapter{}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := db.Find(&bc, bcID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonError{"Suppression d'un chapitre: introuvable"})
-			return
-		}
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+	bc, db := models.BudgetChapter{}, ctx.Values().Get("db").(*gorm.DB)
+	if bc.GetByID(ctx, db, "Suppression d'un chapitre", bcID) != nil {
 		return
 	}
 

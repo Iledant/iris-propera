@@ -1,9 +1,11 @@
 package models
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/jinzhu/gorm"
+	"github.com/kataras/iris"
 )
 
 // User model
@@ -45,5 +47,20 @@ func (u *User) BeforeCreate(scope *gorm.Scope) error {
 func (u *User) BeforeUpdate(scope *gorm.Scope) error {
 	t := NullTime{Time: time.Now(), Valid: true}
 	scope.SetColumn("updated_at", t)
+	return nil
+}
+
+// GetByID fetch a user by ID or return error using ctx to set status code and return json error code
+func (u *User) GetByID(ctx iris.Context, db *gorm.DB, prefix string, ID int64) error {
+	if err := db.Find(u, ID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(jsonError{Erreur: prefix + ", introuvable"})
+			return err
+		}
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{prefix + " : " + err.Error()})
+		return err
+	}
 	return nil
 }

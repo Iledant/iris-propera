@@ -177,7 +177,7 @@ func DeletePhysicalOp(ctx iris.Context) {
 
 // UpdatePhysicalOp handles physical operation put request.
 func UpdatePhysicalOp(ctx iris.Context) {
-	opID, err := ctx.Params().GetInt("opID")
+	opID, err := ctx.Params().GetInt64("opID")
 
 	if err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
@@ -193,9 +193,7 @@ func UpdatePhysicalOp(ctx iris.Context) {
 		return
 	}
 
-	if err = db.First(&op, opID).Error; err != nil {
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(jsonError{"Opération introuvable"})
+	if op.GetByID(ctx, db, "Modification d'opération", opID) != nil {
 		return
 	}
 
@@ -368,7 +366,7 @@ func BatchPhysicalOps(ctx iris.Context) {
 }
 
 // getOpWithPlanAction return the physical operation with complementary fields
-func getOpWithPlanAction(db *gorm.DB, opID int) (opWithPlanAction, error) {
+func getOpWithPlanAction(db *gorm.DB, opID int64) (opWithPlanAction, error) {
 	fullOp := opWithPlanAction{}
 	qry := queries.SQLGetOpWithPlanAction + " WHERE op.id = ?"
 	err := db.Raw(qry, opID).Scan(&fullOp).Error

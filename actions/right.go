@@ -24,7 +24,7 @@ type getRight struct {
 
 // SetRight give a user rights on physical operations
 func SetRight(ctx iris.Context) {
-	userID, err := ctx.Params().GetInt("userID")
+	userID, err := ctx.Params().GetInt64("userID")
 
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -79,7 +79,7 @@ func SetRight(ctx iris.Context) {
 	if len(rights.IDs) > 0 {
 		tuples, tuple := []string{}, ""
 		for _, pID := range rights.IDs {
-			tuple = "(" + strconv.Itoa(userID) + "," + strconv.Itoa(pID) + ")"
+			tuple = "(" + strconv.FormatInt(userID, 10) + "," + strconv.Itoa(pID) + ")"
 			tuples = append(tuples, tuple)
 		}
 		query := "INSERT INTO rights (users_id, physical_op_id) VALUES" + strings.Join(tuples, ",")
@@ -106,7 +106,7 @@ func SetRight(ctx iris.Context) {
 
 // GetRight get rights of an users on physical operations and send back rights, list of users and physical operations list
 func GetRight(ctx iris.Context) {
-	userID, err := ctx.Params().GetInt("userID")
+	userID, err := ctx.Params().GetInt64("userID")
 
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -116,9 +116,7 @@ func GetRight(ctx iris.Context) {
 
 	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{}
 
-	if err = db.Find(&user, userID).Error; err != nil {
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Utilisateur introuvable"})
+	if err = user.GetByID(ctx, db, "Liste des droits utilisateur", userID); err != nil {
 		return
 	}
 
@@ -150,7 +148,7 @@ func GetRight(ctx iris.Context) {
 
 // InheritRight add rights of users on physical operations to the given user
 func InheritRight(ctx iris.Context) {
-	userID, err := ctx.Params().GetInt("userID")
+	userID, err := ctx.Params().GetInt64("userID")
 
 	if err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
@@ -160,9 +158,7 @@ func InheritRight(ctx iris.Context) {
 
 	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{}
 
-	if err = db.Find(&user, userID).Error; err != nil {
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Utilisateur introuvable"})
+	if user.GetByID(ctx, db, "Héritage de droit utilisateur", userID) != nil {
 		return
 	}
 
@@ -212,7 +208,7 @@ func InheritRight(ctx iris.Context) {
 }
 
 // getUserRight return the rights in the database
-func getUserRight(userID int, db *gorm.DB) (*right, error) {
+func getUserRight(userID int64, db *gorm.DB) (*right, error) {
 	rows, err := db.Raw("SELECT physical_op_id FROM rights WHERE users_id = ?", userID).Rows()
 	if err != nil {
 		return nil, err

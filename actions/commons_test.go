@@ -18,6 +18,16 @@ import (
 	"github.com/kataras/iris/httptest"
 )
 
+// testCase is the common structure for all case
+type testCase struct {
+	Token        string
+	Status       int
+	ID           string
+	BodyContains []string
+	Sent         []byte
+	ArraySize    int
+}
+
 // TestContext contains all items for units tests in API.
 type TestContext struct {
 	DB     *gorm.DB

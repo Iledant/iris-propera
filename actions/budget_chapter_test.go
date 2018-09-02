@@ -21,19 +21,18 @@ func TestBudgetChapter(t *testing.T) {
 
 // getAllBudgetChapters tests route is protected and all chapters are sent back.
 func getAllBudgetChapters(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains string
-		ArraySize    int
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: "BudgetChapter", ArraySize: 3},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}, ArraySize: 0},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			BodyContains: []string{"BudgetChapter"}, ArraySize: 3},
 	}
 
 	for _, tc := range testCases {
 		response := e.GET("/api/budget_chapters").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		response.Body().Contains(tc.BodyContains)
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
+		}
 		if tc.ArraySize > 0 {
 			response.JSON().Object().Value("BudgetChapter").Array().Length().Equal(tc.ArraySize)
 		}
@@ -42,25 +41,24 @@ func getAllBudgetChapters(e *httpexpect.Expect, t *testing.T) {
 }
 
 // createBudgetChapterTest tests route is protected and sent chapter is created.
-func createBudgetChapterTest(e *httpexpect.Expect, t *testing.T) int {
-	testCases := []struct {
-		Token        string
-		Status       int
-		Sent         []byte
-		BodyContains string
-		JSONRet      string
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{}`), BodyContains: "mauvais format des paramètres"},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"name":"Essai chapitre","code":999}`), BodyContains: "BudgetChapter", JSONRet: `"name":"Essai chapitre"`},
+func createBudgetChapterTest(e *httpexpect.Expect, t *testing.T) (bcID int) {
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{}`),
+			BodyContains: []string{"mauvais format des paramètres"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			Sent:         []byte(`{"name":"Essai chapitre","code":999}`),
+			BodyContains: []string{"BudgetChapter", `"name":"Essai chapitre"`}},
 	}
-	var bcID int
 
 	for _, tc := range testCases {
-		response := e.POST("/api/budget_chapters").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
-		response.Body().Contains(tc.BodyContains)
+		response := e.POST("/api/budget_chapters").WithHeader("Authorization", "Bearer "+tc.Token).
+			WithBytes(tc.Sent).Expect()
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
+		}
 		if tc.Status == http.StatusOK {
-			response.Body().Contains(tc.JSONRet)
 			bcID = int(response.JSON().Object().Value("BudgetChapter").Object().Value("id").Number().Raw())
 		}
 		response.Status(tc.Status)
@@ -70,20 +68,20 @@ func createBudgetChapterTest(e *httpexpect.Expect, t *testing.T) int {
 
 // modifyBudgetChapterTest tests route is protected and modify work properly.
 func modifyBudgetChapterTest(e *httpexpect.Expect, t *testing.T, bcID int) {
-	testCases := []struct {
-		Token        string
-		ID           int
-		Status       int
-		Sent         []byte
-		BodyContains []string
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: 0, Status: http.StatusBadRequest, Sent: []byte(`{"name":"Essai chapitre 2","code":888}`), BodyContains: []string{`Modification d'un chapitre: introuvable`}},
-		{Token: testCtx.Admin.Token, ID: bcID, Status: http.StatusOK, Sent: []byte(`{"name":"Essai chapitre 2","code":888}`), BodyContains: []string{`BudgetChapter`, `"name":"Essai chapitre 2"`, `"code":888`}},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, ID: "0",
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
+			Sent:         []byte(`{"name":"Essai chapitre 2","code":888}`),
+			BodyContains: []string{`Modification d'un chapitre, introuvable`}},
+		{Token: testCtx.Admin.Token, ID: strconv.Itoa(bcID), Status: http.StatusOK,
+			Sent:         []byte(`{"name":"Essai chapitre 2","code":888}`),
+			BodyContains: []string{`BudgetChapter`, `"id":` + strconv.Itoa(bcID), `"name":"Essai chapitre 2"`, `"code":888`}},
 	}
 
 	for _, tc := range testCases {
-		response := e.PUT("/api/budget_chapters/"+strconv.Itoa(tc.ID)).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		response := e.PUT("/api/budget_chapters/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).
+			WithBytes(tc.Sent).Expect()
 		for _, s := range tc.BodyContains {
 			response.Body().Contains(s)
 		}
@@ -93,20 +91,21 @@ func modifyBudgetChapterTest(e *httpexpect.Expect, t *testing.T, bcID int) {
 
 // deleteBudgetChapterTest tests route is protected and delete work properly.
 func deleteBudgetChapterTest(e *httpexpect.Expect, t *testing.T, bcID int) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		ID           int
-		BodyContains string
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
-		{Token: testCtx.Admin.Token, ID: 0, Status: http.StatusBadRequest, BodyContains: "Suppression d'un chapitre: introuvable"},
-		{Token: testCtx.Admin.Token, ID: bcID, Status: http.StatusOK, BodyContains: "Chapitre supprimé"},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, ID: "0",
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
+			BodyContains: []string{"Suppression d'un chapitre, introuvable"}},
+		{Token: testCtx.Admin.Token, ID: strconv.Itoa(bcID), Status: http.StatusOK,
+			BodyContains: []string{"Chapitre supprimé"}},
 	}
 
 	for _, tc := range testCases {
-		response := e.DELETE("/api/budget_chapters/"+strconv.Itoa(tc.ID)).WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		response.Body().Contains(tc.BodyContains)
+		response := e.DELETE("/api/budget_chapters/"+tc.ID).
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
+		}
 		response.Status(tc.Status)
 	}
 }

@@ -300,11 +300,10 @@ func ChangeUserPwd(ctx iris.Context) {
 	}
 
 	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{}
-	userID, _ := strconv.Atoi(u.Subject)
+	userID, _ := strconv.ParseInt(u.Subject, 10, 64)
 
-	if err = db.Find(&user, userID).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+	if user.GetByID(ctx, db, "Changement de mot de passe utilisateur", userID) != nil {
+		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPwd)); err != nil {

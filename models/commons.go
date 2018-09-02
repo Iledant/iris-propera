@@ -5,7 +5,19 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"time"
+
+	"github.com/jinzhu/gorm"
+	"github.com/kataras/iris"
 )
+
+type jsonError struct {
+	Erreur string `json:"Erreur"`
+}
+
+// GetByID fetch a model using an ID or return an error using ctx to set status code and JSON message
+type GetByID interface {
+	GetByID(ctx iris.Context, db *gorm.DB, prefix string, ID int64) error
+}
 
 // NullTime is used for gorm null time commands
 type NullTime struct {

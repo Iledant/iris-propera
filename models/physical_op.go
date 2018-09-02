@@ -1,8 +1,15 @@
 package models
 
+import (
+	"net/http"
+
+	"github.com/jinzhu/gorm"
+	"github.com/kataras/iris"
+)
+
 // PhysicalOp is the model for physical operations. Number is unique.
 type PhysicalOp struct {
-	ID             int        `json:"id" gorm:"column:id"`
+	ID             int64      `json:"id" gorm:"column:id"`
 	Number         string     `json:"number" gorm:"column:number"`
 	Name           string     `json:"name" gorm:"column:name"`
 	Descript       NullString `json:"descript" gorm:"column:descript"`
@@ -22,4 +29,19 @@ type PhysicalOp struct {
 // TableName ensures the correct table name for physical operations.
 func (PhysicalOp) TableName() string {
 	return "physical_op"
+}
+
+// GetByID fetch a physical operation by ID or return error using ctx to set status code and return json error code
+func (p *PhysicalOp) GetByID(ctx iris.Context, db *gorm.DB, prefix string, ID int64) error {
+	if err := db.Find(p, ID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			ctx.StatusCode(http.StatusBadRequest)
+			ctx.JSON(jsonError{Erreur: prefix + ", introuvable"})
+			return err
+		}
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{prefix + " : " + err.Error()})
+		return err
+	}
+	return nil
 }
