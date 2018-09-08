@@ -22,17 +22,15 @@ func TestPendingCommitment(t *testing.T) {
 
 // getPendingCommitmentsTest check route is protected and pending commitments correctly sent.
 func getPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains []string
-		Count        int
-	}{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK, BodyContains: []string{"PendingCommitments"}, Count: 51},
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusOK,
+			BodyContains: []string{"PendingCommitments"}, ArraySize: 51},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/pending_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		response := e.GET("/api/pending_commitments").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -41,24 +39,22 @@ func getPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
 		}
 		response.Status(tc.Status)
 		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.Count)
+			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
 		}
 	}
 }
 
 // getUnlinkedPendingCommitmentsTest check route is protected and pending commitments correctly sent.
 func getUnlinkedPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains []string
-		Count        int
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: []string{"PendingCommitments"}, Count: 16},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			BodyContains: []string{"PendingCommitments"}, ArraySize: 16},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/pending_commitments/unlinked").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		response := e.GET("/api/pending_commitments/unlinked").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -67,24 +63,22 @@ func getUnlinkedPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
 		}
 		response.Status(tc.Status)
 		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.Count)
+			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
 		}
 	}
 }
 
 // getLinkedPendingCommitmentsTest check route is protected and pending commitments correctly sent.
 func getLinkedPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains []string
-		Count        int
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: []string{"PendingCommitments"}, Count: 35},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			BodyContains: []string{"PendingCommitments"}, ArraySize: 35},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/pending_commitments/linked").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		response := e.GET("/api/pending_commitments/linked").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -93,56 +87,50 @@ func getLinkedPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
 		}
 		response.Status(tc.Status)
 		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.Count)
+			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
 		}
 	}
 }
 
 // linkPcToOpTest check route is protected and pending commitments correctly sent.
 func linkPcToOpTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Sent         []byte
-		Status       int
-		BodyContains []string
-		OpID         string
-		PeCount      int
-	}{
-		{Token: testCtx.User.Token, OpID: "0", Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, OpID: "0", Status: http.StatusBadRequest, BodyContains: []string{"Rattachement d'engagement en cours : opération introuvable"}},
-		{Token: testCtx.Admin.Token, OpID: "12", Status: http.StatusBadRequest, Sent: []byte(`{"peIdList":[228, 14, 230, 231]}`),
-			BodyContains: []string{"Rattachement d'engagement en cours, identifiant introuvable"}, PeCount: 16},
-		{Token: testCtx.Admin.Token, OpID: "12", Status: http.StatusOK, Sent: []byte(`{"peIdList":[228, 229, 230, 231]}`),
-			BodyContains: []string{"PendingCommitments"}, PeCount: 12},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
+			BodyContains: []string{"Rattachement d'engagement en cours : opération introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "12", Status: http.StatusBadRequest,
+			Sent: []byte(`{"peIdList":[228, 14, 230, 231]}`), ArraySize: 16,
+			BodyContains: []string{"Rattachement d'engagement en cours, identifiant introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "12", Status: http.StatusOK,
+			Sent:         []byte(`{"peIdList":[228, 229, 230, 231]}`),
+			BodyContains: []string{"PendingCommitments"}, ArraySize: 12},
 	}
 
 	for _, tc := range testCases {
-		response := e.POST("/api/pending_commitments/physical_ops/"+tc.OpID).WithHeader("Authorization", "Bearer "+tc.Token).
-			WithBytes(tc.Sent).Expect()
+		response := e.POST("/api/pending_commitments/physical_ops/"+tc.ID).
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		for _, s := range tc.BodyContains {
 			response.Body().Contains(s)
 		}
 		response.Status(tc.Status)
 		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.PeCount)
+			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
 		}
 	}
 }
 
 // unlinkPCsTest check route is protected and pending commitments correctly unlinked.
 func unlinkPCsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Sent         []byte
-		Status       int
-		BodyContains []string
-		PeCount      int
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{"peIdList":[228, 14, 230, 231]}`),
-			BodyContains: []string{"Détachement d'engagement en cours, identifiant introuvable"}, PeCount: 39},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"peIdList":[228, 229, 230, 231]}`),
-			BodyContains: []string{"PendingCommitments"}, PeCount: 35},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
+			Sent: []byte(`{"peIdList":[228, 14, 230, 231]}`), ArraySize: 39,
+			BodyContains: []string{"Détachement d'engagement en cours, identifiant introuvable"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			Sent:         []byte(`{"peIdList":[228, 229, 230, 231]}`),
+			BodyContains: []string{"PendingCommitments"}, ArraySize: 35},
 	}
 
 	for _, tc := range testCases {
@@ -153,20 +141,16 @@ func unlinkPCsTest(e *httpexpect.Expect, t *testing.T) {
 		}
 		response.Status(tc.Status)
 		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.PeCount)
+			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
 		}
 	}
 }
 
 // batchPendingsTest check route is protected and return successful.
 func batchPendingsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Sent         []byte
-		Status       int
-		BodyContains []string
-	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError, Sent: []byte(`{Pend}`),
 			BodyContains: []string{"Batch d'engagements en cours, erreur de lecture"}},
 		//cSpell:disable

@@ -21,21 +21,20 @@ func TestDocument(t *testing.T) {
 
 // getDocumentTest tests route is protected and all documents are sent back.
 func getDocumentTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		OpID         string
-		BodyContains string
-		ArraySize    int
-	}{
-		{Token: "fake", OpID: "0", Status: http.StatusInternalServerError, BodyContains: "Token invalide", ArraySize: 0},
-		{Token: testCtx.User.Token, OpID: "0", Status: http.StatusBadRequest, BodyContains: "Liste des documents : opération introuvable", ArraySize: 0},
-		{Token: testCtx.User.Token, OpID: "403", Status: http.StatusOK, BodyContains: "Document", ArraySize: 1},
+	testCases := []testCase{
+		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}, ArraySize: 0},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest,
+			BodyContains: []string{"Liste des documents : opération introuvable"}, ArraySize: 0},
+		{Token: testCtx.User.Token, ID: "403", Status: http.StatusOK,
+			BodyContains: []string{"Document"}, ArraySize: 1},
 	}
 
 	for _, tc := range testCases {
-		response := e.GET("/api/physical_ops/"+tc.OpID+"/documents").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		response.Body().Contains(tc.BodyContains)
+		response := e.GET("/api/physical_ops/"+tc.ID+"/documents").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
+		}
 		if tc.ArraySize > 0 {
 			response.JSON().Object().Value("Document").Array().Length().Equal(tc.ArraySize)
 		}
@@ -44,23 +43,22 @@ func getDocumentTest(e *httpexpect.Expect, t *testing.T) {
 }
 
 // createDocumentTest tests route is protected and sent document is created.
-func createDocumentTest(e *httpexpect.Expect, t *testing.T) int {
-	testCases := []struct {
-		Token        string
-		opID         string
-		Status       int
-		Sent         []byte
-		BodyContains []string
-	}{
-		{Token: "fake", opID: "403", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, opID: "403", Status: http.StatusBadRequest, Sent: []byte(`{}`), BodyContains: []string{"Création de document, champ manquant ou incorrect"}},
-		{Token: testCtx.User.Token, opID: "0", Status: http.StatusBadRequest, Sent: []byte(`{}`), BodyContains: []string{"Création de document : opération introuvable"}},
-		{Token: testCtx.User.Token, opID: "403", Status: http.StatusOK, Sent: []byte(`{"name":"Test création document", "link":"Test création lien document"}`), BodyContains: []string{"Document", `"name":"Test création document"`, `"link":"Test création lien document"`}},
+func createDocumentTest(e *httpexpect.Expect, t *testing.T) (doID int) {
+	testCases := []testCase{
+		{Token: "fake", ID: "403", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, ID: "403", Status: http.StatusBadRequest, Sent: []byte(`{}`),
+			BodyContains: []string{"Création de document, champ manquant ou incorrect"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest, Sent: []byte(`{}`),
+			BodyContains: []string{"Création de document : opération introuvable"}},
+		{Token: testCtx.User.Token, ID: "403", Status: http.StatusOK,
+			Sent:         []byte(`{"name":"Test création document", "link":"Test création lien document"}`),
+			BodyContains: []string{"Document", `"name":"Test création document"`, `"link":"Test création lien document"`}},
 	}
-	var doID int
 
 	for _, tc := range testCases {
-		response := e.POST("/api/physical_ops/"+tc.opID+"/documents").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		response := e.POST("/api/physical_ops/"+tc.ID+"/documents").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		for _, s := range tc.BodyContains {
 			response.Body().Contains(s)
 		}
@@ -74,20 +72,19 @@ func createDocumentTest(e *httpexpect.Expect, t *testing.T) int {
 
 // modifyDocumentTest tests route is protected and modify work properly.
 func modifyDocumentTest(e *httpexpect.Expect, t *testing.T, doID int) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		ID           string
-		Sent         []byte
-		BodyContains []string
-	}{
-		{Token: "fake", ID: "403", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest, BodyContains: []string{"Modification de document : introuvable"}},
-		{Token: testCtx.User.Token, ID: strconv.Itoa(doID), Status: http.StatusOK, Sent: []byte(`{"name":"Test modification document", "link":"Test modification lien document"}`), BodyContains: []string{"Document", `"name":"Test modification document"`, `"link":"Test modification lien document"`}},
+	testCases := []testCase{
+		{Token: "fake", ID: "403", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest,
+			BodyContains: []string{"Modification de document : introuvable"}},
+		{Token: testCtx.User.Token, ID: strconv.Itoa(doID), Status: http.StatusOK,
+			Sent:         []byte(`{"name":"Test modification document", "link":"Test modification lien document"}`),
+			BodyContains: []string{"Document", `"name":"Test modification document"`, `"link":"Test modification lien document"`}},
 	}
 
 	for _, tc := range testCases {
-		response := e.PUT("/api/physical_ops/403/documents/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		response := e.PUT("/api/physical_ops/403/documents/"+tc.ID).
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		for _, s := range tc.BodyContains {
 			response.Body().Contains(s)
 		}
@@ -97,20 +94,21 @@ func modifyDocumentTest(e *httpexpect.Expect, t *testing.T, doID int) {
 
 // deleteDocumentTest tests route is protected and delete work properly.
 func deleteDocumentTest(e *httpexpect.Expect, t *testing.T, doID int) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		ID           string
-		BodyContains string
-	}{
-		{Token: "fake", ID: "0", Status: http.StatusInternalServerError, BodyContains: "Token invalide"},
-		{Token: testCtx.User.Token, ID: "0", Status: http.StatusNotFound, BodyContains: "Suppression de document : introuvable"},
-		{Token: testCtx.User.Token, ID: strconv.Itoa(doID), Status: http.StatusOK, BodyContains: "Document supprimé"},
+	testCases := []testCase{
+		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusNotFound,
+			BodyContains: []string{"Suppression de document : introuvable"}},
+		{Token: testCtx.User.Token, ID: strconv.Itoa(doID), Status: http.StatusOK,
+			BodyContains: []string{"Document supprimé"}},
 	}
 
 	for _, tc := range testCases {
-		response := e.DELETE("/api/physical_ops/403/documents/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		response.Body().Contains(tc.BodyContains)
+		response := e.DELETE("/api/physical_ops/403/documents/"+tc.ID).
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		for _, s := range tc.BodyContains {
+			response.Body().Contains(s)
+		}
 		response.Status(tc.Status)
 	}
 }

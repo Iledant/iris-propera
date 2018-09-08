@@ -17,16 +17,16 @@ func TestSettings(t *testing.T) {
 
 // getSettingsTest check route is protected and datas sent has got items and number of lines.
 func getSettingsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains []string
-	}{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			BodyContains: []string{"Beneficiary", "BudgetChapter", "BudgetSector", "BudgetProgram", "BudgetAction", "Commissions", "PhysicalOp",
-				"PaymentType", "Plan", "BudgetCredits", "UnlinkedPendingCommitments", "LinkedPendingCommitments", "Step", "Category"}},
+			BodyContains: []string{"Beneficiary", "BudgetChapter", "BudgetSector",
+				"BudgetProgram", "BudgetAction", "Commissions", "PhysicalOp",
+				"PaymentType", "Plan", "BudgetCredits", "UnlinkedPendingCommitments",
+				"LinkedPendingCommitments", "Step", "Category"}},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/settings").WithHeader("Authorization", "Bearer "+tc.Token).

@@ -48,12 +48,7 @@ func getPreProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 
 // batchPreProgrammingsTest check route is protected and return successful.
 func batchPreProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Sent         []byte
-		Status       int
-		BodyContains []string
-	}{
+	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusInternalServerError, Sent: []byte(`{Pend}`),
 			BodyContains: []string{"Batch préprogrammation, erreur de décodage"}},

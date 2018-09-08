@@ -18,12 +18,7 @@ func TestTodayMessage(t *testing.T) {
 
 // getTodayMessageTest check route is protected and datas sent has got items and number of lines.
 func getTodayMessageTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains []string
-		Count        int
-	}{
+	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
 			BodyContains: []string{"TodayMessage", "title", "text"}},
@@ -42,16 +37,13 @@ func getTodayMessageTest(e *httpexpect.Expect, t *testing.T) {
 
 // setTodayMessageTest check route is protected and datas sent has got items and number of lines.
 func setTodayMessageTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		Sent         []byte
-		BodyContains []string
-		Count        int
-	}{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"title":"Essai de titre","text":"Essai de texte"}`),
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			Sent:         []byte(`{"title":"Essai de titre","text":"Essai de texte"}`),
 			BodyContains: []string{"TodayMessage", `"title":"Essai de titre"`, `"text":"Essai de texte"`}},
 	}
 	for i, tc := range testCases {

@@ -21,16 +21,13 @@ func TestStep(t *testing.T) {
 
 // getStepTest check route is protected and datas sent has got items and number of lines.
 func getStepsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains []string
-		Count        int
-	}{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
 			//cSpell:disable
-			BodyContains: []string{"Step", "name", "Protocole", "Travaux en cours (financés)", "Travaux préparatoires", "SDMR"}},
+			BodyContains: []string{"Step", "name", "Protocole",
+				"Travaux en cours (financés)", "Travaux préparatoires", "SDMR"}},
 		//cSpell:enable
 	}
 	for i, tc := range testCases {
@@ -47,20 +44,18 @@ func getStepsTest(e *httpexpect.Expect, t *testing.T) {
 
 // createStepTest check route is protected and datas sent has got correct datas.
 func createStepTest(e *httpexpect.Expect, t *testing.T) (stID int) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		Sent         []byte
-		BodyContains []string
-		Count        int
-	}{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"name":"Essai d'étape"}`),
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			Sent:         []byte(`{"name":"Essai d'étape"}`),
 			BodyContains: []string{"Step", `"name":"Essai d'étape"`}},
 	}
 	for i, tc := range testCases {
-		response := e.POST("/api/steps").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		response := e.POST("/api/steps").WithHeader("Authorization", "Bearer "+tc.Token).
+			WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -77,22 +72,19 @@ func createStepTest(e *httpexpect.Expect, t *testing.T) (stID int) {
 
 // modifyStepTest check route is protected and datas sent has got correct datas.
 func modifyStepTest(e *httpexpect.Expect, t *testing.T, stID int) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		Sent         []byte
-		StID         string
-		BodyContains []string
-		Count        int
-	}{
-		{Token: "fake", StID: "0", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, StID: "0", Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, StID: "0", Status: http.StatusBadRequest, BodyContains: []string{"Modification d'étape : introuvable"}},
-		{Token: testCtx.Admin.Token, StID: strconv.Itoa(stID), Status: http.StatusOK, Sent: []byte(`{"name":"Modification d'étape"}`),
+	testCases := []testCase{
+		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
+			BodyContains: []string{"Modification d'étape : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: strconv.Itoa(stID), Status: http.StatusOK,
+			Sent:         []byte(`{"name":"Modification d'étape"}`),
 			BodyContains: []string{"Step", `"name":"Modification d'étape"`}},
 	}
 	for i, tc := range testCases {
-		response := e.PUT("/api/steps/"+tc.StID).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		response := e.PUT("/api/steps/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -105,21 +97,18 @@ func modifyStepTest(e *httpexpect.Expect, t *testing.T, stID int) {
 
 // deleteStepTest check route is protected and datas sent has got correct datas.
 func deleteStepTest(e *httpexpect.Expect, t *testing.T, stID int) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		StID         string
-		BodyContains []string
-		Count        int
-	}{
-		{Token: "fake", StID: "0", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, StID: "0", Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, StID: "0", Status: http.StatusBadRequest, BodyContains: []string{"Suppression d'étape : introuvable"}},
-		{Token: testCtx.Admin.Token, StID: strconv.Itoa(stID), Status: http.StatusOK,
+	testCases := []testCase{
+		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
+			BodyContains: []string{"Suppression d'étape : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: strconv.Itoa(stID), Status: http.StatusOK,
 			BodyContains: []string{"Etape supprimée"}},
 	}
 	for i, tc := range testCases {
-		response := e.DELETE("/api/steps/"+tc.StID).WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		response := e.DELETE("/api/steps/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
