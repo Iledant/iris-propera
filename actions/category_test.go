@@ -3,6 +3,7 @@ package actions
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -28,16 +29,25 @@ func getCategoriesTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Category"}, ArraySize: 22},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/categories").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetCategories[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetCategories[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("Category").Array().Length().Equal(tc.ArraySize)
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetCategories[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
-		response.Status(tc.Status)
 	}
 }
 
@@ -47,17 +57,24 @@ func createCategoryTest(e *httpexpect.Expect, t *testing.T) (caID int) {
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{}`),
-			BodyContains: []string{"Création de catégorie, champ 'name' manquant ou incorrect"}},
+			BodyContains: []string{"Création d'une catégorie : Name invalide"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			Sent:         []byte(`{"name":"Test création catégorie"}`),
 			BodyContains: []string{"Category", `"name":"Test création catégorie"`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/categories").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nCreateCategory[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nCreateCategory[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.Status == http.StatusOK {
 			caID = int(response.JSON().Object().Value("Category").Object().Value("id").Number().Raw())
@@ -72,20 +89,27 @@ func modifyCategoryTest(e *httpexpect.Expect, t *testing.T, caID int) {
 	testCases := []testCase{
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
-			BodyContains: []string{"Modification de catégorie : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"name":"Test modification catégorie"}`),
+			BodyContains: []string{"Modification d'une catégorie, requête : Catégorie introuvable"}},
 		{Token: testCtx.Admin.Token, ID: strconv.Itoa(caID), Status: http.StatusOK,
 			Sent:         []byte(`{"name":"Test modification catégorie"}`),
 			BodyContains: []string{"Category", `"name":"Test modification catégorie"`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.PUT("/api/categories/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nModifyCategory[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nModifyCategory[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -94,18 +118,24 @@ func deleteCategoryTest(e *httpexpect.Expect, t *testing.T, caID int) {
 	testCases := []testCase{
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusNotFound,
-			BodyContains: []string{"Suppression de catégorie : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Suppression d'une catégorie, requête : Catégorie introuvable"}},
 		{Token: testCtx.Admin.Token, ID: strconv.Itoa(caID), Status: http.StatusOK,
 			BodyContains: []string{"Catégorie supprimée"}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.DELETE("/api/categories/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nDeleteCategory[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDeleteCategory[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
