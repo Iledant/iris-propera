@@ -3,6 +3,7 @@ package actions
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -29,15 +30,24 @@ func getAllBudgetProgramsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"BudgetProgram"}, ArraySize: 84},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/budget_programs").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetAllBudgetPrograms[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetAllBudgetPrograms[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("BudgetProgram").Array().Length().Equal(tc.ArraySize)
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetAllBudgetPrograms[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
-		response.Status(tc.Status)
 	}
 }
 
@@ -50,15 +60,24 @@ func getChapterBudgetProgramsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"BudgetProgram"}, ArraySize: 11},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/budget_chapters/3/budget_programs").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetChapterBudgetPrograms[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetChapterBudgetPrograms[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("BudgetProgram").Array().Length().Equal(tc.ArraySize)
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetChapterBudgetPrograms[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
-		response.Status(tc.Status)
 	}
 }
 
@@ -68,26 +87,31 @@ func createBudgetProgramTest(e *httpexpect.Expect, t *testing.T) (bpID int) {
 		{Token: testCtx.User.Token, ID: "3", Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, ID: "3", Status: http.StatusBadRequest, Sent: []byte(`{}`),
-			BodyContains: []string{"Création de programme budgétaire, champ manquant ou incorrect"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
-			Sent:         []byte(`{"code_contract":"C","code_function":"FF","code_number":"NNN"}`),
-			BodyContains: []string{"Création de programme budgétaire, index chapitre incorrect"}},
+			BodyContains: []string{"Création d'un programme : Champ manquant ou incorrect"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"code_contract":"C","code_function":"FF","code_number":"NNN","name":"Programme"}`),
+			BodyContains: []string{`Création d'un programme, requête : pq: une instruction insert ou update sur la table « budget_program » viole la contrainte de clé`}},
 		{Token: testCtx.Admin.Token, ID: "3", Status: http.StatusOK,
-			Sent: []byte(`{"code_contract":"C","code_function":"FF","code_number":"NNN"}`),
+			Sent: []byte(`{"code_contract":"C","code_function":"FF","code_number":"NNN","name":"Programme"}`),
 			BodyContains: []string{"BudgetProgram", `"code_contract":"C"`, `"code_function":"FF"`,
 				`"code_number":"NNN"`, `"code_subfunction":null`}},
 	}
-
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/budget_chapters/"+tc.ID+"/budget_programs").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nCreateBudgetProgram[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nCreateBudgetProgram[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.Status == http.StatusOK {
 			bpID = int(response.JSON().Object().Value("BudgetProgram").Object().Value("id").Number().Raw())
 		}
-		response.Status(tc.Status)
 	}
 	return bpID
 }
@@ -97,21 +121,28 @@ func modifyBudgetProgramTest(e *httpexpect.Expect, t *testing.T, bpID int) {
 	testCases := []testCase{
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
-			BodyContains: []string{"Modification de programme : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"code_contract":"X","code_function":"YY","code_number":"ZZZ","code_subfunction":"9","name":"Programme"}`),
+			BodyContains: []string{"Modification d'un programme, requête : Programme introuvable"}},
 		{Token: testCtx.Admin.Token, ID: strconv.Itoa(bpID), Status: http.StatusOK,
-			Sent: []byte(`{"code_contract":"X","code_function":"YY","code_number":"ZZZ","code_subfunction":"9"}`),
+			Sent: []byte(`{"code_contract":"X","code_function":"YY","code_number":"ZZZ","code_subfunction":"9","name":"Programme"}`),
 			BodyContains: []string{"BudgetProgram", `"code_contract":"X"`, `"code_function":"YY"`,
 				`"code_number":"ZZZ"`, `"code_subfunction":"9"`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.PUT("/api/budget_chapters/3/budget_programs/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nModifyBudgetProgram[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nModifyBudgetProgram[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -120,18 +151,24 @@ func deleteBudgetProgramTest(e *httpexpect.Expect, t *testing.T, bpID int) {
 	testCases := []testCase{
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusNotFound,
-			BodyContains: []string{"Suppression de programme : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Suppression d'un programme, requête : Programme introuvable"}},
 		{Token: testCtx.Admin.Token, ID: strconv.Itoa(bpID), Status: http.StatusOK,
 			BodyContains: []string{"Programme supprimé"}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.DELETE("/api/budget_chapters/3/budget_programs/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nDeleteBudgetProgram[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDeleteBudgetProgram[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
