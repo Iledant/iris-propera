@@ -8,136 +8,91 @@ import (
 	"github.com/kataras/iris"
 )
 
-// bssResp embeddes response for an array of budget sectors.
-type bssResp struct {
-	BudgetSector []models.BudgetSector `json:"BudgetSector"`
-}
-
 // bsResp embeddes response for an single budget sector.
 type bsResp struct {
 	BudgetSector models.BudgetSector `json:"BudgetSector"`
 }
 
-// bsReq is used for creation and modification of a budget sector.
-type bsReq struct {
-	Code *string `json:"code"`
-	Name *string `json:"name"`
-}
-
 // GetBudgetSectors handles request get all budget sectors.
 func GetBudgetSectors(ctx iris.Context) {
-	bss := []models.BudgetSector{}
-
+	var resp models.BudgetSectors
 	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := db.Find(&bss).Error; err != nil {
+	if err := resp.GetAll(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Liste des secteurs budgétaire, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(bssResp{bss})
+	ctx.JSON(resp)
 }
 
 // CreateBudgetSector handles request post request to create a new sector.
 func CreateBudgetSector(ctx iris.Context) {
-	bs := bsReq{}
-	if err := ctx.ReadJSON(&bs); err != nil {
+	var req models.BudgetSector
+	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création d'un secteur budgétaire, décodage : " + err.Error()})
 		return
 	}
-
-	if bs.Code == nil || len(*bs.Code) == 0 || len(*bs.Code) > 10 ||
-		bs.Name == nil || len(*bs.Name) == 0 || len(*bs.Name) > 100 {
+	if err := req.Validate(); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Création de secteur budgétaire, champ manquant ou incorrect"})
+		ctx.JSON(jsonError{"Création d'un secteur budgétaire : " + err.Error()})
 		return
 	}
-
 	db := ctx.Values().Get("db").(*gorm.DB)
-	newBs := models.BudgetSector{Code: *bs.Code, Name: *bs.Name}
-
-	if err := db.Create(&newBs).Error; err != nil {
+	if err := req.Create(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création d'un secteur budgétaire, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(bsResp{newBs})
+	ctx.JSON(bsResp{req})
 }
 
 // ModifyBudgetSector handles request put requestion to modify a sector.
 func ModifyBudgetSector(ctx iris.Context) {
-	bsID, err := ctx.Params().GetInt("bsID")
+	bsID, err := ctx.Params().GetInt64("bsID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'un secteur budgétaire, paramètre : " + err.Error()})
 		return
 	}
-
-	bs, db := models.BudgetSector{}, ctx.Values().Get("db").(*gorm.DB)
-
-	if err = db.First(&bs, bsID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonMessage{"Modification de secteur : introuvable"})
-			return
-		}
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		return
-	}
-
-	req := bsReq{}
+	var req models.BudgetSector
 	if err = ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'un secteur budgétaire, décodage : " + err.Error()})
 		return
 	}
-
-	if req.Code != nil && len(*req.Code) > 0 && len(*req.Code) < 10 {
-		bs.Code = *req.Code
+	if err = req.Validate(); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Modification d'un secteur budgétaire " + err.Error()})
+		return
 	}
-
-	if req.Name != nil && len(*req.Name) > 0 && len(*req.Name) < 100 {
-		bs.Name = *req.Name
-	}
-
-	if err = db.Save(&bs).Error; err != nil {
+	db := ctx.Values().Get("db").(*gorm.DB)
+	req.ID = bsID
+	if err = req.Update(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'un secteur budgétaire, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(bsResp{bs})
+	ctx.JSON(bsResp{req})
 }
 
 // DeleteBudgetSector handles the request to delete an budget sector.
 func DeleteBudgetSector(ctx iris.Context) {
-	bsID, err := ctx.Params().GetInt("bsID")
+	bsID, err := ctx.Params().GetInt64("bsID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Suppression d'un secteur budgétaire, paramètre : " + err.Error()})
 		return
 	}
-
 	bs, db := models.BudgetSector{ID: bsID}, ctx.Values().Get("db").(*gorm.DB)
-
-	if err = db.First(&bs, bsID).Error; err != nil {
+	if err = bs.Delete(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(jsonError{"Suppression de secteur : introuvable"})
+		ctx.JSON(jsonError{"Suppression d'un secteur budgétaire, requête : " + err.Error()})
 		return
 	}
-
-	if err = db.Delete(&bs).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		return
-	}
-
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Secteur supprimé"})
 }
