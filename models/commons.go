@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
+	"strconv"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -91,7 +93,11 @@ func (nb *NullBool) Scan(value interface{}) error {
 		nb.Valid = false
 		return nil
 	}
-	nb.Bool, nb.Valid = value.(bool), true
+	var n sql.NullBool
+	if err := n.Scan(value); err != nil {
+		return err
+	}
+	nb.Bool, nb.Valid = n.Bool, n.Valid
 	return nil
 }
 
@@ -132,7 +138,11 @@ func (ni *NullInt64) Scan(value interface{}) error {
 		ni.Valid = false
 		return nil
 	}
-	ni.Int64, ni.Valid = value.(int64), true
+	var n sql.NullInt64
+	if err := n.Scan(value); err != nil {
+		return err
+	}
+	ni.Int64, ni.Valid = n.Int64, n.Valid
 	return nil
 }
 
@@ -173,7 +183,11 @@ func (ns *NullString) Scan(value interface{}) error {
 		ns.Valid = false
 		return nil
 	}
-	ns.String, ns.Valid = value.(string), true
+	var n sql.NullString
+	if err := n.Scan(value); err != nil {
+		return err
+	}
+	ns.String, ns.Valid = n.String, n.Valid
 	return nil
 }
 
@@ -214,7 +228,11 @@ func (nf *NullFloat64) Scan(value interface{}) error {
 		nf.Valid = false
 		return nil
 	}
-	nf.Float64, nf.Valid = value.(float64), true
+	var n sql.NullFloat64
+	if err := n.Scan(value); err != nil {
+		return err
+	}
+	nf.Float64, nf.Valid = n.Float64, n.Valid
 	return nil
 }
 
@@ -224,4 +242,80 @@ func (nf NullFloat64) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return nf.Float64, nil
+}
+
+// toSQL convert i to a string used for INSERT VALUES statement.
+func toSQL(i interface{}) string {
+	switch v := i.(type) {
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	case string:
+		return "$$" + v + "$$"
+	case NullInt64:
+		if !v.Valid {
+			return "null"
+		}
+		return strconv.FormatInt(v.Int64, 10)
+	case time.Time:
+		return "'" + v.Format("2006-01-02") + "'"
+	case NullString:
+		if !v.Valid {
+			return "null"
+		}
+		return "$$" + v.String + "$$"
+	case NullFloat64:
+		if !v.Valid {
+			return "null"
+		}
+		return strconv.FormatFloat(v.Float64, 'f', -1, 64)
+	case NullBool:
+		if !v.Valid {
+			return "null"
+		}
+		if v.Bool {
+			return "TRUE"
+		}
+		return "FALSE"
+	case NullTime:
+		if !v.Valid {
+			return "null"
+		}
+		return "'" + v.Time.Format("2006-01-02") + "'"
+	}
+	return ""
+}
+
+type sqlJSON json.RawMessage
+
+var emptyJSON = sqlJSON("{}")
+
+// MarshalJSON implements interface for sqlJSON.
+func (s sqlJSON) MarshalJSON() ([]byte, error) {
+	if len(s) == 0 {
+		return emptyJSON, nil
+	}
+	return s, nil
+}
+
+// Scan implements interface for sqlJSON.
+func (s *sqlJSON) Scan(src interface{}) error {
+	var source []byte
+	switch t := src.(type) {
+	case string:
+		source = []byte(t)
+	case []byte:
+		if len(t) == 0 {
+			source = emptyJSON
+		} else {
+			source = t
+		}
+	case nil:
+		*s = emptyJSON
+	default:
+		return errors.New("Incompatible type for JSONText")
+	}
+	*s = sqlJSON(append((*s)[0:0], source...))
+	return nil
 }

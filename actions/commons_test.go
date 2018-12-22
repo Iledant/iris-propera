@@ -23,6 +23,7 @@ type testCase struct {
 	Token        string
 	Status       int
 	ID           string
+	Param        string
 	BodyContains []string
 	Sent         []byte
 	ArraySize    int
@@ -105,7 +106,7 @@ func restoreTestDB(t *testing.T) {
 
 // fetchTokens logins an user and send back the login response (token and user fiels)
 func fetchLoginResponse(e *httpexpect.Expect, t *testing.T, c *config.Credentials, role string) *LoginResponse {
-	response := e.POST("/users/signin").WithQuery("email", c.Email).WithQuery("password", c.Password).Expect()
+	response := e.POST("/api/user/signin").WithBytes([]byte(`{"email":"` + c.Email + `","password":"` + c.Password + `"}`)).Expect()
 
 	lr := LoginResponse{}
 	if err := json.Unmarshal(response.Content, &lr); err != nil {

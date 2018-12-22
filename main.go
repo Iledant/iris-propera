@@ -6,6 +6,7 @@ import (
 
 	"github.com/Iledant/iris_propera/actions"
 	"github.com/Iledant/iris_propera/config"
+
 	"github.com/kataras/iris"
 )
 
@@ -26,6 +27,7 @@ func main() {
 	}
 
 	defer db.Close()
+
 	actions.SetRoutes(app, db)
 
 	// Use port 5000 as Elastic beanstalk use it by default
