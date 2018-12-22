@@ -32,17 +32,22 @@ func multiannualProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/multiannual_programmation").
-			WithHeader("Authorization", "Bearer "+tc.Token).
-			Expect()
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("MultiannualProgrammation[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nMultiannuelProgrammation[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("MultiannualProgrammation").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nMultiannuelProgrammation[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"number"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nMultiannualProgrammation[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -62,12 +67,18 @@ func annualProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("AnnualProgrammation[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nAnnualProgrammation[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("AnnualProgrammation").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nAnnualProgrammation[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"name"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nAnnualProgrammation[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -87,12 +98,18 @@ func programmingPrevisionTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("ProgrammingPrevision[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nProgrammingAndPrevision[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("ProgrammingsPrevision").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nProgrammingAndPrevision[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"number"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nProgrammingAndPrevision[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -110,12 +127,18 @@ func actionProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("ActionProgrammation[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nActionProgrammation[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("BudgetProgrammation").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nActionProgrammation[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"action_code"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nActionProgrammation[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -126,7 +149,7 @@ func actionCommitmentTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
 			BodyContains: []string{"CommitmentPerBudgetAction", "chapter", "sector", "subfunction", "program",
-				"action", "action_name", "y2018", "y2019", "y2020", "y2021"}, ArraySize: 46},
+				"action", "action_name", "y0", "y1", "y2", "y3"}, ArraySize: 46},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/commitment_per_budget_action").WithHeader("Authorization", "Bearer "+tc.Token).
@@ -134,10 +157,19 @@ func actionCommitmentTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("ActionCommitment[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nActionCommitment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nActionCommitment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"chapter"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nActionCommitment[%d] :\n  nombre attendu -> %d   nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
 		if tc.Status == http.StatusOK {
 			response.JSON().Object().Value("CommitmentPerBudgetAction").Array().Length().Equal(tc.ArraySize)
 		}
@@ -152,7 +184,7 @@ func detailedActionCommitmentTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Status: http.StatusOK,
 			BodyContains: []string{"DetailedCommitmentPerBudgetAction", "chapter",
 				"sector", "subfunction", "program", "action", "action_name", "number", "name",
-				"y2018", "y2019", "y2020", "y2021"}, ArraySize: 185},
+				"y0", "y1", "y2", "y3"}, ArraySize: 150},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/detailed_commitment_per_budget_action").WithHeader("Authorization", "Bearer "+tc.Token).
@@ -160,12 +192,18 @@ func detailedActionCommitmentTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("DetailedActionCommitment[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nDetailedActionCommitment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("DetailedCommitmentPerBudgetAction").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDetailedActionCommitment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"action_name"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nDetailedActionCommitment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -176,7 +214,7 @@ func detailedActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
 			BodyContains: []string{"DetailedPaymentPerBudgetAction", "chapter", "sector", "subfunction", "program",
-				"action", "action_name", "number", "name", "y2019", "y2020", "y2021"}, ArraySize: 433},
+				"action", "action_name", "number", "name", "y1", "y2", "y3"}, ArraySize: 433},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/detailed_payment_per_budget_action").WithHeader("Authorization", "Bearer "+tc.Token).
@@ -184,12 +222,18 @@ func detailedActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("DetailedActionPayment[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nDetailedActionPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("DetailedPaymentPerBudgetAction").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDetailedActionPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"chapter"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nDetailedActionPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -201,8 +245,8 @@ func actionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
 			BodyContains: []string{"PaymentPerBudgetAction", "chapter",
-				"sector", "subfunction", "program", "action", "action_name", "y2019",
-				"y2020", "y2021"}, ArraySize: 58},
+				"sector", "subfunction", "program", "action", "action_name", "y1",
+				"y2", "y3"}, ArraySize: 58},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/payment_per_budget_action").
@@ -210,12 +254,18 @@ func actionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("DetailedActionPayment[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nActionPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PaymentPerBudgetAction").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nActionPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"chapter"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nActionPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }

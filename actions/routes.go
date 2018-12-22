@@ -1,29 +1,40 @@
 package actions
 
 import (
+	"github.com/iris-contrib/middleware/cors"
 	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
 // SetRoutes initialize all routes for the application
 func SetRoutes(app *iris.Application, db *gorm.DB) {
-	app.Post("/users/signup", setDBMiddleware(db), SignUp)
-	app.Post("/users/signin", setDBMiddleware(db), Login)
-	api := app.Party("/api", setDBMiddleware(db))
+	crs := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
+	crsParty := app.Party("/api", crs).AllowMethods(iris.MethodOptions)
+
+	crsParty.Post("/user/signup", setDBMiddleware(db), SignUp)
+	crsParty.Post("/user/signin", setDBMiddleware(db), Login)
+	api := crsParty.Party("", setDBMiddleware(db))
 
 	adminParty := api.Party("", AdminMiddleware)
 
-	adminParty.Get("/users", GetUsers)
-	adminParty.Post("/users", CreateUser)
-	adminParty.Put("/users/{userID:int}", UpdateUser)
-	adminParty.Delete("/users/{userID:int}", DeleteUser)
-	adminParty.Get("/users/{userID:int}/rights", GetRight)
-	adminParty.Post("/users/{userID:int}/rights", SetRight)
-	adminParty.Post("/users/{userID:int}/inherits", InheritRight)
+	adminParty.Get("/user", GetUsers)
+	adminParty.Post("/user", CreateUser)
+	adminParty.Put("/user/{userID:int}", UpdateUser)
+	adminParty.Delete("/user/{userID:int}", DeleteUser)
+	adminParty.Get("/user/{userID:int}/rights", GetRight)
+	adminParty.Post("/user/{userID:int}/rights", SetRight)
+	adminParty.Post("/user/{userID:int}/inherits", InheritRight)
 
 	adminParty.Post("/physical_ops", CreatePhysicalOp)
 	adminParty.Post("/physical_ops/array", BatchPhysicalOps)
 	adminParty.Delete("/physical_ops/{opID:int}", DeletePhysicalOp)
+	adminParty.Get("/physical_ops/financial_commitments", GetOpsAndFCs)
 
 	adminParty.Get("/beneficiaries", GetBeneficiaries)
 	adminParty.Put("/beneficiaries/{beneficiaryID:int}", UpdateBeneficiary)
@@ -105,8 +116,15 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 
 	adminParty.Post("/today_message", SetTodayMessage)
 
+	adminParty.Get("/scenarios", GetScenarios)
+	adminParty.Post("/scenarios", CreateScenario)
+	adminParty.Put("/scenarios/{sID:int}", ModifyScenario)
+	adminParty.Delete("/scenarios/{sID:int}", DeleteScenario)
+	adminParty.Get("/scenarios/{sID:int}", GetScenarioDatas)
+	adminParty.Post("/scenarios/{sID:int}/offsets", SetScenarioOffsets)
+
 	userParty := api.Party("", ActiveMiddleware)
-	userParty.Post("/logout", Logout) // changed, before located at /user/logout
+	userParty.Post("/user/logout", Logout)
 	userParty.Get("/physical_ops", GetPhysicalOps)
 	userParty.Put("/physical_ops/{opID:int}", UpdatePhysicalOp)
 	userParty.Post("/user/password", ChangeUserPwd)
@@ -139,7 +157,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/physical_ops/{opID:int}/previsions", GetOpPrevisions)
 	userParty.Post("/physical_ops/{opID:int}/previsions", SetOpPrevisions)
 
-	userParty.Get("/financial_commitments/month", GetMonthFC) // changed, before financialcommitments
+	userParty.Get("/financial_commitments/month", GetMonthFC)
 	userParty.Get("/import_log", GetImportLogs)
 
 	userParty.Get("/payment_ratios", GetRatios)
@@ -149,7 +167,8 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/payment_types", GetPaymentTypes)
 	userParty.Get("/payments/month", GetPaymentsPerMonth)
 	userParty.Get("/payments/prevision_realized", GetPrevisionRealized)
-	userParty.Get("/payments/cumulated", GetCumulatedMonthPayment)
+	userParty.Get("/payments/month_cumulated", GetCumulatedMonthPayment)
+	userParty.Get("/payments", GetAllBudgetPrograms)
 
 	userParty.Get("/pending_commitments", GetPendings)
 
@@ -174,6 +193,14 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/summaries/detailed_payment_per_budget_action", GetDetailedActionPayment)
 
 	userParty.Get("/today_message", GetTodayMessage)
+
+	userParty.Get("/op_dpt_ratios/ops", GetOpWithDptRatios)
+	userParty.Post("/op_dpt_ratios/upload", BatchOpDptRatios)
+	userParty.Get("/op_dpt_ratios/financial_commitments", GetFCPerDpt)
+	userParty.Get("/op_dpt_ratios/detailed_financial_commitments", GetDetailedFCPerDpt)
+	userParty.Get("/op_dpt_ratios/detailed_programmings", GetDetailedPrgPerDpt)
+
+	userParty.Get("/home", GetHomeDatas)
 
 	userParty.Get("/steps", GetSteps)
 }

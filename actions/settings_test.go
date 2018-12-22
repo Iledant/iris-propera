@@ -34,9 +34,13 @@ func getSettingsTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetSettings[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nSettings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nSettings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+
 	}
 }
