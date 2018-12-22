@@ -3,24 +3,13 @@ package actions
 import (
 	"net/http"
 
-	"github.com/Iledant/iris_propera/actions/queries"
 	"github.com/Iledant/iris_propera/models"
 	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
-type baaResp struct {
-	BudgetAction []models.BudgetAction `json:"BudgetAction"`
-}
-
 type baResp struct {
 	BudgetAction models.BudgetAction `json:"BudgetAction"`
-}
-
-type baReq struct {
-	Code     *string `json:"code"`
-	Name     *string `json:"name"`
-	SectorID *int    `json:"sector_id"`
 }
 
 // GetProgramBudgetActions handles request get budget actions of a program.
@@ -28,227 +17,132 @@ func GetProgramBudgetActions(ctx iris.Context) {
 	prgID, err := ctx.Params().GetInt("prgID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Actions budgétaires d'un programme, paramètre : " + err.Error()})
 		return
 	}
-
+	var resp models.BudgetActions
 	db := ctx.Values().Get("db").(*gorm.DB)
-	rows, err := db.Raw("SELECT * FROM budget_action WHERE program_id = ?", prgID).Rows()
-	if err != nil {
+	if err = resp.GetAllPrgID(prgID, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Actions budgétaires d'un programme, requête : " + err.Error()})
 		return
 	}
-	defer rows.Close()
-
-	arr, item := baaResp{}, models.BudgetAction{}
-	for rows.Next() {
-		rows.Scan(&item)
-		arr.BudgetAction = append(arr.BudgetAction, item)
-	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(arr)
+	ctx.JSON(resp)
 }
 
 // GetAllBudgetActions handles request get all budget actions.
 func GetAllBudgetActions(ctx iris.Context) {
-	baa := []models.BudgetAction{}
-
+	var resp models.BudgetActions
 	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := db.Find(&baa).Error; err != nil {
+	if err := resp.GetAll(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Liste des actions budgétaires, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(baaResp{baa})
+	ctx.JSON(resp)
 }
 
 // CreateBudgetAction handles request post request to create a new action.
 func CreateBudgetAction(ctx iris.Context) {
-	prgID, err := ctx.Params().GetInt("prgID")
+	prgID, err := ctx.Params().GetInt64("prgID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création d'action budgétaire, paramètre : " + err.Error()})
 		return
 	}
-
-	ba := baReq{}
-	if err = ctx.ReadJSON(&ba); err != nil {
+	var req models.BudgetAction
+	if err = ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création d'action budgétaire, décodage : " + err.Error()})
 		return
 	}
-
-	if ba.Code == nil || *ba.Code == "" || ba.Name == nil || *ba.Name == "" || ba.SectorID == nil {
+	if err = req.Validate(); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Création d'action budgétaire, champ manquant ou incorrect"})
+		ctx.JSON(jsonError{"Création d'action budgétaire : " + err.Error()})
 		return
 	}
 	db := ctx.Values().Get("db").(*gorm.DB)
-
-	if db.Raw("SELECT id FROM budget_sector WHERE id = ?", *ba.SectorID).RecordNotFound() {
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Création d'action budgétaire, index secteur incorrect"})
-		return
-	}
-
-	newBa := models.BudgetAction{Code: *ba.Code, Name: *ba.Name, ProgramID: prgID, SectorID: *ba.SectorID}
-
-	if err = db.Create(&newBa).Error; err != nil {
+	req.ProgramID = prgID
+	if err = req.Create(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création d'action budgétaire, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(baResp{newBa})
-}
-
-// baSent is used for decoding one line of an array in the budget actions arrays
-type baSent struct{ Code, Name, Sector string }
-
-// baaSent is used
-type baaSent struct {
-	BudgetAction []baSent `json:"BudgetAction"`
+	ctx.JSON(baResp{req})
 }
 
 // BatchBudgetActions handles request post an array of actions.
 func BatchBudgetActions(ctx iris.Context) {
-	var baa baaSent
+	var baa models.BudgetActionsBatch
 	if err := ctx.ReadJSON(&baa); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
-
 	db := ctx.Values().Get("db").(*gorm.DB)
-	tx := db.Begin()
-
-	if err := tx.Exec(queries.SQLDropTempActionTable).Error; err != nil {
+	if err := baa.Save(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		tx.Rollback()
+		ctx.JSON(jsonError{"Batch budget action, requête : " + err.Error()})
 		return
 	}
-
-	if err := tx.Exec(queries.SQLCreateTempActionTable).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		tx.Rollback()
-		return
-	}
-
-	for _, ba := range baa.BudgetAction {
-		if len(ba.Code) < 7 {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonError{"Erreur lors de l'import, code trop court :" + ba.Code})
-			tx.Rollback()
-			return
-		}
-		cc, cf, cn, ac := ba.Code[0:1], ba.Code[1:3], ba.Code[3:6], ba.Code[6:]
-
-		if err := tx.Exec(queries.SQLInsertTempAction, cc, cf, cn, ac, ba.Name, ba.Sector).Error; err != nil {
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.JSON(jsonError{err.Error()})
-			tx.Rollback()
-			return
-		}
-	}
-
-	if err := tx.Exec(queries.SQLUpdateBudgetAction).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		tx.Rollback()
-		return
-	}
-
-	if err := tx.Exec(queries.SQLInsertBudgetAction).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		tx.Rollback()
-		return
-	}
-
-	tx.Exec(queries.SQLDropTempActionTable)
-	tx.Commit()
-
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Actions mises à jour"})
 }
 
 // ModifyBudgetAction handles request put requestion to modify an action.
 func ModifyBudgetAction(ctx iris.Context) {
-	baID, err := ctx.Params().GetInt("baID")
+	prgID, err := ctx.Params().GetInt64("prgID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'action budgétaire, paramètre : " + err.Error()})
 		return
 	}
-
-	ba, db := models.BudgetAction{}, ctx.Values().Get("db").(*gorm.DB)
-
-	if err = db.First(&ba, baID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonMessage{"Modification d'action : introuvable"})
-			return
-		}
+	baID, err := ctx.Params().GetInt64("baID")
+	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'action budgétaire, paramètre : " + err.Error()})
 		return
 	}
-
-	req := baReq{}
+	db := ctx.Values().Get("db").(*gorm.DB)
+	var req models.BudgetAction
 	if err = ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'action budgétaire, décodage : " + err.Error()})
 		return
 	}
-
-	if req.Code != nil && *req.Code != "" && len(*req.Code) < 4 {
-		ba.Code = *req.Code
+	if err = req.Validate(); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Modification d'action budgétaire : " + err.Error()})
+		return
 	}
-
-	if req.Name != nil && *req.Name != "" && len(*req.Name) < 100 {
-		ba.Name = *req.Name
-	}
-
-	if err = db.Save(&ba).Error; err != nil {
+	req.ID = baID
+	req.ProgramID = prgID
+	if err = req.Update(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'action budgétaire, update : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(baResp{ba})
+	ctx.JSON(baResp{req})
 }
 
 // DeleteBudgetAction handles the request to delete an budget action.
 func DeleteBudgetAction(ctx iris.Context) {
-	baID, err := ctx.Params().GetInt("baID")
+	baID, err := ctx.Params().GetInt64("baID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Suppression d'action budgétaire, paramètre : " + err.Error()})
 		return
 	}
-
 	ba, db := models.BudgetAction{ID: baID}, ctx.Values().Get("db").(*gorm.DB)
-
-	if err = db.First(&ba, baID).Error; err != nil {
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(jsonError{"Suppression d'action : introuvable"})
-		return
-	}
-
-	if err = db.Delete(&ba).Error; err != nil {
+	if err = ba.Delete(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Suppression d'action budgétaire, delete : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Action supprimée"})
 }

@@ -2,6 +2,7 @@ package actions
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -25,15 +26,24 @@ func getBeneficiariesTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Beneficiary"}, ArraySize: 530},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/beneficiaries").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetBeneficiaries[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetBeneficiaries[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("Beneficiary").Array().Length().Equal(tc.ArraySize)
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetBeneficiaries[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
-		response.Status(tc.Status)
 	}
 }
 
@@ -43,21 +53,27 @@ func updateBeneficiaryTest(e *httpexpect.Expect, t *testing.T) {
 		{ID: "1", Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
 		{ID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
-			BodyContains: []string{"Modification de bénéficiaire : champ name manquant"},
+			BodyContains: []string{"Modification de bénéficiaire : Champ name manquant"},
 			Sent:         []byte("{}")},
-		{ID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
-			BodyContains: []string{"Modification de bénéficiaire : introuvable"},
+		{ID: "0", Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
+			BodyContains: []string{"Modification de bénéficiaire, requête : Bénéficiaire introuvable"},
 			Sent:         []byte(`{"Name":"Essai bénéficiaire"}`)},
 		{ID: "1", Token: testCtx.Admin.Token, Status: http.StatusOK,
 			BodyContains: []string{"Beneficiary", `"name":"Essai bénéficiaire"`},
 			Sent:         []byte(`{"Name":"Essai bénéficiaire"}`)},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.PUT("/api/beneficiaries/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nUpdateBeneficiary[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nUpdateBeneficiary[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }

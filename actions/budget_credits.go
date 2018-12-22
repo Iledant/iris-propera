@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Iledant/iris_propera/actions/queries"
 	"github.com/Iledant/iris_propera/models"
 	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
@@ -19,11 +18,6 @@ type brReq struct {
 	ReservedCommitment *int64     `json:"reserved_commitment"`
 }
 
-// brrResp embeddes response for an array of budget credits.
-type brrResp struct {
-	BudgetCredit []models.BudgetCredit `json:"BudgetCredits"`
-}
-
 // brResp embeddes response for a single budget credits.
 type brResp struct {
 	BudgetCredit models.BudgetCredit `json:"BudgetCredits"`
@@ -32,178 +26,99 @@ type brResp struct {
 // GetBudgetCredits handles request get all budget credits.
 func GetBudgetCredits(ctx iris.Context) {
 	db := ctx.Values().Get("db").(*gorm.DB)
-	brr := []models.BudgetCredit{}
-
-	if err := db.Find(&brr).Error; err != nil {
+	var resp models.BudgetCredits
+	if err := resp.GetAll(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Liste des crédits budgétaire, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brrResp{brr})
+	ctx.JSON(resp)
 }
 
 // GetLastBudgetCredits handles request for getting the most recent budget credits of current year.
 func GetLastBudgetCredits(ctx iris.Context) {
 	db := ctx.Values().Get("db").(*gorm.DB)
-	year := time.Now().Year()
-
-	rows, err := db.Raw(queries.SQLGetMostRecentCredits, year).Rows()
-	if err != nil {
+	year := int64(time.Now().Year())
+	var resp models.BudgetCredits
+	if err := resp.GetLatest(year, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Crédits budgétaires les plus récents, requête : " + err.Error()})
 		return
 	}
-	defer rows.Close()
-	brr, br := []models.BudgetCredit{}, models.BudgetCredit{}
-
-	for rows.Next() {
-		db.ScanRows(rows, &br)
-		brr = append(brr, br)
-	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brrResp{brr})
+	ctx.JSON(resp)
 }
 
 // CreateBudgetCredit handles post request for creating a budget credit.
 func CreateBudgetCredit(ctx iris.Context) {
-	sbr := brReq{}
-
-	if err := ctx.ReadJSON(&sbr); err != nil {
+	var req models.CompleteBudgetCredit
+	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création de crédits, décodage : " + err.Error()})
 		return
 	}
-
-	if sbr.CommissionDate == nil || sbr.Chapter == nil || sbr.PrimaryCommitment == nil ||
-		sbr.FrozenCommitment == nil || sbr.ReservedCommitment == nil {
+	if err := req.Validate(); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Création de crédits : champ manquant ou incorrect"})
+		ctx.JSON(jsonError{"Création de crédits : " + err.Error()})
 		return
 	}
-
 	db := ctx.Values().Get("db").(*gorm.DB)
-	chID := struct{ ID int64 }{}
-
-	if err := db.Raw("SELECT id FROM budget_chapter WHERE code = ?", *sbr.Chapter).Scan(&chID).Error; err != nil {
+	var resp models.BudgetCredit
+	if err := resp.Create(&req, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Création de crédits, impossible de trouver le chapitre :" + err.Error()})
+		ctx.JSON(jsonError{"Création de crédits, requête : " + err.Error()})
 		return
 	}
-
-	br := models.BudgetCredit{CommissionDate: models.NullTime{Valid: true, Time: *sbr.CommissionDate},
-		ChapterID:         models.NullInt64{Valid: true, Int64: chID.ID},
-		PrimaryCommitment: *sbr.PrimaryCommitment, FrozenCommitment: *sbr.FrozenCommitment,
-		ReservedCommitment: *sbr.ReservedCommitment}
-
-	if err := db.Create(&br).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		return
-	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brResp{br})
+	ctx.JSON(brResp{resp})
 }
 
 // ModifyBudgetCredit handles put request for modifying budget credits.
 func ModifyBudgetCredit(ctx iris.Context) {
-	brID, err := ctx.Params().GetInt("brID")
+	brID, err := ctx.Params().GetInt64("brID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification de crédits, paramètre : " + err.Error()})
 		return
 	}
-
-	sbr := brReq{}
-	if err := ctx.ReadJSON(&sbr); err != nil {
+	var req models.CompleteBudgetCredit
+	if err = ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification de crédits, décodage : " + err.Error()})
 		return
 	}
-
-	br, db := models.BudgetCredit{}, ctx.Values().Get("db").(*gorm.DB)
-
-	if err := db.Find(&br, brID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonError{"Modification des crédits: introuvable"})
-			return
-		}
+	if err = req.Validate(); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Modification de crédits " + err.Error()})
+		return
+	}
+	db := ctx.Values().Get("db").(*gorm.DB)
+	resp := models.BudgetCredit{ID: brID}
+	if err = resp.Update(&req, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification de crédits, requête : " + err.Error()})
 		return
 	}
-
-	if sbr.Chapter != nil {
-		chID := struct{ ID int64 }{}
-
-		if err := db.Raw("SELECT id FROM budget_chapter WHERE code = ?", *sbr.Chapter).Scan(&chID).Error; err != nil {
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.JSON(jsonError{"Modification de crédits, impossible de trouver le chapitre :" + err.Error()})
-			return
-		}
-		br.ChapterID.Valid = true
-		br.ChapterID.Int64 = chID.ID
-	}
-
-	if sbr.CommissionDate != nil {
-		br.CommissionDate.Valid = true
-		br.CommissionDate.Time = *sbr.CommissionDate
-	}
-
-	if sbr.PrimaryCommitment != nil {
-		br.PrimaryCommitment = *sbr.PrimaryCommitment
-	}
-
-	if sbr.ReservedCommitment != nil {
-		br.ReservedCommitment = *sbr.ReservedCommitment
-	}
-
-	if sbr.FrozenCommitment != nil {
-		br.FrozenCommitment = *sbr.FrozenCommitment
-	}
-
-	if err = db.Save(&br).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		return
-	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brResp{br})
+	ctx.JSON(brResp{resp})
 }
 
 // DeleteBudgetCredit handles delete request for budget credits.
 func DeleteBudgetCredit(ctx iris.Context) {
-	brID, err := ctx.Params().GetInt("brID")
+	brID, err := ctx.Params().GetInt64("brID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Suppression de crédits, décodage : " + err.Error()})
 		return
 	}
-
-	br := models.BudgetCredit{}
+	req := models.BudgetCredit{ID: brID}
 	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := db.Find(&br, brID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonError{"Suppression de crédits: introuvable"})
-			return
-		}
+	if err := req.Delete(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Suppression de crédits, requête : " + err.Error()})
 		return
 	}
-
-	if err = db.Delete(&br).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
-		return
-	}
-
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Crédits supprimés"})
 }
@@ -215,64 +130,18 @@ type batchBrr struct {
 
 // BatchBudgetCredits handles the post array request for budget credits
 func BatchBudgetCredits(ctx iris.Context) {
-	var brr batchBrr
-
-	if err := ctx.ReadJSON(&brr); err != nil {
+	var req models.CompleteBudgetCredits
+	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Erreur de lecture du batch crédits : " + err.Error()})
 		return
 	}
-
 	db := ctx.Values().Get("db").(*gorm.DB)
-	tx := db.Begin()
-
-	if err := tx.Exec(queries.SQLDropTempCreditsTable).Error; err != nil {
+	if err := req.Save(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Batch crédits erreur de suppression de la table temporaire : " + err.Error()})
-		tx.Rollback()
+		ctx.JSON(jsonError{"Batch crédits, requête : " + err.Error()})
 		return
 	}
-
-	if err := tx.Exec(queries.SQLCreateTempCreditsTable).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Batch crédits erreur de création de la table temporaire : " + err.Error()})
-		tx.Rollback()
-		return
-	}
-
-	for _, br := range brr.BudgetCredits {
-		if br.CommissionDate == nil || br.Chapter == nil || br.PrimaryCommitment == nil ||
-			br.ReservedCommitment == nil || br.FrozenCommitment == nil {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonError{"Batch crédits, champs manquants"})
-			tx.Rollback()
-			return
-		}
-
-		if err := tx.Exec(queries.SQLInsertTempCredits, *br.CommissionDate, *br.Chapter,
-			*br.PrimaryCommitment, *br.ReservedCommitment, *br.FrozenCommitment).Error; err != nil {
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.JSON(jsonError{"Batch crédits erreur d'import : " + err.Error()})
-			tx.Rollback()
-			return
-		}
-	}
-
-	if err := tx.Exec(queries.SQLUpdateBatchCredits).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Batch crédits erreur d'insertion : " + err.Error()})
-		tx.Rollback()
-		return
-	}
-
-	if err := tx.Exec(queries.SQLDropTempCreditsTable).Error; err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Batch crédits erreur de suppression de la table temporaire : " + err.Error()})
-		tx.Rollback()
-		return
-	}
-
-	tx.Commit()
 
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Credits importés"})

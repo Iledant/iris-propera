@@ -1,17 +1,20 @@
 package models
 
 import (
-	"net/http"
-
-	"github.com/jinzhu/gorm"
-	"github.com/kataras/iris"
+	"database/sql"
+	"errors"
 )
 
 // BudgetChapter model
 type BudgetChapter struct {
-	ID   int    `json:"id" gorm:"column:id"`
+	ID   int64  `json:"id" gorm:"column:id"`
 	Code int    `json:"code" gorm:"column:code"`
 	Name string `json:"name" gorm:"column:name"`
+}
+
+// BudgetChapters embeddes an array of budget chapters to json export
+type BudgetChapters struct {
+	BudgetChapters []BudgetChapter `json:"BudgetChapter"`
 }
 
 // TableName ensures table name for budget_chapter
@@ -19,17 +22,67 @@ func (BudgetChapter) TableName() string {
 	return "budget_chapter"
 }
 
-// GetByID fetch a physical operation by ID or return error using ctx to set status code and return json error code
-func (b *BudgetChapter) GetByID(ctx iris.Context, db *gorm.DB, prefix string, ID int64) error {
-	if err := db.First(b, ID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonError{Erreur: prefix + ", introuvable"})
+// Validate checks if fields are correctly formed.
+func (b *BudgetChapter) Validate() error {
+	if b.Name == "" || len(b.Name) > 100 || b.Code == 0 {
+		return errors.New("Name manquant ou trop long ou code absent")
+	}
+	return nil
+}
+
+// GetAll fetches all budget chapters in database.
+func (b *BudgetChapters) GetAll(db *sql.DB) (err error) {
+	rows, err := db.Query("SELECT id, code, name FROM budget_chapter")
+	if err != nil {
+		return err
+	}
+	var r BudgetChapter
+	defer rows.Close()
+	for rows.Next() {
+		if err = rows.Scan(&r.ID, &r.Code, &r.Name); err != nil {
 			return err
 		}
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{prefix + " : " + err.Error()})
+		b.BudgetChapters = append(b.BudgetChapters, r)
+	}
+	err = rows.Err()
+	return err
+}
+
+// Create add data sent to database.
+func (b *BudgetChapter) Create(db *sql.DB) (err error) {
+	err = db.QueryRow("INSERT INTO budget_chapter (code, name) VALUES($1,$2) RETURNING id",
+		b.Code, b.Name).Scan(&b.ID)
+	return err
+}
+
+// Update a budget chapter in database.
+func (b *BudgetChapter) Update(db *sql.DB) (err error) {
+	res, err := db.Exec(`UPDATE budget_chapter SET code = $1, name = $2 WHERE id = $3`, b.Code, b.Name, b.ID)
+	if err != nil {
 		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return errors.New("Chapitre budgétaire introuvable")
+	}
+	return err
+}
+
+// Delete remove budget chapter whose ID is given from database.
+func (b *BudgetChapter) Delete(db *sql.DB) (err error) {
+	res, err := db.Exec("DELETE FROM budget_chapter WHERE id = $1", b.ID)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return errors.New("Chapitre budgétaire introuvable")
 	}
 	return nil
 }
