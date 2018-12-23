@@ -18,30 +18,32 @@ func TestPreProgramming(t *testing.T) {
 
 // getPreProgrammingsTest check route is protected and pre programmings correctly sent.
 func getPreProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains []string
-		Year         string
-		Count        int
-	}{
-		{Token: "fake", Year: "2018", Status: http.StatusInternalServerError,
+	testCases := []testCase{
+		{Token: "fake", Param: "2018", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.Admin.Token, Year: "2018", Status: http.StatusOK,
-			BodyContains: []string{"PreProgrammings"}, Count: 619},
+		{Token: testCtx.User.Token, Param: "2018", Status: http.StatusOK,
+			BodyContains: []string{"PreProgrammings"}, ArraySize: 3},
+		{Token: testCtx.Admin.Token, Param: "2018", Status: http.StatusOK,
+			BodyContains: []string{"PreProgrammings"}, ArraySize: 619},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/pre_programmings").WithHeader("Authorization", "Bearer "+tc.Token).
-			WithQuery("year", tc.Year).Expect()
+			WithQuery("year", tc.Param).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetPreProgrammings[%d] : attendu \"%s\" et reçu \"%s\"", i, s, content)
+				t.Errorf("\nGetPreProgrammings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PreProgrammings").Array().Length().Equal(tc.Count)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetPreProgrammings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"physical_op_id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetPreProgrammings[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -51,7 +53,7 @@ func batchPreProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusInternalServerError, Sent: []byte(`{Pend}`),
-			BodyContains: []string{"Batch préprogrammation, erreur de décodage"}},
+			BodyContains: []string{"Batch préprogrammation, décodage :"}},
 		//cSpell:disable
 		{Token: testCtx.User.Token, Status: http.StatusOK, Sent: []byte(`{"PreProgrammings": [
 			{"physical_op_id":9,"pre_prog_id":null,"pre_prog_year":2018,"pre_prog_value":100000000,
@@ -65,17 +67,20 @@ func batchPreProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 				`"physical_op_id":14`, `"pre_prog_year":2018`, `"pre_prog_value":200000000`,
 				`"pre_prog_commission_id":8`, `"pre_prog_total_value":400000000`, `"pre_prog_total_value":null`,
 				`"pre_prog_state_ratio":null`, `"pre_prog_state_ratio":0.35`}},
+		//cSpell:enable
 	}
-	//cSpell:enable
 	for i, tc := range testCases {
 		response := e.POST("/api/pre_programmings").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("BatchPreProgrammings[%d] : attendu \"%s\" et reçu \"%s\"", i, s, content)
+				t.Errorf("\nBatchPreProgrammings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchPreProgrammings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
