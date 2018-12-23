@@ -35,10 +35,13 @@ func getStepsTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetStep[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nGetStep[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetStep[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -49,6 +52,9 @@ func createStepTest(e *httpexpect.Expect, t *testing.T) (stID int) {
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
+			Sent:         []byte(`{"name":""}`),
+			BodyContains: []string{"Création d'étape : Name incorrect"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			Sent:         []byte(`{"name":"Essai d'étape"}`),
 			BodyContains: []string{"Step", `"name":"Essai d'étape"`}},
@@ -59,13 +65,16 @@ func createStepTest(e *httpexpect.Expect, t *testing.T) (stID int) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("CreateStep[%d] : attendu %s et reçu \n%s", i, s, content)
-			}
-			if tc.Status == http.StatusOK {
-				stID = int(response.JSON().Object().Value("Step").Object().Value("id").Number().Raw())
+				t.Errorf("\nCreateStep[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nCreateStep[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.Status == http.StatusOK {
+			stID = int(response.JSON().Object().Value("Step").Object().Value("id").Number().Raw())
+		}
 	}
 	return stID
 }
@@ -77,8 +86,9 @@ func modifyStepTest(e *httpexpect.Expect, t *testing.T, stID int) {
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
-			BodyContains: []string{"Modification d'étape : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"name":"Modification d'étape"}`),
+			BodyContains: []string{"Modification d'étape, requête : Etape introuvable"}},
 		{Token: testCtx.Admin.Token, ID: strconv.Itoa(stID), Status: http.StatusOK,
 			Sent:         []byte(`{"name":"Modification d'étape"}`),
 			BodyContains: []string{"Step", `"name":"Modification d'étape"`}},
@@ -88,10 +98,13 @@ func modifyStepTest(e *httpexpect.Expect, t *testing.T, stID int) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("ModifyStep[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nModifyStep[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nModifyStep[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -102,8 +115,8 @@ func deleteStepTest(e *httpexpect.Expect, t *testing.T, stID int) {
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
-			BodyContains: []string{"Suppression d'étape : introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Suppression d'étape, requête : Etape introuvable"}},
 		{Token: testCtx.Admin.Token, ID: strconv.Itoa(stID), Status: http.StatusOK,
 			BodyContains: []string{"Etape supprimée"}},
 	}
@@ -112,9 +125,12 @@ func deleteStepTest(e *httpexpect.Expect, t *testing.T, stID int) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("DeleteStep[%d] : attendu %s et reçu \n%s", i, s, content)
+				t.Errorf("\nDeleteStep[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDeleteStep[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
