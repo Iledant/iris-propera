@@ -3,6 +3,7 @@ package actions
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -28,16 +29,25 @@ func getEventTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Event"}, ArraySize: 1},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/physical_ops/9/events").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetEvent[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetEvent[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("Event").Array().Length().Equal(tc.ArraySize)
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetEvent[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
-		response.Status(tc.Status)
 	}
 }
 
@@ -52,15 +62,24 @@ func getNextMonthEventTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Event"}, ArraySize: 0},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/events").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetNextMonthEvent[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetNextMonthEvent[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("Event").Array().Length().Equal(tc.ArraySize)
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetNextMonthEvent[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
-		response.Status(tc.Status)
 	}
 }
 
@@ -70,9 +89,11 @@ func createEventTest(e *httpexpect.Expect, t *testing.T) (evID int) {
 		{Token: "fake", ID: "9", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, ID: "9", Status: http.StatusBadRequest, Sent: []byte(`{}`),
-			BodyContains: []string{"Création d'événement, champ manquant ou incorrect"}},
-		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest, Sent: []byte(`{}`),
-			BodyContains: []string{"Création d'événement : opération introuvable"}},
+			BodyContains: []string{"Création d'un événement : PhysicalOpID, Name ou Date incorrect"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest,
+			Sent: []byte(`{"name":"Test création événement", "date":"2018-04-01T20:00:00Z",
+		"iscertain":true,"descript":"Test création événement description"}`),
+			BodyContains: []string{"Création d'un événement : PhysicalOpID, Name ou Date incorrect"}},
 		{Token: testCtx.User.Token, ID: "9", Status: http.StatusOK,
 			Sent: []byte(`{"name":"Test création événement", "date":"2018-04-01T20:00:00Z",
 			"iscertain":true,"descript":"Test création événement description"}`),
@@ -80,16 +101,22 @@ func createEventTest(e *httpexpect.Expect, t *testing.T) (evID int) {
 				`"iscertain":true`, `"descript":"Test création événement description"`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/physical_ops/"+tc.ID+"/events").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nCreateEvent[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nCreateEvent[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.Status == http.StatusOK {
 			evID = int(response.JSON().Object().Value("Event").Object().Value("id").Number().Raw())
 		}
-		response.Status(tc.Status)
 	}
 	return evID
 }
@@ -99,8 +126,10 @@ func modifyEventTest(e *httpexpect.Expect, t *testing.T, evID int) {
 	testCases := []testCase{
 		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest,
-			BodyContains: []string{"Modification d'événement : introuvable"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusInternalServerError,
+			Sent: []byte(`{"name":"Test modification événement", "date":"2017-04-01T20:00:00Z",
+		"iscertain":false,"descript":"Test modification événement description"}`),
+			BodyContains: []string{"Modification d'un événement, requête : Événement introuvable"}},
 		{Token: testCtx.User.Token, ID: strconv.Itoa(evID), Status: http.StatusOK,
 			Sent: []byte(`{"name":"Test modification événement", "date":"2017-04-01T20:00:00Z",
 			"iscertain":false,"descript":"Test modification événement description"}`),
@@ -109,13 +138,19 @@ func modifyEventTest(e *httpexpect.Expect, t *testing.T, evID int) {
 				`"descript":"Test modification événement description"`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.PUT("/api/physical_ops/9/events/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nModifyEvent[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nModifyEvent[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -124,18 +159,24 @@ func deleteEventTest(e *httpexpect.Expect, t *testing.T, evID int) {
 	testCases := []testCase{
 		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, ID: "0", Status: http.StatusNotFound,
-			BodyContains: []string{"Suppression d'événement : introuvable"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Suppression d'un événement, requête : Événement introuvable"}},
 		{Token: testCtx.User.Token, ID: strconv.Itoa(evID), Status: http.StatusOK,
 			BodyContains: []string{"Événement supprimé"}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.DELETE("/api/physical_ops/9/events/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nDeleteEvent[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDeleteEvent[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
