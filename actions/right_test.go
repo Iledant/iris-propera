@@ -3,14 +3,11 @@ package actions
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
 )
-
-type rightTest struct {
-	Right []int `json:"Right"`
-}
 
 // TestRight implements tests for users right handlers.
 func TestRight(t *testing.T) {
@@ -27,86 +24,76 @@ func getRightsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{ID: "26", Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}, ArraySize: 0},
-		{ID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
-			BodyContains: []string{"Liste des droits utilisateur, introuvable"}, ArraySize: 0},
 		{ID: "26", Token: testCtx.Admin.Token, Status: http.StatusOK,
-			BodyContains: []string{"Right", "User", "PhysicalOp"}, ArraySize: 49},
+			BodyContains: []string{`"Right":[536,25,41,54,56,477,140,444,446,447,448,449,450,451,452,453,19,372,389,391,445,454,478,479,481,482,483,164,165,166,182,194,197,220,294,300,321,333,340,349,357,480,484,486,487,488,489,390,551]`, "User", "PhysicalOp"}},
 	}
-
-	for _, tc := range testCases {
-		response := e.GET("/api/users/"+tc.ID+"/rights").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	for i, tc := range testCases {
+		response := e.GET("/api/user/"+tc.ID+"/rights").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetRights[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-
-		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("Right").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetRights[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
-		response.Status(tc.Status)
 	}
 }
 
 // setRightTest tests route is protected and returned list is the same as sent one
 func setRightsTest(e *httpexpect.Expect, t *testing.T) {
 	userID := strconv.Itoa(testCtx.User.User.ID)
-	testCases := []struct {
-		ID, Token    string
-		Right        rightTest
-		Status       int
-		BodyContains string
-		ArraySize    int
-	}{
-		{ID: "26", Token: testCtx.User.Token, Right: rightTest{},
-			Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
-		{ID: "0", Token: testCtx.Admin.Token, Right: rightTest{},
-			Status: http.StatusBadRequest, BodyContains: "Utilisateur introuvable", ArraySize: 0},
-		{ID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{}},
-			Status: http.StatusOK, BodyContains: "Right", ArraySize: 0},
-		{ID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{0}},
-			Status: http.StatusBadRequest, BodyContains: "Mauvais identificateur d'opération", ArraySize: 0},
-		{ID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{9, 10, 11, 12}},
-			Status: http.StatusOK, BodyContains: "Right", ArraySize: 4},
+	testCases := []testCase{
+		{ID: "26", Token: testCtx.User.Token, Sent: []byte(`{"Right":[]}`),
+			Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
+		{ID: userID, Token: testCtx.Admin.Token, Sent: []byte(`{"Right":[]}`),
+			Status: http.StatusOK, BodyContains: []string{"Right"}},
+		{ID: userID, Token: testCtx.Admin.Token, Sent: []byte(`{"Right":[0]}`),
+			Status: http.StatusInternalServerError, BodyContains: []string{"Fixation des droits, requête :"}},
+		{ID: userID, Token: testCtx.Admin.Token, Sent: []byte(`{"Right":[9, 10, 11, 12]}`),
+			Status: http.StatusOK, BodyContains: []string{`"Right":[9,10,11,12]`}},
 	}
-
-	for _, tc := range testCases {
-		response := e.POST("/api/users/"+tc.ID+"/rights").WithHeader("Authorization", "Bearer "+tc.Token).WithJSON(tc.Right).Expect()
-		response.Body().Contains(tc.BodyContains)
-		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("Right").Array().Length().Equal(tc.ArraySize)
+	for i, tc := range testCases {
+		response := e.POST("/api/user/"+tc.ID+"/rights").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nSetRights[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nSetRights[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
 // inheritRightsTest tests route is protected and returned list is compliant.
 func inheritsRightsTest(e *httpexpect.Expect, t *testing.T) {
 	userID := strconv.Itoa(testCtx.User.User.ID)
-	testCases := []struct {
-		ID, Token    string
-		Right        rightTest
-		Status       int
-		BodyContains string
-		ArraySize    int
-	}{
-		{ID: "26", Token: testCtx.User.Token, Right: rightTest{},
-			Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis", ArraySize: 0},
-		{ID: "0", Token: testCtx.Admin.Token, Right: rightTest{},
-			Status: http.StatusBadRequest, BodyContains: "Héritage de droit utilisateur, introuvable", ArraySize: 0},
-		{ID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{}},
-			Status: http.StatusOK, BodyContains: "Right", ArraySize: 4},
-		{ID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{0}},
-			Status: http.StatusBadRequest, BodyContains: "Mauvais identificateur d'utilisateur", ArraySize: 0},
-		{ID: userID, Token: testCtx.Admin.Token, Right: rightTest{[]int{26}},
-			Status: http.StatusOK, BodyContains: "Right", ArraySize: 53},
+	testCases := []testCase{
+		{ID: "26", Token: testCtx.User.Token, Sent: []byte(`{"Right":[]}`),
+			Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
+		{ID: userID, Token: testCtx.Admin.Token, Sent: []byte(`{"Right":[]}`),
+			Status: http.StatusOK, BodyContains: []string{"Right"}},
+		{ID: userID, Token: testCtx.Admin.Token, Sent: []byte(`{"Right":[35]}`),
+			Status: http.StatusOK, BodyContains: []string{"Right", "37", "541", "543"}},
 	}
-
-	for _, tc := range testCases {
-		response := e.POST("/api/users/"+tc.ID+"/inherits").WithHeader("Authorization", "Bearer "+tc.Token).WithJSON(tc.Right).Expect()
-		response.Body().Contains(tc.BodyContains)
-		if tc.ArraySize > 0 {
-			response.JSON().Object().Value("Right").Array().Length().Equal(tc.ArraySize)
+	for i, tc := range testCases {
+		response := e.POST("/api/user/"+tc.ID+"/inherits").WithHeader("Authorization", "Bearer "+tc.Token).
+			WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nInheritsRights[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nInheritsRights[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
-
 }
