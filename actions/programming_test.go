@@ -19,30 +19,30 @@ func TestProgramming(t *testing.T) {
 
 // getProgrammingsTest check route is protected and programmings correctly sent.
 func getProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Status       int
-		BodyContains []string
-		Year         string
-		Count        int
-	}{
-		{Token: "fake", Year: "2018", Status: http.StatusInternalServerError,
+	testCases := []testCase{
+		{Token: "fake", Param: "2018", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.Admin.Token, Year: "2018", Status: http.StatusOK,
-			BodyContains: []string{"Programmings"}, Count: 623},
+		{Token: testCtx.Admin.Token, Param: "2018", Status: http.StatusOK,
+			BodyContains: []string{"Programmings"}, ArraySize: 623},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/programmings").WithHeader("Authorization", "Bearer "+tc.Token).
-			WithQuery("year", tc.Year).Expect()
+			WithQuery("year", tc.Param).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetProgrammings[%d] : attendu \"%s\" et reçu \"%s\"", i, s, content)
+				t.Errorf("\nGetProgrammings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("Programmings").Array().Length().Equal(tc.Count)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetProgrammings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetProgrammings[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -53,17 +53,20 @@ func getProgrammingsYearsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			BodyContains: []string{`"ProgrammingsYear":[2018]`}},
+			BodyContains: []string{`{"ProgrammingsYears":[{"year":2018}]}`}},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/programmings/years").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetProgrammingsYears[%d] : attendu \"%s\" et reçu \"%s\"", i, s, content)
+				t.Errorf("\nGetProgrammingsYears[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetProgrammingsYears[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -74,7 +77,7 @@ func batchProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, Sent: []byte(`{Pend}`),
 			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError, Sent: []byte(`{Pend}`),
-			BodyContains: []string{"Batch programmation, décodage impossible"}},
+			BodyContains: []string{"Batch programmation, décodage : "}},
 		//cSpell:disable
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"Programmings": [
 			{"physical_op_id":9,"year":2018,"value":100000000,
@@ -95,9 +98,12 @@ func batchProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("BatchProgrammings[%d] : attendu \"%s\" et reçu \"%s\"", i, s, content)
+				t.Errorf("\nBatchProgrammings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchProgrammings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
