@@ -8,21 +8,15 @@ import (
 	"github.com/kataras/iris"
 )
 
-// illResp embeddes array of import logs for JSON response.
-type illResp struct {
-	ImportLogs []models.ImportLog `json:"ImportLog"`
-}
-
 // GetImportLogs handles to get request for log informations
 func GetImportLogs(ctx iris.Context) {
-	db, ill := ctx.Values().Get("db").(*gorm.DB), illResp{}
-
-	if err := db.Find(&ill.ImportLogs).Error; err != nil {
+	db := ctx.Values().Get("db").(*gorm.DB)
+	var resp models.ImportLogs
+	if err := resp.GetAll(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Import logs, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(ill)
+	ctx.JSON(resp)
 }

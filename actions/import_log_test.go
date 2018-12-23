@@ -2,6 +2,7 @@ package actions
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -17,22 +18,24 @@ func TestImportLog(t *testing.T) {
 
 // getImportLogsTest tests route is protected and imports logs are sent back.
 func getImportLogsTest(e *httpexpect.Expect, t *testing.T) {
-	testCases := []struct {
-		Token        string
-		Year         int
-		Status       int
-		BodyContains []string
-	}{
+	testCases := []testCase{
 		{Token: "", Status: http.StatusInternalServerError, BodyContains: []string{"Token absent"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
-			BodyContains: []string{"ImportLog", `"id":1`, `"category":"Payments"`, `"id":2`, `"category":"FinancialCommitments"`}},
+			BodyContains: []string{"ImportLog", `"id":1`, `"category":"Payments"`,
+				`"id":2`, `"category":"FinancialCommitments"`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/import_log").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetImportLogs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetImportLogs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
