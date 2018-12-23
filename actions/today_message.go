@@ -2,6 +2,7 @@ package actions
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Iledant/iris_propera/models"
 	"github.com/jinzhu/gorm"
@@ -15,48 +16,92 @@ type todayMsgResp struct {
 
 // GetTodayMessage handles the get request to fetch title and text
 func GetTodayMessage(ctx iris.Context) {
-	var tm models.TodayMessage
+	var resp todayMsgResp
+	var err error
 	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := db.First(&tm, 1).Error; err != nil {
-		if err != gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.JSON(jsonError{"Today message requête : " + err.Error()})
-			return
-		}
+	if err = resp.TodayMessage.Get(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Today message requête : " + err.Error()})
+		return
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(todayMsgResp{tm})
-}
-
-// todayMsgReq is used to decode sent post request
-type todayMsgReq struct {
-	Title string `json:"title"`
-	Text  string `json:"text"`
+	ctx.JSON(resp)
 }
 
 // SetTodayMessage handles the set request to fetch title and text
 func SetTodayMessage(ctx iris.Context) {
-	var req todayMsgReq
+	var req models.TodayMessage
 	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation today message, décodage : " + err.Error()})
 		return
 	}
 	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := db.Exec("UPDATE today_messages SET title = ?, text = ? WHERE id = 1",
-		req.Title, req.Text).Error; err != nil {
+	if err := req.Update(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation today message, update : " + err.Error()})
 		return
 	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(todayMsgResp{req})
+}
 
-	tm := models.TodayMessage{}
-	if err := db.First(&tm, 1).Error; err != nil {
+type homeResp struct {
+	models.TodayMessage `json:"TodayMessage"`
+	models.NextMonthEvents
+	models.MonthFinancialCommitments
+	models.YearBudgetCredits
+	models.ProgrammingsPerMonthes
+	models.PaymentPerMonths
+}
+
+// GetHomeDatas handles the get request for the home page.
+func GetHomeDatas(ctx iris.Context) {
+	var resp homeResp
+	var err error
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err = resp.TodayMessage.Get(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Fixation today message, lecture base de données : " + err.Error()})
+		ctx.JSON(jsonError{"HomeDatas, today messages requête : " + err.Error()})
 		return
 	}
-
+	uID, err := getUserID(ctx)
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Homedatas, user : " + err.Error()})
+		return
+	}
+	if err = resp.NextMonthEvents.Get(uID, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Homedatas, next month events : " + err.Error()})
+		return
+	}
+	year, err := ctx.URLParamInt("year")
+	if err != nil || year == 0 {
+		year = time.Now().Year()
+	}
+	if err = resp.MonthFinancialCommitments.GetAll(year, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"HomeDatas, MonthFinancialCommitments : " + err.Error()})
+		return
+	}
+	if err = resp.YearBudgetCredits.GetAll(year, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"HomeDatas, YearBudgetCredits : " + err.Error()})
+		return
+	}
+	err = resp.ProgrammingsPerMonthes.GetAll(year, db.DB())
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"HomeDatas, ProgrammingsPerMonth : " + err.Error()})
+		return
+	}
+	err = resp.PaymentPerMonths.GetAll(year, db.DB())
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"HomeDatas, PaymentPerMonths : " + err.Error()})
+		return
+	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(todayMsgResp{tm})
+	ctx.JSON(resp)
 }
