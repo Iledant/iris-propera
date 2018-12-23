@@ -32,14 +32,20 @@ func getPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
 		response := e.GET("/api/pending_commitments").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetPendings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetPendings[%d] : contenu incorrect, attendu \"%s\" et reçu \"%s\"", i, tc.BodyContains, content)
+				t.Errorf("\nGetPendings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetPendings[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -58,12 +64,18 @@ func getUnlinkedPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetPendings[%d] : contenu incorrect, attendu \"%s\" et reçu \"%s\"", i, tc.BodyContains, content)
+				t.Errorf("\nGetUnlinkedPendings[%d] : contenu incorrect, attendu \"%s\" et reçu \"%s\"", i, tc.BodyContains, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetUnlinkedPendings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetUnlinkedPendings[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -82,12 +94,18 @@ func getLinkedPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetPendings[%d] : contenu incorrect, attendu \"%s\" et reçu \"%s\"", i, tc.BodyContains, content)
+				t.Errorf("\nGetLinkedPendings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetLinkedPendings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetLinkedPendings[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -97,25 +115,35 @@ func linkPcToOpTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusBadRequest,
-			BodyContains: []string{"Rattachement d'engagement en cours : opération introuvable"}},
-		{Token: testCtx.Admin.Token, ID: "12", Status: http.StatusBadRequest,
-			Sent: []byte(`{"peIdList":[228, 14, 230, 231]}`), ArraySize: 16,
-			BodyContains: []string{"Rattachement d'engagement en cours, identifiant introuvable"}},
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"peIdList":[228, 14, 230, 231]}`),
+			BodyContains: []string{"Rattachement d'engagement en cours, requête : pq"}},
+		{Token: testCtx.Admin.Token, ID: "12", Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"peIdList":[228, 14, 230, 231]}`),
+			BodyContains: []string{"Rattachement d'engagement en cours, requête : Opération ou engagements en cours introuvables"}},
 		{Token: testCtx.Admin.Token, ID: "12", Status: http.StatusOK,
 			Sent:         []byte(`{"peIdList":[228, 229, 230, 231]}`),
 			BodyContains: []string{"PendingCommitments"}, ArraySize: 12},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/pending_commitments/physical_ops/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nLinkPcToOp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nLinkPcToOp[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nLinkPcToOp[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -125,23 +153,32 @@ func unlinkPCsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
-			Sent: []byte(`{"peIdList":[228, 14, 230, 231]}`), ArraySize: 39,
-			BodyContains: []string{"Détachement d'engagement en cours, identifiant introuvable"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"peIdList":[228, 14, 230, 231]}`),
+			BodyContains: []string{"Détachement d'engagement en cours, requête : Opération ou engagements en cours introuvables"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			Sent:         []byte(`{"peIdList":[228, 229, 230, 231]}`),
 			BodyContains: []string{"PendingCommitments"}, ArraySize: 35},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/pending_commitments/unlink").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nUnLinkPcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("PendingCommitments").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nUnLinkPcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nUnLinkPcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }
@@ -152,7 +189,7 @@ func batchPendingsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError, Sent: []byte(`{Pend}`),
-			BodyContains: []string{"Batch d'engagements en cours, erreur de lecture"}},
+			BodyContains: []string{"Batch d'engagements en cours, décodage :"}},
 		//cSpell:disable
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Sent: []byte(`{"PendingCommitment": [
 			{"iris_code":"18002306","name":"METRO LIGNE 11 - PROLONGEMENT A ROSNY BOIS PERRIER - CONVENTION DE FINANCEMENT TRAVAUX N°3","proposed_value":7501596200,"chapter":"908  ","action":"481006011 - Métro    ","commission_date":"2018-05-30T00:00:00Z","beneficiary":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS"},
@@ -164,12 +201,18 @@ func batchPendingsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Engagements en cours importés"}},
 	}
 	//cSpell:enable
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/pending_commitments").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nBatchPendings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchPendings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
