@@ -17,6 +17,7 @@ func TestPhysicalOps(t *testing.T) {
 		ID := createPhysicalOpTest(testCtx.E, t)
 		updatePhysicalOpTest(testCtx.E, t)
 		deletePhysicalOpTest(testCtx.E, t, ID)
+		getOpAndFcsTest(testCtx.E, t)
 		batchPhysicalOpsTest(testCtx.E, t)
 		getPrevisionsTests(testCtx.E, t)
 		setOpPrevisionsTests(testCtx.E, t)
@@ -39,14 +40,19 @@ func getPhysicalOpsTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetPhysicalOps[%d] : contenu incorrect, attendu \"%s\" et reçu\n\"%s\"", i, tc.BodyContains, content)
+				t.Errorf("\nGetPhysicalOps[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().ContainsKey("PhysicalOp")
-			response.JSON().Object().Value("PhysicalOp").Array().Length().Equal(tc.ArraySize)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetPhysicalOps[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
-		response.Status(tc.Status)
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetPhysicalOps[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
 	}
 }
 
@@ -56,9 +62,9 @@ func createPhysicalOpTest(e *httpexpect.Expect, t *testing.T) (ID int) {
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest, Sent: []byte(`{}`),
-			BodyContains: []string{"Mauvais format de numéro d'opération"}},
+			BodyContains: []string{"Création d'opération : Number ou Name incorrect"}},
 		{Token: testCtx.Admin.Token, Sent: []byte(`{"number":"99XX001","name":""}`),
-			Status: http.StatusBadRequest, BodyContains: []string{"Nom de l'opération absent"}},
+			Status: http.StatusBadRequest, BodyContains: []string{"Création d'opération : Number ou Name incorrect"}},
 		{Token: testCtx.Admin.Token, Sent: []byte(`{"number":"18VN044","name":"Essai fluvial","isr":true,
 		"descript":"description","value":123456,"valuedate":"2018-08-21T02:00:00Z","length":123456,"tri":500,"van":123456}`),
 			Status: http.StatusOK, BodyContains: []string{"PhysicalOp", `"number":"18VN045"`,
@@ -69,12 +75,11 @@ func createPhysicalOpTest(e *httpexpect.Expect, t *testing.T) (ID int) {
 	for i, tc := range testCases {
 		response := e.POST("/api/physical_ops").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
-		for _, bc := range tc.BodyContains {
-			if !strings.Contains(content, bc) {
-				t.Errorf("CreatePhysicalOp[%d] : contenu incorrect, attendu \"%s\" et reçu\n\"%s\"", i, bc, content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nCreatePhysicalOp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
 		if tc.Status == http.StatusOK {
 			ID = int(response.JSON().Object().Value("PhysicalOp").Object().Value("id").Number().Raw())
 		}
@@ -88,18 +93,25 @@ func deletePhysicalOpTest(e *httpexpect.Expect, t *testing.T, ID int) {
 	testCases := []testCase{
 		{Token: testCtx.User.Token, ID: sID, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusNotFound,
+		{Token: testCtx.Admin.Token, ID: "0", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Opération introuvable"}},
 		{Token: testCtx.Admin.Token, ID: sID, Status: http.StatusOK,
 			BodyContains: []string{"Opération supprimée"}},
 	}
 
-	for _, tc := range testCases {
-		response := e.DELETE("/api/physical_ops/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	for i, tc := range testCases {
+		response := e.DELETE("/api/physical_ops/"+tc.ID).
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nDeletePhysicalOp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDeletePhysicalOp[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -109,30 +121,37 @@ func updatePhysicalOpTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "", ID: "0", Status: http.StatusInternalServerError,
 			Sent: []byte(`{}`), BodyContains: []string{"Token absent"}},
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest,
-			Sent: []byte(`{}`), BodyContains: []string{"Modification d'opération, introuvable"}},
-		{Token: testCtx.User.Token, ID: "15", Status: http.StatusBadRequest,
-			Sent: []byte(`{}`), BodyContains: []string{"L'utilisateur n'a pas de droits sur l'opération"}},
-		{Token: testCtx.Admin.Token, ID: "14", Sent: []byte(`{"number":"01DI001"}`),
-			Status: http.StatusBadRequest, BodyContains: []string{"Numéro d'opération existant"}},
-		{Token: testCtx.User.Token, ID: "14", Sent: []byte(`{"name":"Nouveau nom","isr":true,"descript":"Nouvelle description","value":123456,"valuedate":"2018-08-17T00:00:00Z","length":123456,"tri":500,"van":123456,"plan_line_id":34}`),
+			Sent:         []byte(`{"name":"Nom nouveau","isr":false,"descript":"Description nouvelle","value":546,"valuedate":"2018-08-16T00:00:00Z","length":546,"tri":300,"van":100,"plan_line_id":34}`),
+			BodyContains: []string{"Modification d'opération : Number ou Name incorrect"}},
+		{Token: testCtx.User.Token, ID: "15", Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"name":"Nom nouveau","number":"01BU004","isr":false,"descript":"Description nouvelle","value":546,"valuedate":"2018-08-16T00:00:00Z","length":546,"tri":300,"van":100,"plan_line_id":34}`),
+			BodyContains: []string{"Modification d'opération, requête : Droits insuffisant pour l'opération"}},
+		{Token: testCtx.Admin.Token, ID: "14",
+			Sent:   []byte(`{"name":"Nom nouveau","number":"18VN045","isr":false,"descript":"Description nouvelle","value":546,"valuedate":"2018-08-16T00:00:00Z","length":546,"tri":300,"van":100,"plan_line_id":34}`),
+			Status: http.StatusInternalServerError, BodyContains: []string{"Numéro d'opération existant"}},
+		{Token: testCtx.User.Token, ID: "14", Sent: []byte(`{"name":"Nouveau nom","number":"01BU004","isr":true,"descript":"Nouvelle description","value":123456,"valuedate":"2018-08-17T00:00:00Z","length":123456,"tri":500,"van":123456,"plan_line_id":34}`),
 			Status: http.StatusOK, BodyContains: []string{"PhysicalOp", `"name":"Bus - voirie - aménagement"`,
 				`"isr":true`, `"descript":"Nouvelle description"`, `"value":123456`, `"valuedate":"2018-08-17T00:00:00Z"`,
 				`"length":123456`, `"tri":500`, `"van":123456`, `"plan_line_id":32`}},
-		{Token: testCtx.Admin.Token, ID: "14", Sent: []byte(`{"name":"Nom nouveau","isr":false,"descript":"Description nouvelle","value":546,"valuedate":"2018-08-16T00:00:00Z","length":546,"tri":300,"van":100,"plan_line_id":34}`),
+		{Token: testCtx.Admin.Token, ID: "14", Sent: []byte(`{"name":"Nom nouveau","number":"01BU004","isr":false,"descript":"Description nouvelle","value":546,"valuedate":"2018-08-16T00:00:00Z","length":546,"tri":300,"van":100,"plan_line_id":34}`),
 			Status: http.StatusOK, BodyContains: []string{"PhysicalOp", `"name":"Nom nouveau"`, `"isr":false`,
 				`"descript":"Description nouvelle"`, `"value":546`, `"valuedate":"2018-08-16T00:00:00Z"`,
 				`"length":546`, `"tri":300`, `"van":100`, `"plan_line_id":34`}},
 	}
 
 	for i, tc := range testCases {
-		response := e.PUT("/api/physical_ops/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		response := e.PUT("/api/physical_ops/"+tc.ID).
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
-		for _, bc := range tc.BodyContains {
-			if !strings.Contains(content, bc) {
-				t.Errorf("UpdatePhysicalOp[%d] : contenu incorrect, attendu \"%s\" et reçu\n\"%s\"", i, bc, content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nUpdatePhysicalOp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nUpdatePhysicalOp[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -142,7 +161,7 @@ func batchPhysicalOpsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Sent: []byte(`{"PhysicalOp":[]}`),
 			Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Sent: []byte(`{"PhysicalOp":[{"number":"20XX999","isr":true}]}`),
-			Status: http.StatusInternalServerError, BodyContains: []string{"Erreur d'insertion"}},
+			Status: http.StatusInternalServerError, BodyContains: []string{"Batch opération, requête : pq"}},
 		{Token: testCtx.Admin.Token, Sent: []byte(`{"PhysicalOp":[{"number":"20XX001",
 		"name":"Essai batch1","isr":true},{"number":"18DI999","name":"Essai batch2","isr":true}]}`),
 			Status: http.StatusOK, BodyContains: []string{"Terminé"}},
@@ -157,18 +176,20 @@ func batchPhysicalOpsTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("Batch physical_ops[%d] : contenu incorrect, attendu \"%s\" et reçu\n\"%s\"", i, tc.BodyContains, content)
+				t.Errorf("\nBatchPhysicalOps[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchPhysicalOps[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
-
 	response := e.GET("/api/physical_ops").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).Expect()
 	ee := []string{"Essai batch1", "Essai batch2", "Essai batch3", "Description batch3", "20XX001"}
 	content := string(response.Content)
 	for _, e := range ee {
 		if !strings.Contains(content, e) {
-			t.Errorf("Batch physical_ops[GET] : attendu \"%s\" et reçu\n\"%s\"", e, content)
+			t.Errorf("\nBatchPhysicalOps[GET] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", e, content)
 		}
 	}
 }
@@ -178,21 +199,24 @@ func getPrevisionsTests(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, ID: "0", Status: http.StatusBadRequest,
-			BodyContains: []string{"Prevision d'opération, opération introuvable"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Prévision d'opération, check : Opération introuvable"}},
 		{Token: testCtx.User.Token, ID: "10", Status: http.StatusOK,
 			BodyContains: []string{"PrevCommitment", "PrevPayment", "FinancialCommitment", "PendingCommitment",
-				"Payment", "PaymentPerBeneficiary", "FinancialCommitmentPerBeneficiary", "ImportLog"}},
+				"Payment", "PaymentPerBeneficiary", "FinancialCommitmentPerBeneficiary", "ImportLog", "Event", "Document", "PaymentType"}},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/physical_ops/"+tc.ID+"/previsions").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("GetOpPrevisions[%d] : attendu %s et reçu\n%s", i, s, content)
+				t.Errorf("\nGetPrevisions[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetPrevisions[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -202,8 +226,8 @@ func setOpPrevisionsTests(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", ID: "0", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, ID: "0", Sent: []byte(`{Prev}`), Status: http.StatusInternalServerError,
 			BodyContains: []string{"Fixation prévision d'opération, erreur décodage payload"}},
-		{Token: testCtx.User.Token, ID: "0", Sent: []byte(`{"PrevCommitment":[],"PrevPayment":[]}`), Status: http.StatusBadRequest,
-			BodyContains: []string{"Fixation prévision d'opération, opération introuvable"}},
+		{Token: testCtx.User.Token, ID: "0", Sent: []byte(`{"PrevCommitment":[],"PrevPayment":[]}`), Status: http.StatusInternalServerError,
+			BodyContains: []string{"Fixation prévision d'opération, opération : Opération introuvable"}},
 		{Token: testCtx.User.Token, ID: "10", Status: http.StatusOK,
 			Sent: []byte(`{"PrevCommitment":[{"year":2019,"value":100000000,"descript":null,"total_value":null,"state_ratio":null},
 		{"year":2020,"value":200000000,"descript":"essai de description","total_value":400000000,"state_ratio":0.5}],
@@ -217,9 +241,42 @@ func setOpPrevisionsTests(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("SetOpPrevisions[%d] : attendu %s et reçu\n%s", i, s, content)
+				t.Errorf("\nSetOpPrevisions[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nSetOpPrevisions[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+	}
+}
+
+func getOpAndFcsTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			BodyContains: []string{"PhysicalOpFinancialCommitments", "number", "op_name", "iris_code", "iris_name"},
+			ArraySize:    4465},
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/physical_ops/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetOpAndFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetOpAndFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"number"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetOpAndFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
 	}
 }
