@@ -2,6 +2,7 @@ package actions
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -47,14 +48,20 @@ func getUnlinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"FinancialCommitment", `"last_page":8`, `"current_page":8`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("page", tc.Page).WithQuery("LinkType", tc.LinkType).WithQuery("search", tc.Search).
 			WithQuery("MinYear", tc.MinYear).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetUnlinkedFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetUnlinkedFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -68,18 +75,24 @@ func getMonthFCTest(e *httpexpect.Expect, t *testing.T) {
 	}{
 		{Token: "", Status: http.StatusInternalServerError, BodyContains: []string{"Token absent"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK, Year: 2017,
-			BodyContains: []string{"FinancialCommitmentPerMonth", `"month":3`, `"value":9681497875`}},
+			BodyContains: []string{"FinancialCommitmentsPerMonth", `"month":3`, `"value":9681497875`}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
-			BodyContains: []string{"FinancialCommitmentPerMonth", `"month":3`, `"value":10778560491`}},
+			BodyContains: []string{"FinancialCommitmentsPerMonth", `"month":3`, `"value":10778560491`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/financial_commitments/month").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("year", tc.Year).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetMonthFCTest[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetMonthFCTest[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -109,14 +122,20 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"FinancialCommitment", `"last_page":6`, `"current_page":6`}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/financial_commitments/linked").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("page", tc.Page).WithQuery("LinkType", tc.LinkType).WithQuery("search", tc.Search).
 			WithQuery("MinYear", tc.MinYear).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetLinkedFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetLinkedFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -130,20 +149,29 @@ func getOpFcsTest(e *httpexpect.Expect, t *testing.T) {
 		FcsCount     int
 	}{
 		{Token: "fake", OpID: "0", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusBadRequest,
-			OpID: "0", BodyContains: []string{"Liste des engagements : opération introuvable"}},
+		{Token: testCtx.User.Token, Status: http.StatusOK,
+			OpID: "0", BodyContains: []string{"null"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
 			OpID: "12", BodyContains: []string{"FinancialCommitment"}, FcsCount: 8},
 	}
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.GET("/api/physical_ops/"+tc.OpID+"/financial_commitments").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("FinancialCommitment").Array().Length().Equal(tc.FcsCount)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetOpFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.FcsCount > 0 {
+			count := strings.Count(content, `"coriolis_year"`)
+			if count != tc.FcsCount {
+				t.Errorf("\nGetOpFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.FcsCount, count)
+			}
 		}
 	}
 }
@@ -162,27 +190,37 @@ func unlinkFcsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			Sent:         []byte(`{"linkType":"PhysicalOp","fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
 			BodyContains: []string{"FinancialCommitment", `"last_page":284`}, OpID: "12", FcsCount: 3},
-		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
+		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
 			Sent:         []byte(`{"linkType":"PhysicalOp","fcIdList":[0]}`),
-			BodyContains: []string{"Détachement d'engagement : mauvais identificateur d'engagement"}},
+			BodyContains: []string{"Détachement d'engagements, requête : Engagements incorrects"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			Sent:         []byte(`{"linkType":"PlanLine","fcIdList":[138,147,190,136,192]}`),
 			BodyContains: []string{"FinancialCommitment", `"last_page":17`}},
-		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
+		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
 			Sent:         []byte(`{"linkType":"PlanLine","fcIdList":[0]}`),
-			BodyContains: []string{"Détachement d'engagement : mauvais identificateur d'engagement"}},
+			BodyContains: []string{"Détachement d'engagements, requête : Engagements incorrects"}},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/financial_commitments/unlink").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
+
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nUnlinkFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nUnlinkFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 		if tc.OpID != "" {
 			response := e.GET("/api/physical_ops/"+tc.OpID+"/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-			response.JSON().Object().Value("FinancialCommitment").Array().Length().Equal(tc.FcsCount)
+			count := strings.Count(string(response.Content), `"id"`)
+			if count != tc.FcsCount {
+				t.Errorf("\nUnlinkFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.FcsCount, count)
+			}
 		}
 		// TODO implement plan line get test
 	}
@@ -199,22 +237,35 @@ func linkFcToOpTest(e *httpexpect.Expect, t *testing.T) {
 		FcsCount     int
 	}{
 		{Token: testCtx.User.Token, OpID: "0", Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, OpID: "0", Status: http.StatusBadRequest, BodyContains: []string{"Rattachement d'engagement : opération introuvable"}},
+		{Token: testCtx.Admin.Token, OpID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Rattachement engagements / opération, requête : pq"},
+			Sent:         []byte(`{"fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
+		},
 		{Token: testCtx.Admin.Token, OpID: "12", Status: http.StatusOK,
 			Sent:         []byte(`{"fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
 			BodyContains: []string{"FinancialCommitment", `"last_page":1`}, FcsCount: 8},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/financial_commitments/physical_ops/"+tc.OpID).WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
+
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nLinkFcToOp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nLinkFcToOp[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 		if tc.OpID != "0" {
 			response := e.GET("/api/physical_ops/"+tc.OpID+"/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-			response.JSON().Object().Value("FinancialCommitment").Array().Length().Equal(tc.FcsCount)
+			count := strings.Count(string(response.Content), `"id"`)
+			if count != tc.FcsCount {
+				t.Errorf("\nUnlinkFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.FcsCount, count)
+			}
 		}
 	}
 }
@@ -229,20 +280,29 @@ func linkFcToPlTest(e *httpexpect.Expect, t *testing.T) {
 		PlID         string
 		FcsCount     int
 	}{
-		{Token: testCtx.User.Token, PlID: "0", Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, PlID: "0", Status: http.StatusBadRequest, BodyContains: []string{"Rattachement d'engagement : ligne de plan introuvable"}},
+		{Token: testCtx.User.Token, PlID: "0", Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, PlID: "0", Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"fcIdList":[138,147,190,136,192]}`),
+			BodyContains: []string{"Rattachement engagements / ligne de plan, requête : pq"}},
 		{Token: testCtx.Admin.Token, PlID: "23", Status: http.StatusOK,
 			Sent:         []byte(`{"fcIdList":[138,147,190,136,192]}`),
 			BodyContains: []string{"FinancialCommitment", `"last_page":268`}, FcsCount: 8},
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/financial_commitments/plan_lines/"+tc.PlID).WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nLinkFcToPl[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nLinkFcToPl[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 		// TODO implement get plan line FCs test
 		// if tc.PlID != "0" {
 		// 	response := e.GET("/api/physical_ops/"+tc.PlID+"/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
@@ -269,13 +329,19 @@ func batchFcsTest(e *httpexpect.Expect, t *testing.T) {
 		//cSpell:enable
 	}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nBatchFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -295,18 +361,28 @@ func batchOpFcsTest(e *httpexpect.Expect, t *testing.T) {
 				{"op_number":"18FF005","coriolis_year":"2008","coriolis_egt_code":"P1215","coriolis_egt_num":"241790","coriolis_egt_line":"1"},
 				{"op_number":"18FF005","coriolis_year":"2008","coriolis_egt_code":"P1215","coriolis_egt_num":"241792","coriolis_egt_line":"1"}]}`)},
 	}
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/financial_commitments/attachments").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
 		for _, s := range tc.BodyContains {
-			response.Body().Contains(s)
+			if !strings.Contains(content, s) {
+				t.Errorf("\nBatchOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchOpFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.Status == http.StatusOK {
-			body := e.GET("/api/physical_ops/17/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect().Body()
-			body.Contains("R-2007-UAD-217075-1")
-			body.Contains("R-2007-UAD-217078-1")
-			body.Contains("R-2008-P1215-241790-1")
-			body.Contains("R-2008-P1215-241792-1")
+			body := e.GET("/api/physical_ops/17/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+			content = string(body.Content)
+			for _, s := range []string{"R-2007-UAD-217075-1", "R-2007-UAD-217078-1",
+				"R-2008-P1215-241790-1", "R-2008-P1215-241792-1"} {
+				if !strings.Contains(content, s) {
+					t.Errorf("\nBatchOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				}
+			}
 		}
 		response.Status(tc.Status)
 	}
