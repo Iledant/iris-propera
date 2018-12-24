@@ -61,3 +61,27 @@ func (b *Beneficiaries) GetAll(db *sql.DB) (err error) {
 	}
 	return nil
 }
+
+// GetPlanAll fetches all beneficiaries in the database linked to a plan
+// whose ID is given
+func (b *Beneficiaries) GetPlanAll(planID int64, db *sql.DB) (err error) {
+	rows, err := db.Query(`SELECT id, code, name FROM beneficiary WHERE id IN 
+	(SELECT DISTINCT beneficiary_id FROM plan_line_ratios WHERE plan_line_id IN 
+		(SELECT id FROM plan_line WHERE plan_id=$1))`, planID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	var r Beneficiary
+	for rows.Next() {
+		err = rows.Scan(&r.ID, &r.Code, &r.Name)
+		if err != nil {
+			return err
+		}
+		b.Beneficiaries = append(b.Beneficiaries, r)
+	}
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	return nil
+}

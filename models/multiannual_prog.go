@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// MultiannualProgrammation embeddes an array of sqlJSON for json export.
+// MultiannualProgrammation embeddes an array of bytes for json export.
 type MultiannualProgrammation []byte
 
 // GetAll fetches multi annual programmation from database.

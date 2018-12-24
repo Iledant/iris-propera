@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"time"
 )
 
 // Plan model
@@ -97,4 +98,28 @@ func (p *Plan) Delete(db *sql.DB) (err error) {
 	}
 	tx.Commit()
 	return nil
+}
+
+// GetByID fetch a plan from database using it's ID.
+func (p *Plan) GetByID(db *sql.DB) (err error) {
+	err = db.QueryRow(`SELECT id, name, descript, first_year, last_year FROM plan
+	WHERE id = $1`, p.ID).Scan(&p.ID, &p.Name, &p.Descript, &p.FirstYear, &p.LastYear)
+	return err
+}
+
+// GetFirstAndLastYear computes first and last year for previsions according either
+// to plan's field or to actual year and previsions
+func (p *Plan) GetFirstAndLastYear(db *sql.DB) (firstYear int64, lastYear int64, err error) {
+	firstYear = int64(time.Now().Year() + 1)
+	if p.FirstYear.Valid && p.FirstYear.Int64 > firstYear {
+		firstYear = p.FirstYear.Int64
+	}
+	if p.LastYear.Valid {
+		lastYear = p.LastYear.Int64
+	} else {
+		if err = db.QueryRow("SELECT max(year) FROM prev_commitment").Scan(&lastYear); err != nil {
+			return 0, 0, err
+		}
+	}
+	return firstYear, lastYear, nil
 }

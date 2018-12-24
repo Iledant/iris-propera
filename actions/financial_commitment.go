@@ -119,7 +119,7 @@ func LinkFcToPl(ctx iris.Context) {
 		return
 	}
 	pl, db := models.PlanLine{ID: plID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = pl.LinkFinancialCommitments(fcIDs.IDs, db.DB()); err != nil {
+	if err = pl.LinkFCs(fcIDs.IDs, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Rattachement engagements / ligne de plan, requête : " + err.Error()})
 		return
