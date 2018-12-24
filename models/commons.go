@@ -4,21 +4,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"strconv"
 	"time"
-
-	"github.com/jinzhu/gorm"
-	"github.com/kataras/iris"
 )
 
 type jsonError struct {
 	Erreur string `json:"Erreur"`
-}
-
-// GetByID fetch a model using an ID or return an error using ctx to set status code and JSON message
-type GetByID interface {
-	GetByID(ctx iris.Context, db *gorm.DB, prefix string, ID int64) error
 }
 
 // NullTime is used for gorm null time commands
@@ -285,37 +276,4 @@ func toSQL(i interface{}) string {
 		return "'" + v.Time.Format("2006-01-02") + "'"
 	}
 	return ""
-}
-
-type sqlJSON json.RawMessage
-
-var emptyJSON = sqlJSON("{}")
-
-// MarshalJSON implements interface for sqlJSON.
-func (s sqlJSON) MarshalJSON() ([]byte, error) {
-	if len(s) == 0 {
-		return emptyJSON, nil
-	}
-	return s, nil
-}
-
-// Scan implements interface for sqlJSON.
-func (s *sqlJSON) Scan(src interface{}) error {
-	var source []byte
-	switch t := src.(type) {
-	case string:
-		source = []byte(t)
-	case []byte:
-		if len(t) == 0 {
-			source = emptyJSON
-		} else {
-			source = t
-		}
-	case nil:
-		*s = emptyJSON
-	default:
-		return errors.New("Incompatible type for JSONText")
-	}
-	*s = sqlJSON(append((*s)[0:0], source...))
-	return nil
 }
