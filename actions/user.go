@@ -1,20 +1,22 @@
 package actions
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/Iledant/iris_propera/models"
 	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // returnedToken is used to send a unique JSON object for login
 type returnedToken struct {
 	Token string      `json:"token"`
 	User  models.User `json:"user"`
+}
+
+type userResp struct {
+	User models.User `json:"user"`
 }
 
 // sentUser is used for creating or updating user
@@ -26,43 +28,41 @@ type sentUser struct {
 	Active   bool   `json:"active"`
 }
 
+// credentials is used to decode user login payload
+type credentials struct {
+	Email    *string
+	Password *string
+}
+
 // Login handles user login using credentials and return token if success.
 func Login(ctx iris.Context) {
-	email, password := ctx.URLParam("email"), ctx.URLParam("password")
-	// Check parameters
-	if email == "" || password == "" {
+	c := credentials{}
+	if err := ctx.ReadJSON(&c); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Décodage login : " + err.Error()})
+	}
+	if c.Email == nil || *c.Email == "" || c.Password == nil || *c.Password == "" {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Champ manquant ou incorrect"})
 		return
 	}
-
 	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{}
-
-	if err := db.Where("email = ?", email).First(&user).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusNotFound)
-			ctx.JSON(jsonError{"Erreur de login ou mot de passe"})
-			return
-		}
+	if err := user.GetByEmail(*c.Email, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err := user.ValidatePwd(*c.Password); err != nil {
 		ctx.StatusCode(http.StatusNotFound)
 		ctx.JSON(jsonError{"Erreur de login ou mot de passe"})
 		return
 	}
-
 	token, err := setToken(&user)
-
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(returnedToken{token, user})
 }
@@ -70,177 +70,132 @@ func Login(ctx iris.Context) {
 // Logout handles users logout and destroy his token.
 func Logout(ctx iris.Context) {
 	u, err := bearerToUser(ctx)
-
 	if err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Erreur de token"})
 		return
 	}
-
 	userID, _ := strconv.Atoi(u.Subject)
 	delToken(userID)
-
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Utilisateur déconnecté"})
 }
 
 // GetUsers handles the GET request for all users and send back only secure fields.
 func GetUsers(ctx iris.Context) {
-	users := []models.User{}
+	var users models.Users
 	db := ctx.Values().Get("db").(*gorm.DB)
-
-	if err := db.Find(&users).Error; err != nil {
-		ctx.JSON(jsonMessage{err.Error()})
+	if err := users.GetAll(db.DB()); err != nil {
+		ctx.JSON(jsonMessage{"Liste des utilisateurs : " + err.Error()})
 		ctx.StatusCode(http.StatusInternalServerError)
 		return
 	}
-
-	ctx.JSON(struct {
-		User []models.User `json:"user"`
-	}{users})
+	ctx.JSON(users)
 	ctx.StatusCode(http.StatusOK)
 }
 
 // CreateUser handles the creation by admin of a new user and returns the created user.
 func CreateUser(ctx iris.Context) {
-	sent := sentUser{}
-
-	if err := ctx.ReadJSON(&sent); err != nil {
+	var req sentUser
+	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonMessage{err.Error()})
+		ctx.JSON(jsonMessage{"Création d'utilisateur : " + err.Error()})
 		return
 	}
-
-	// Check parameters
-	if sent.Name == "" || sent.Email == "" || sent.Password == "" ||
-		(sent.Role != models.UserRole && sent.Role != models.AdminRole && sent.Role != models.ObserverRole) {
+	if req.Name == "" || req.Email == "" || req.Password == "" ||
+		(req.Role != models.UserRole && req.Role != models.AdminRole && req.Role != models.ObserverRole) {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonMessage{"Champ manquant ou incorrect"})
+		ctx.JSON(jsonMessage{"Création d'utilisateur : Champ manquant ou incorrect"})
 		return
 	}
-
-	newUser, db := sent.toUser(), ctx.Values().Get("db").(*gorm.DB)
-
-	if err := usrExists(&newUser, db); err != nil {
+	db := ctx.Values().Get("db").(*gorm.DB)
+	user := models.User{Name: req.Name, Email: req.Email, Active: req.Active, Role: req.Role, Password: req.Password}
+	if err := user.Exists(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création d'utilisateur : " + err.Error()})
 		return
 	}
-
-	if err := setUserPwd(&newUser, sent.Password); err != nil {
+	if err := user.CryptPwd(); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création d'utilisateur, cryptage : " + err.Error()})
 		return
 	}
-
-	if err := db.Create(&newUser).Error; err != nil {
+	if err := user.Create(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Création d'utilisateur, requête : " + err.Error()})
 		return
 	}
-
-	response := struct {
-		User models.User `json:"user"`
-	}{newUser}
 	ctx.StatusCode(http.StatusCreated)
-	ctx.JSON(response)
+	ctx.JSON(userResp{user})
 }
 
 // UpdateUser handles the updating by admin of an existing user and sent back modified user.
 func UpdateUser(ctx iris.Context) {
 	userID, err := ctx.Params().GetInt("userID")
-
 	if err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'utilisateur, paramètre : " + err.Error()})
 		return
 	}
-
 	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{ID: userID}
-
-	if err = db.First(&user, userID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			ctx.StatusCode(http.StatusNotFound)
-			ctx.JSON(jsonError{"Utilisateur introuvable"})
-			return
-		}
+	if err = user.GetByID(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'utilisateur, requête get : " + err.Error()})
 		return
 	}
-
-	sent := sentUser{}
-	if err = ctx.ReadJSON(&sent); err != nil {
+	var req sentUser
+	if err = ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonMessage{err.Error()})
+		ctx.JSON(jsonError{"Modification d'utilisateur, décodage : " + err.Error()})
 		return
 	}
-
-	if sent.Email != "" {
-		user.Email = sent.Email
+	if req.Email != "" {
+		user.Email = req.Email
 	}
-
-	if sent.Name != "" {
-		user.Name = sent.Name
+	if req.Name != "" {
+		user.Name = req.Name
 	}
-
-	user.Active = sent.Active
-
-	if sent.Role != "" {
-		if sent.Role != models.AdminRole && sent.Role != models.UserRole && sent.Role != models.ObserverRole {
+	user.Active = req.Active
+	if req.Role != "" {
+		if req.Role != models.AdminRole && req.Role != models.UserRole && req.Role != models.ObserverRole {
 			ctx.StatusCode(http.StatusBadRequest)
-			ctx.JSON(jsonError{Error: "Rôle différent de ADMIN, USER et OBSERVER"})
+			ctx.JSON(jsonError{"Modification d'utilisateur, rôle incorrect"})
 			return
 		}
-		user.Role = sent.Role
+		user.Role = req.Role
 	}
-
-	if sent.Password != "" {
-		if err = setUserPwd(&user, sent.Password); err != nil {
+	if req.Password != "" {
+		user.Password = req.Password
+		if err = user.CryptPwd(); err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
-			ctx.JSON(jsonError{err.Error()})
+			ctx.JSON(jsonError{"Modification d'utilisateur, mot de passe : " + err.Error()})
 			return
 		}
 	}
-
-	if err = db.Save(&user).Error; err != nil {
+	if err = user.Update(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Modification d'utilisateur, requête : " + err.Error()})
 		return
 	}
-
-	response := struct {
-		User models.User `json:"user"`
-	}{user}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(response)
+	ctx.JSON(userResp{user})
 }
 
 // DeleteUser handles the deleting by admin of an existing user.
 func DeleteUser(ctx iris.Context) {
 	userID, err := ctx.Params().GetInt("userID")
-
 	if err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Suppression d'utilisateur, paramètre : " + err.Error()})
 		return
 	}
-
 	db := ctx.Values().Get("db").(*gorm.DB)
-	user := models.User{}
-
-	if err = db.First(&user, userID).Error; err != nil {
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(jsonError{"Utilisateur introuvable"})
-		return
-	}
-
-	if err = db.Delete(&user).Error; err != nil {
+	user := models.User{ID: userID}
+	if err = user.Delete(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Suppression d'utilisateur, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Utilisateur supprimé"})
 }
@@ -248,35 +203,28 @@ func DeleteUser(ctx iris.Context) {
 // SignUp handles the request of a new user and creates an inactive account.
 func SignUp(ctx iris.Context) {
 	name, email, password := ctx.URLParam("name"), ctx.URLParam("email"), ctx.URLParam("password")
-
-	// Parameters validation
 	if name == "" || email == "" || password == "" {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Champ manquant ou incorrect"})
+		ctx.JSON(jsonError{"Inscription d'utilisateur : Champ manquant ou incorrect"})
 		return
 	}
-
 	db := ctx.Values().Get("db").(*gorm.DB)
-	user := models.User{Name: name, Email: email, Role: models.UserRole, Active: false}
-
-	if err := usrExists(&user, db); err != nil {
+	user := models.User{Name: name, Email: email, Role: models.UserRole, Active: false, Password: password}
+	if err := user.Exists(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Inscription d'utilisateur, exists : " + err.Error()})
 		return
 	}
-
-	if err := setUserPwd(&user, password); err != nil {
+	if err := user.CryptPwd(); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Inscription d'utilisateur, password : " + err.Error()})
 		return
 	}
-
-	if err := db.Create(&user).Error; err != nil {
+	if err := user.Create(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Inscription d'utilisateur, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(jsonMessage{"Utilisateur créé, en attente d'activation"})
 }
@@ -284,80 +232,56 @@ func SignUp(ctx iris.Context) {
 // ChangeUserPwd handles the request of a user to change his password.
 func ChangeUserPwd(ctx iris.Context) {
 	currentPwd, newPwd := ctx.URLParam("current_password"), ctx.URLParam("password")
-
 	if currentPwd == "" || newPwd == "" {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Ancien et nouveau mots de passe requis"})
+		ctx.JSON(jsonError{"Changement de mot de passe : Ancien et nouveau mots de passe requis"})
 		return
 	}
-
 	u, err := bearerToUser(ctx)
-
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Changement de mot de passe, user : " + err.Error()})
 		return
 	}
-
-	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{}
-	userID, _ := strconv.ParseInt(u.Subject, 10, 64)
-
-	if user.GetByID(ctx, db, "Changement de mot de passe utilisateur", userID) != nil {
+	userID, _ := strconv.Atoi(u.Subject)
+	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{ID: userID}
+	if user.GetByID(db.DB()) != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Changement de mot de passe, get : " + err.Error()})
 		return
 	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPwd)); err != nil {
+	if err := user.ValidatePwd(currentPwd); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Erreur de mot de passe"})
+		ctx.JSON(jsonError{"Changement de mot de passe : Erreur de mot de passe"})
 		return
 	}
-
-	if err = setUserPwd(&user, newPwd); err != nil {
+	user.Password = newPwd
+	if err = user.CryptPwd(); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{Error: err.Error()})
+		ctx.JSON(jsonError{"Changement de mot de passe, password : " + err.Error()})
 		return
 	}
-
-	if err = db.Model(&user).Update("password", user.Password).Error; err != nil {
+	if err = user.Update(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{err.Error()})
+		ctx.JSON(jsonError{"Changement de mot de passe, requête : " + err.Error()})
 		return
 	}
-
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Mot de passe changé"})
 }
 
-// usrExists verifies if a name or email already in the users table.
-func usrExists(user *models.User, db *gorm.DB) error {
-	var count int
-	err := db.Where("name = ? OR email = ?", user.Name, user.Email).Find(&user).Count(&count).Error
-
-	if err == gorm.ErrRecordNotFound {
-		return nil
-	}
-
-	if count > 0 {
-		err = errors.New("Utilisateur existant")
-	}
-
-	return err
-}
-
-// setUserPwd sets and crypts password of a user.
-func setUserPwd(u *models.User, pwd string) error {
-	cryptPwd, err := bcrypt.GenerateFromPassword([]byte(pwd), 10)
-
+// getUserRoleAndID fetch user role and ID with the token
+func getUserID(ctx iris.Context) (uID int64, err error) {
+	u, err := bearerToUser(ctx)
 	if err != nil {
-		return err
+		return 0, err
 	}
-
-	u.Password = string(cryptPwd)
-
-	return nil
-}
-
-// toUser convert to modes.USer
-func (u sentUser) toUser() models.User {
-	return models.User{Name: u.Name, Email: u.Email, Active: u.Active, Role: u.Role}
+	uID, err = strconv.ParseInt(u.Subject, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	if u.Role == models.AdminRole {
+		uID = 0
+	}
+	return uID, nil
 }

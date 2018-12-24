@@ -1,56 +1,30 @@
 package actions
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/Iledant/iris_propera/config"
-	"github.com/Iledant/iris_propera/models"
 	"github.com/iris-contrib/httpexpect"
 )
 
-type SentUser struct {
-	Name     string `json:"name,omitempty"`
-	Email    string `json:"email,omitempty"`
-	Password string `json:"password,omitempty"`
-	Role     string `json:"role,omitempty"`
-	Active   bool   `json:"active,omitempty"`
-}
-
-type jsonUser struct {
-	User struct {
-		ID       int             `json:"id"`
-		Name     string          `json:"name"`
-		Email    string          `json:"email"`
-		Password string          `json:"password"`
-		Role     string          `json:"role"`
-		Active   bool            `json:"active"`
-		Created  models.NullTime `json:"created_at"`
-		Updated  models.NullTime `json:"updated_at"`
-	}
-}
-
 type SentUserCase struct {
-	User         SentUser
+	Sent         []byte
 	Status       int
 	BodyContains string
-	Describe     string
 }
-
-// Stored for all tests
-var createdID int
 
 // UserTest includes all tests for users
 func TestUser(t *testing.T) {
 	TestCommons(t)
 	t.Run("User", func(t *testing.T) {
 		getUsers(testCtx.E, t)
-		createUser(testCtx.E, t)
-		updateUser(testCtx.E, t)
+		createdUID := createUser(testCtx.E, t)
+		updateUser(testCtx.E, t, createdUID)
 		chgPwd(testCtx.E, t)
-		deleteUser(testCtx.E, t)
+		deleteUser(testCtx.E, t, createdUID)
 		signupTest(testCtx.E, t)
 		logoutTest(testCtx.E, t)
 	})
@@ -58,65 +32,89 @@ func TestUser(t *testing.T) {
 
 // getUsers test list returned
 func getUsers(e *httpexpect.Expect, t *testing.T) {
-	response := e.GET("/api/users").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).
+	response := e.GET("/api/user").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).
 		Expect()
-	response.Status(http.StatusOK)
-	response.JSON().Object().ContainsKey("user")
-	e.GET("/api/users").WithHeader("Authorization", "Bearer "+testCtx.User.Token).
-		Expect().Status(http.StatusUnauthorized)
+	content := string(response.Content)
+	if !strings.Contains(content, "user") {
+		t.Errorf("\nGetUsers[admin] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", "user", content)
+	}
+	statusCode := response.Raw().StatusCode
+	if statusCode != http.StatusOK {
+		t.Errorf("\nGetUsers[admin],statut :  attendu ->%v  reçu <-%v", http.StatusOK, statusCode)
+	}
+	response = e.GET("/api/user").WithHeader("Authorization", "Bearer "+testCtx.User.Token).
+		Expect()
+	statusCode = response.Raw().StatusCode
+	if statusCode != http.StatusUnauthorized {
+		t.Errorf("\nGetUsers[user],statut :  attendu ->%v  reçu <-%v", http.StatusUnauthorized, statusCode)
+	}
 }
 
 //createUser test user creation and get userID for other tests
-func createUser(e *httpexpect.Expect, t *testing.T) {
+func createUser(e *httpexpect.Expect, t *testing.T) (createdUID string) {
 	cts := []SentUserCase{
-		{User: SentUser{Name: "Essai6", Email: "essai5@iledefrance.fr", Password: "toto", Role: "USER", Active: false},
-			Status: http.StatusBadRequest, BodyContains: "existant", Describe: "Email déjà présent"},
-		{User: SentUser{Name: "", Email: "essai@iledefrance.fr", Password: "toto", Role: "USER", Active: false},
+		{Sent: []byte(`{"name":"Essai6","email":"essai5@iledefrance.fr","password":"toto","role":"USER","active":false}`),
+			Status: http.StatusBadRequest, BodyContains: "existant"},
+		{Sent: []byte(`{"name":"","email":"essai@iledefrance.fr","password":"toto","role":"USER","active":false}`),
 			Status: http.StatusBadRequest, BodyContains: "Champ manquant ou incorrect"},
-		{User: SentUser{Name: "essai4", Email: "essai@iledefrance.fr", Password: "toto", Role: "FALSE", Active: false},
+		{Sent: []byte(`{"name":"essai4","email":"essai@iledefrance.fr","password":"toto","role":"FALSE","active":false}`),
 			Status: http.StatusBadRequest, BodyContains: "Champ manquant ou incorrect"},
-		{User: SentUser{Name: "essai", Email: "essai@iledefrance.fr", Password: "toto", Role: "USER", Active: false},
+		{Sent: []byte(`{"name":"essai","email":"essai@iledefrance.fr","password":"toto","role":"USER","active":false}`),
 			Status: http.StatusCreated, BodyContains: "essai"},
 	}
 
 	var response *httpexpect.Response
-	for _, ct := range cts {
-		response = e.POST("/api/users").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).WithJSON(ct.User).Expect()
-		response.Body().Contains(ct.BodyContains)
-		response.Status(ct.Status)
+	for i, ct := range cts {
+		response = e.POST("/api/user").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).WithBytes(ct.Sent).Expect()
+		content := string(response.Content)
+		if !strings.Contains(content, ct.BodyContains) {
+			t.Errorf("\nCreateUser[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, ct.BodyContains, content)
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != ct.Status {
+			t.Errorf("\nCreateUser[%d],statut :  attendu ->%v  reçu <-%v", i, ct.Status, statusCode)
+		}
+		if ct.Status == http.StatusCreated {
+			createdUID = strconv.Itoa(int(response.JSON().Object().Value("user").Object().Value("id").Number().Raw()))
+		}
 	}
-
-	createdUser := jsonUser{}
-	if err := json.Unmarshal(response.Content, &createdUser); err != nil {
-		t.Error("Impossible de décoder la réponse de l'utilisateur créé")
-		t.FailNow()
-	}
-	createdID = createdUser.User.ID
+	return createdUID
 }
 
 // updateUser tests changing properties of previously created user
-func updateUser(e *httpexpect.Expect, t *testing.T) {
+func updateUser(e *httpexpect.Expect, t *testing.T, createdUID string) {
 	cts := []SentUserCase{
-		{User: SentUser{Name: "", Email: "", Password: "", Role: "", Active: false},
+		{Sent: []byte(`{"name":"","email":"","password":"","role":"","active":false}`),
 			Status: http.StatusOK, BodyContains: "essai"},
-		{User: SentUser{Name: "Essai2", Email: "", Password: "", Role: "", Active: true},
+		{Sent: []byte(`{"name":"Essai2","email":"","password":"","role":"","active":true}`),
 			Status: http.StatusOK, BodyContains: `"name":"Essai2"`},
-		{User: SentUser{Name: "", Email: "essai2@iledefrance.fr", Password: "", Role: "", Active: true},
+		{Sent: []byte(`{"name":"","email":"essai2@iledefrance.fr","password":"","role":"","active":true}`),
 			Status: http.StatusOK, BodyContains: `"email":"essai2@iledefrance.fr"`},
-		{User: SentUser{Name: "", Email: "", Password: "", Role: "ADMIN", Active: true},
+		{Sent: []byte(`{"name":"","email":"","password":"","role":"ADMIN","active":true}`),
 			Status: http.StatusOK, BodyContains: `"role":"ADMIN"`},
-		{User: SentUser{Name: "", Email: "", Password: "", Role: "FAIL", Active: true},
-			Status: http.StatusBadRequest, BodyContains: "Rôle différent"},
+		{Sent: []byte(`{"name":"","email":"","password":"","role":"FAIL","active":true}`),
+			Status: http.StatusBadRequest, BodyContains: "Modification d'utilisateur, rôle incorrect"},
 	}
 
-	for _, ct := range cts {
-		response := e.PUT("/api/users/"+strconv.Itoa(createdID)).
-			WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).WithJSON(ct.User).Expect()
-		response.Status(ct.Status).Body().Contains(ct.BodyContains)
+	for i, ct := range cts {
+		response := e.PUT("/api/user/"+createdUID).
+			WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).WithBytes(ct.Sent).Expect()
+		content := string(response.Content)
+		if !strings.Contains(content, ct.BodyContains) {
+			t.Errorf("\nUpdateUser[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, ct.BodyContains, content)
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != ct.Status {
+			t.Errorf("\nUpdateUser[%d],statut :  attendu ->%v  reçu <-%v", i, ct.Status, statusCode)
+		}
 	}
 
-	e.PUT("/post/users/0").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).
-		Expect().Status(http.StatusNotFound)
+	response := e.PUT("/post/users/0").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).
+		Expect()
+	statusCode := response.Raw().StatusCode
+	if statusCode != http.StatusNotFound {
+		t.Errorf("\nUpdateUser[final],statut :  attendu ->%v  reçu <-%v", http.StatusNotFound, statusCode)
+	}
 }
 
 // chgPwd tests the request for the connected user
@@ -128,33 +126,45 @@ func chgPwd(e *httpexpect.Expect, t *testing.T) {
 		{"toto", "tutu", "Mot de passe changé", http.StatusOK},
 		{"tutu", "toto", "Mot de passe changé", http.StatusOK}}
 
-	for _, tc := range testCases {
+	for i, tc := range testCases {
 		response := e.POST("/api/user/password").WithQuery("current_password", tc.Old).WithQuery("password", tc.New).
 			WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
-		response.Body().Contains(tc.BodyContains)
-		response.Status(tc.Status)
+		content := string(response.Content)
+		if !strings.Contains(content, tc.BodyContains) {
+			t.Errorf("\nChgPwd[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, tc.BodyContains, content)
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nChgPwd[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
 // deleteUser test admin deleting of an user
-func deleteUser(e *httpexpect.Expect, t *testing.T) {
+func deleteUser(e *httpexpect.Expect, t *testing.T, createdUID string) {
 	testCases := []struct {
 		Token, UserID string
 		Status        int
 		BodyContains  string
 	}{
-		{Token: testCtx.User.Token, UserID: strconv.Itoa(createdID), Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
+		{Token: testCtx.User.Token, UserID: createdUID, Status: http.StatusUnauthorized, BodyContains: "Droits administrateur requis"},
 		{Token: testCtx.Admin.Token, UserID: "", Status: http.StatusNotFound, BodyContains: ""},
-		{Token: testCtx.Admin.Token, UserID: strconv.Itoa(0), Status: http.StatusNotFound, BodyContains: "Utilisateur introuvable"},
-		{Token: testCtx.Admin.Token, UserID: strconv.Itoa(createdID), Status: http.StatusOK, BodyContains: "Utilisateur supprimé"},
+		{Token: testCtx.Admin.Token, UserID: strconv.Itoa(0), Status: http.StatusInternalServerError, BodyContains: "Utilisateur introuvable"},
+		{Token: testCtx.Admin.Token, UserID: createdUID, Status: http.StatusOK, BodyContains: "Utilisateur supprimé"},
 	}
 
-	for _, tc := range testCases {
-		request := e.DELETE("/api/users/"+tc.UserID).WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	for i, tc := range testCases {
+		response := e.DELETE("/api/user/"+tc.UserID).WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
 		if tc.BodyContains != "" {
-			request.Body().Contains(tc.BodyContains)
+			if !strings.Contains(content, tc.BodyContains) {
+				t.Errorf("\nDeleteUser[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, tc.BodyContains, content)
+			}
 		}
-		request.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDeleteUser[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -171,22 +181,40 @@ func signupTest(e *httpexpect.Expect, t *testing.T) {
 		{Name: "Nouveau", Email: "nouveau@iledefrance.fr", Password: "nouveau", Status: http.StatusCreated, BodyContains: "Utilisateur créé"},
 	}
 
-	for _, tc := range testCases {
-		request := e.POST("/users/signup").WithQuery("name", tc.Name).WithQuery("email", tc.Email).WithQuery("password", tc.Password).Expect()
-		request.Body().Contains(tc.BodyContains)
-		request.Status(tc.Status)
+	for i, tc := range testCases {
+		response := e.POST("/api/user/signup").WithQuery("name", tc.Name).WithQuery("email", tc.Email).WithQuery("password", tc.Password).Expect()
+		content := string(response.Content)
+		if !strings.Contains(content, tc.BodyContains) {
+			t.Errorf("\nSignUp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, tc.BodyContains, content)
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nSignUp[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
 // logoutTest for a connected user
 func logoutTest(e *httpexpect.Expect, t *testing.T) {
-	request := e.POST("/api/logout").WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
-	request.Body().Contains("Utilisateur déconnecté")
-	request.Status(http.StatusOK)
+	response := e.POST("/api/user/logout").WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
+	content := string(response.Content)
+	if !strings.Contains(content, "Utilisateur déconnecté") {
+		t.Errorf("\nLogOut[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", 0, "Utilisateur déconnecté", content)
+	}
+	statusCode := response.Raw().StatusCode
+	if statusCode != http.StatusOK {
+		t.Errorf("\nLogOut[%d],statut :  attendu ->%v  reçu <-%v", 0, http.StatusOK, statusCode)
+	}
 
-	request = e.POST("/api/logout").WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
-	request.Body().Contains("Token invalide")
-	request.Status(http.StatusInternalServerError)
+	response = e.POST("/api/user/logout").WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
+	content = string(response.Content)
+	if !strings.Contains(content, "Token invalide") {
+		t.Errorf("\nLogOut[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", 1, "Token invalide", content)
+	}
+	statusCode = response.Raw().StatusCode
+	if statusCode != http.StatusInternalServerError {
+		t.Errorf("\nLogOut[%d],statut :  attendu ->%v  reçu <-%v", 1, http.StatusInternalServerError, statusCode)
+	}
 
 	cfg := config.Get()
 	newLRUser := fetchLoginResponse(e, t, &cfg.Users.User, "USER")
