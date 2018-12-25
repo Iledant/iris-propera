@@ -46,7 +46,8 @@ func (p *PlanLine) Delete(db *sql.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	if _, err = tx.Exec("DELETE FROM plan_line_ratios WHERE plan_line_id = $1", p.ID); err != nil {
+	if _, err = tx.Exec("DELETE FROM plan_line_ratios WHERE plan_line_id = $1",
+		p.ID); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -75,8 +76,8 @@ func (p *PlanLine) Create(plr *PlanLineRatios, db *sql.DB) (err error) {
 		return err
 	}
 	err = tx.QueryRow(`INSERT INTO plan_line (plan_id,name,descript,value,total_value) 
-	VALUES($1,$2,$3,$4,$5) RETURNING id`, p.PlanID, p.Name, p.Descript, p.Value, p.TotalValue).
-		Scan(&p.ID)
+	VALUES($1,$2,$3,$4,$5) RETURNING id`, p.PlanID, p.Name, p.Descript,
+		p.Value, p.TotalValue).Scan(&p.ID)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -103,8 +104,9 @@ func (p *PlanLine) Update(plr *PlanLineRatios, db *sql.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	res, err := tx.Exec(`UPDATE plan_line SET plan_id=$1,name=$2,descript=$3,value=$4,total_value=$5
-	WHERE id=$6`, p.PlanID, p.Name, p.Descript, p.Value, p.TotalValue, p.ID)
+	res, err := tx.Exec(`UPDATE plan_line SET plan_id=$1,name=$2,descript=$3,
+	value=$4,total_value=$5 WHERE id=$6`, p.PlanID, p.Name, p.Descript, p.Value,
+		p.TotalValue, p.ID)
 	if err != nil {
 		tx.Rollback()
 		return err

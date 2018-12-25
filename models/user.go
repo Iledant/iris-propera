@@ -11,8 +11,8 @@ import (
 // User model
 type User struct {
 	ID            int        `json:"id"`
-	Created       NullTime   `json:"created_at" gorm:"column:created_at"`
-	Updated       NullTime   `json:"updated_at" gorm:"column:updated_at"`
+	Created       NullTime   `json:"created_at"`
+	Updated       NullTime   `json:"updated_at"`
 	Name          string     `json:"name"`
 	Email         string     `json:"email"`
 	Password      string     `json:"-"`

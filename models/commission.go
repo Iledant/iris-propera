@@ -8,9 +8,9 @@ import (
 
 // Commission model
 type Commission struct {
-	ID   int64     `json:"id" gorm:"column:id"`
-	Date time.Time `json:"date" gorm:"column:date"`
-	Name string    `json:"name" gorm:"column:name"`
+	ID   int64     `json:"id"`
+	Date time.Time `json:"date"`
+	Name string    `json:"name"`
 }
 
 // Commissions embeddes an array of commissions for json export.
@@ -53,7 +53,8 @@ func (c *Commission) Create(db *sql.DB) (err error) {
 
 // Update modifies a commission in database.
 func (c *Commission) Update(db *sql.DB) (err error) {
-	res, err := db.Exec(`UPDATE commissions SET date = $1, name = $2 WHERE id = $3`, c.Date, c.Name, c.ID)
+	res, err := db.Exec(`UPDATE commissions SET date=$1, name=$2 WHERE id=$3`,
+		c.Date, c.Name, c.ID)
 	if err != nil {
 		return err
 	}

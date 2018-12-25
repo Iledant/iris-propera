@@ -7,13 +7,13 @@ import (
 
 // BudgetProgram model
 type BudgetProgram struct {
-	ID              int64      `json:"id" gorm:"column:id"`
-	CodeContract    string     `json:"code_contract" gorm:"column:code_contract"`
-	CodeFunction    string     `json:"code_function" gorm:"column:code_function"`
-	CodeNumber      string     `json:"code_number" gorm:"column:code_number"`
-	CodeSubfunction NullString `json:"code_subfunction" gorm:"column:code_subfunction"`
-	Name            string     `json:"name" gorm:"column:name"`
-	ChapterID       int64      `json:"chapter_id" gorm:"column:chapter_id"`
+	ID              int64      `json:"id"`
+	CodeContract    string     `json:"code_contract"`
+	CodeFunction    string     `json:"code_function"`
+	CodeNumber      string     `json:"code_number"`
+	CodeSubfunction NullString `json:"code_subfunction"`
+	Name            string     `json:"name"`
+	ChapterID       int64      `json:"chapter_id"`
 }
 
 // BudgetPrograms embeddes an array of BudgetPrograms for json export.
@@ -23,8 +23,9 @@ type BudgetPrograms struct {
 
 // Validate checks if fields are well formed.
 func (b *BudgetProgram) Validate() error {
-	if len(b.CodeContract) != 1 || b.CodeFunction == "" || len(b.CodeFunction) > 2 || b.CodeNumber == "" ||
-		len(b.CodeNumber) > 3 || (b.CodeSubfunction.Valid && len(b.CodeSubfunction.String) != 1) || b.Name == "" {
+	if len(b.CodeContract) != 1 || b.CodeFunction == "" || len(b.CodeFunction) > 2 ||
+		b.CodeNumber == "" || len(b.CodeNumber) > 3 ||
+		(b.CodeSubfunction.Valid && len(b.CodeSubfunction.String) != 1) || b.Name == "" {
 		return errors.New("Champ manquant ou incorrect")
 	}
 	return nil
@@ -32,16 +33,16 @@ func (b *BudgetProgram) Validate() error {
 
 // GetAll fetches all budget programs from database.
 func (b *BudgetPrograms) GetAll(db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT id, code_contract, code_function, code_number, code_subfunction, 
-	name, chapter_id FROM budget_program`)
+	rows, err := db.Query(`SELECT id, code_contract, code_function, code_number,
+	code_subfunction, name, chapter_id FROM budget_program`)
 	if err != nil {
 		return err
 	}
 	var r BudgetProgram
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&r.ID, &r.CodeContract, &r.CodeFunction, &r.CodeNumber, &r.CodeSubfunction,
-			&r.Name, &r.ChapterID); err != nil {
+		if err = rows.Scan(&r.ID, &r.CodeContract, &r.CodeFunction, &r.CodeNumber,
+			&r.CodeSubfunction, &r.Name, &r.ChapterID); err != nil {
 			return err
 		}
 		b.BudgetPrograms = append(b.BudgetPrograms, r)
@@ -52,16 +53,16 @@ func (b *BudgetPrograms) GetAll(db *sql.DB) (err error) {
 
 // GetAllChapterLinked fetches all budget programs linked to a chapter for json export.
 func (b *BudgetPrograms) GetAllChapterLinked(chapterID int64, db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT id, code_contract, code_function, code_number, code_subfunction, 
-	name, chapter_id FROM budget_program WHERE chapter_id = $1`, chapterID)
+	rows, err := db.Query(`SELECT id, code_contract, code_function, code_number, 
+	code_subfunction, name, chapter_id FROM budget_program WHERE chapter_id=$1`, chapterID)
 	if err != nil {
 		return err
 	}
 	var r BudgetProgram
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&r.ID, &r.CodeContract, &r.CodeFunction, &r.CodeNumber, &r.CodeSubfunction,
-			&r.Name, &r.ChapterID); err != nil {
+		if err = rows.Scan(&r.ID, &r.CodeContract, &r.CodeFunction, &r.CodeNumber,
+			&r.CodeSubfunction, &r.Name, &r.ChapterID); err != nil {
 			return err
 		}
 		b.BudgetPrograms = append(b.BudgetPrograms, r)

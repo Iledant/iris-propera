@@ -152,7 +152,7 @@ type getPrevisionsResp struct {
 	models.OpPendings
 	models.OpPayments
 	models.PaymentsPerBeneficiary
-	models.FinancialCommitmentsPerBeneficiary
+	models.FCsPerBeneficiary
 	models.ImportLogs
 	models.Events
 	models.PaymentTypes
@@ -208,7 +208,7 @@ func GetOpPrevisions(ctx iris.Context) {
 		ctx.JSON(jsonError{"Prévision d'opération, requête payment par bénéficiaire : " + err.Error()})
 		return
 	}
-	if resp.FinancialCommitmentsPerBeneficiary.GetOpAll(opID, db.DB()); err != nil {
+	if resp.FCsPerBeneficiary.GetOpAll(opID, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête engagement par bénéficiaire : " + err.Error()})
 		return

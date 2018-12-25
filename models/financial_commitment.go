@@ -12,22 +12,22 @@ import (
 
 // FinancialCommitment model
 type FinancialCommitment struct {
-	ID              int64     `json:"id" gorm:"column:id"`
-	PhysicalOpID    NullInt64 `json:"physical_op_id" gorm:"column:physical_op_id"`
-	PlanLineID      NullInt64 `json:"plan_line_id" gorm:"column:plan_line_id"`
-	Chapter         string    `json:"chapter" gorm:"column:chapter"`
-	Action          string    `json:"action" gorm:"column:action"`
-	IrisCode        string    `json:"iris_code" gorm:"column:iris_code"`
-	CoriolisYear    string    `json:"coriolis_year" gorm:"column:coriolis_year"`
-	CoriolisEgtCode string    `json:"coriolis_egt_code" gorm:"column:coriolis_egt_code"`
-	CoriolisEgtNum  string    `json:"coriolis_egt_num" gorm:"column:coriolis_egt_num"`
-	CoriolisEgtLine string    `json:"coriolis_egt_line" gorm:"column:coriolis_egt_line"`
-	Name            string    `json:"name" gorm:"column:name"`
-	BeneficiaryCode int       `json:"beneficiary_code" gorm:"column:beneficiary_code"`
-	Date            time.Time `json:"date" gorm:"column:date"`
-	Value           int64     `json:"value" gorm:"column:value"`
-	ActionID        NullInt64 `json:"action_id" gorm:"column:action_id"`
-	LapseDate       NullTime  `json:"lapse_date" gorm:"column:lapse_date"`
+	ID              int64     `json:"id"`
+	PhysicalOpID    NullInt64 `json:"physical_op_id"`
+	PlanLineID      NullInt64 `json:"plan_line_id"`
+	Chapter         string    `json:"chapter"`
+	Action          string    `json:"action"`
+	IrisCode        string    `json:"iris_code"`
+	CoriolisYear    string    `json:"coriolis_year"`
+	CoriolisEgtCode string    `json:"coriolis_egt_code"`
+	CoriolisEgtNum  string    `json:"coriolis_egt_num"`
+	CoriolisEgtLine string    `json:"coriolis_egt_line"`
+	Name            string    `json:"name"`
+	BeneficiaryCode int       `json:"beneficiary_code"`
+	Date            time.Time `json:"date"`
+	Value           int64     `json:"value"`
+	ActionID        NullInt64 `json:"action_id"`
+	LapseDate       NullTime  `json:"lapse_date"`
 }
 
 // FinancialCommitments embeddes an array of FinancialCommitment for json export.
@@ -91,13 +91,13 @@ type PaginatedOpLinkedItems struct {
 
 // PlanLineLinkedFinancialCommitment is used to query financial commitment linked to a plan line.
 type PlanLineLinkedFinancialCommitment struct {
-	FcID          int       `json:"fcID" gorm:"column:fc_id"`
-	FcValue       int64     `json:"fcValue" gorm:"column:fc_value"`
-	FcName        string    `json:"fcName" gorm:"column:fc_name"`
-	IrisCode      string    `json:"iris_code" gorm:"column:iris_code"`
-	FcDate        time.Time `json:"fcDate" gorm:"column:fc_date"`
-	PlName        string    `json:"plName" gorm:"column:pl_name"`
-	FcBeneficiary string    `json:"fcBeneficiary" gorm:"column:fc_beneficiary"`
+	FcID          int       `json:"fcID"`
+	FcValue       int64     `json:"fcValue"`
+	FcName        string    `json:"fcName"`
+	IrisCode      string    `json:"iris_code"`
+	FcDate        time.Time `json:"fcDate"`
+	PlName        string    `json:"plName"`
+	FcBeneficiary string    `json:"fcBeneficiary"`
 }
 
 // PlanLineLinkedFinancialCommitments embeddes an array of PlanLineLinkedFinancialCommitment.
@@ -135,7 +135,7 @@ type FinancialCommitmentsBatch struct {
 }
 
 // Unlink set to null financial commitments links to a physical operation in database.
-func (f FinancialCommitment) Unlink(LinkType string, fcIDs []int64, db *sql.DB) (err error) {
+func (f *FinancialCommitment) Unlink(LinkType string, fcIDs []int64, db *sql.DB) (err error) {
 	var IDQryPart string
 	if LinkType == "PhysicalOp" {
 		IDQryPart = "physical_op_id"
@@ -325,7 +325,7 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 }
 
 // Save a batch of financial commitments into database.
-func (f FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
+func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return err

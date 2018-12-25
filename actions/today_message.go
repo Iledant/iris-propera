@@ -49,7 +49,7 @@ func SetTodayMessage(ctx iris.Context) {
 type homeResp struct {
 	models.TodayMessage `json:"TodayMessage"`
 	models.NextMonthEvents
-	models.MonthFinancialCommitments
+	models.MonthCommitments
 	models.YearBudgetCredits
 	models.ProgrammingsPerMonthes
 	models.PaymentPerMonths
@@ -80,9 +80,9 @@ func GetHomeDatas(ctx iris.Context) {
 	if err != nil || year == 0 {
 		year = time.Now().Year()
 	}
-	if err = resp.MonthFinancialCommitments.GetAll(year, db.DB()); err != nil {
+	if err = resp.MonthCommitments.GetAll(year, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"HomeDatas, MonthFinancialCommitments : " + err.Error()})
+		ctx.JSON(jsonError{"HomeDatas, MonthCommitments : " + err.Error()})
 		return
 	}
 	if err = resp.YearBudgetCredits.GetAll(year, db.DB()); err != nil {

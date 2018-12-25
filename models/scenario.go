@@ -10,9 +10,9 @@ import (
 
 // Scenario model
 type Scenario struct {
-	ID       int64      `json:"id" gorm:"column:id"`
-	Name     string     `json:"name" gorm:"column:name"`
-	Descript NullString `json:"descript" gorm:"column:descript"`
+	ID       int64      `json:"id"`
+	Name     string     `json:"name"`
+	Descript NullString `json:"descript"`
 }
 
 // Scenarios embeddes an array of Scenario for json export.
@@ -52,13 +52,15 @@ func (s *Scenario) Invalid() bool {
 
 // Create insert a new scenario into database.
 func (s *Scenario) Create(db *sql.DB) (err error) {
-	err = db.QueryRow("INSERT INTO scenario (name,descript) VALUES($1,$2) RETURNING id", s.Name, s.Descript).Scan(&s.ID)
+	err = db.QueryRow("INSERT INTO scenario (name,descript) VALUES($1,$2) RETURNING id",
+		s.Name, s.Descript).Scan(&s.ID)
 	return err
 }
 
 // Update modifies a scenario into database.
 func (s *Scenario) Update(db *sql.DB) (err error) {
-	res, err := db.Exec(`UPDATE scenario SET name=$1, descript=$2 WHERE id = $3`, s.Name, s.Descript, s.ID)
+	res, err := db.Exec(`UPDATE scenario SET name=$1, descript=$2 WHERE id = $3`,
+		s.Name, s.Descript, s.ID)
 	if err != nil {
 		return err
 	}
@@ -78,7 +80,8 @@ func (s *Scenario) Delete(db *sql.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	if _, err = tx.Exec("DELETE from scenario_offset WHERE scenario_id = $1", s.ID); err != nil {
+	if _, err = tx.Exec("DELETE from scenario_offset WHERE scenario_id = $1",
+		s.ID); err != nil {
 		tx.Rollback()
 		return
 	}
@@ -102,8 +105,10 @@ func (s *Scenario) Delete(db *sql.DB) (err error) {
 // Populate calculates datas linked to a scenario.
 func (d *ScenarioDatas) Populate(sID int64, firstYear int64, db *sql.DB) (err error) {
 	var lastYear int64
-	if err = db.QueryRow(`SELECT max(p.year+s.offset)::bigint AS year FROM prev_commitment p, scenario_offset s 
-	 WHERE s.physical_op_id = p.physical_op_id AND s.scenario_id= $1`, sID).Scan(&lastYear); err != nil {
+	if err = db.QueryRow(`SELECT max(p.year+s.offset)::bigint AS year 
+	 FROM prev_commitment p, scenario_offset s 
+	 WHERE s.physical_op_id = p.physical_op_id AND s.scenario_id= $1`, sID).
+		Scan(&lastYear); err != nil {
 		return err
 	}
 	var columnNames, typesNames, jsonNames []string

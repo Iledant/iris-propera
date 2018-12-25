@@ -4,9 +4,9 @@ import "database/sql"
 
 // ImportLog model
 type ImportLog struct {
-	ID       int    `json:"id" gorm:"column:id"`
-	Category string `json:"category" gorm:"column:category"`
-	LastDate string `json:"last_date" gorm:"column:last_date"`
+	ID       int    `json:"id"`
+	Category string `json:"category"`
+	LastDate string `json:"last_date"`
 }
 
 // ImportLogs embeddes an array of ImportLog for json export.

@@ -2,15 +2,18 @@ package models
 
 import (
 	"database/sql"
+	"encoding/json"
 	"strconv"
 	"strings"
 )
 
-// MultiannualProgrammation embeddes an array of bytes for json export.
-type MultiannualProgrammation []byte
+// MuntilannualProg embeddes an array of bytes for json export.
+type MuntilannualProg struct {
+	MuntilannualProg json.RawMessage `json:"MuntilannualProg"`
+}
 
 // GetAll fetches multi annual programmation from database.
-func (m *MultiannualProgrammation) GetAll(firstYear int64, db *sql.DB) (err error) {
+func (m *MuntilannualProg) GetAll(firstYear int64, db *sql.DB) (err error) {
 	var lastYear int64
 	if err = db.QueryRow("SELECT max(year) FROM prev_commitment").Scan(&lastYear); err != nil {
 		return err
@@ -52,6 +55,9 @@ func (m *MultiannualProgrammation) GetAll(firstYear int64, db *sql.DB) (err erro
 		rr = append(rr, r)
 	}
 	err = rows.Err()
-	*m = []byte(`{"MultiannualProgrammation":[` + strings.Join(rr, ",") + `]}`)
-	return err
+	if err != nil {
+		return err
+	}
+	m.MuntilannualProg = json.RawMessage("[" + strings.Join(rr, ",") + "]")
+	return nil
 }

@@ -7,19 +7,14 @@ import (
 
 // PreProgramming model
 type PreProgramming struct {
-	ID           int         `json:"id" gorm:"column:id"`
-	Year         int         `json:"year" gorm:"column:year"`
-	PhysicalOpID int         `json:"physical_op_id" gorm:"column:physical_op_id"`
-	CommissionID int         `json:"commission_id" gorm:"column:commission_id"`
-	Value        int64       `json:"value" gorm:"column:value"`
-	StateRatio   NullFloat64 `json:"state_ratio" gorm:"column:state_ratio"`
-	TotalValue   NullInt64   `json:"total_value" gorm:"column:total_value"`
-	Descript     NullString  `json:"descript" gorm:"column:descript"`
-}
-
-// TableName ensures table name for pre_programmings
-func (u PreProgramming) TableName() string {
-	return "pre_programmings"
+	ID           int         `json:"id"`
+	Year         int         `json:"year"`
+	PhysicalOpID int         `json:"physical_op_id"`
+	CommissionID int         `json:"commission_id"`
+	Value        int64       `json:"value"`
+	StateRatio   NullFloat64 `json:"state_ratio"`
+	TotalValue   NullInt64   `json:"total_value"`
+	Descript     NullString  `json:"descript"`
 }
 
 // FullPreProgramming is used to scan the select pre programming query results
@@ -72,13 +67,16 @@ func (f *FullPreProgrammings) GetAll(uID int64, year int64, db *sql.DB) (err err
 	if uID != 0 {
 		fromQry = ` (SELECT * FROM physical_op WHERE id IN (SELECT physical_op_id FROM rights WHERE users_id = $2)) op `
 	}
-	query := `SELECT op.id AS physical_op_id, op.number AS physical_op_number, op.name AS physical_op_name,
-	pc.value AS prev_value, pc.state_ratio AS prev_state_ratio, 
+	query := `SELECT op.id AS physical_op_id, op.number AS physical_op_number, 
+	op.name AS physical_op_name, pc.value AS prev_value, pc.state_ratio AS prev_state_ratio, 
 	pc.total_value AS prev_total_value, pc.descript AS prev_descript, pp.id AS pre_prog_id,
 	pp.value AS pre_prog_value, pp.year AS pre_prog_year, pp.commission_id AS pre_prog_commission_id, 
 	pp.state_ratio AS pre_prog_state_ratio, pp.total_value AS pre_prog_total_value, 
-	pp.descript AS pre_prog_descript, pl.plan_name, pl.plan_line_name, pl.plan_line_value, pl.plan_line_total_value 
-	FROM` + fromQry + `LEFT OUTER JOIN (SELECT pl.id, pl.name AS plan_line_name, pl.value AS plan_line_value, pl.total_value AS plan_line_total_value, p.name AS plan_name
+	pp.descript AS pre_prog_descript, pl.plan_name, pl.plan_line_name, pl.plan_line_value,
+	 pl.plan_line_total_value 
+	FROM` + fromQry +
+		`LEFT OUTER JOIN (SELECT pl.id, pl.name AS plan_line_name, pl.value AS plan_line_value, 
+		pl.total_value AS plan_line_total_value, p.name AS plan_name
 		FROM plan_line pl, plan p WHERE pl.plan_id = p.id) pl ON op.plan_line_id = pl.id
 LEFT OUTER JOIN (SELECT * FROM prev_commitment WHERE year = $1) pc ON op.id = pc.physical_op_id
 LEFT OUTER JOIN (SELECT * FROM pre_programmings WHERE year = $1) pp ON op.id = pp.physical_op_id`
@@ -123,8 +121,9 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 	var value string
 	var values []string
 	for _, pp := range p.PreProgrammings {
-		value = "(" + toSQL(pp.ID) + "," + toSQL(pp.Year) + "," + toSQL(pp.PhysicalOpID) + "," + toSQL(pp.CommissionID) +
-			"," + toSQL(pp.Value) + "," + toSQL(pp.TotalValue) + "," + toSQL(pp.StateRatio) + ", NULL)"
+		value = "(" + toSQL(pp.ID) + "," + toSQL(pp.Year) + "," + toSQL(pp.PhysicalOpID) +
+			"," + toSQL(pp.CommissionID) + "," + toSQL(pp.Value) + "," + toSQL(pp.TotalValue) +
+			"," + toSQL(pp.StateRatio) + ", NULL)"
 		values = append(values, value)
 	}
 	if _, err = tx.Exec(`INSERT INTO temp_pre_programmings (id, year, physical_op_id,
@@ -153,7 +152,8 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 		if _, err = tx.Exec(`DELETE FROM pre_programmings pp 
 		WHERE pp.physical_op_id IN (SELECT id FROM physical_op
 			WHERE id IN (SELECT physical_op_id FROM rights WHERE users_id = $1))
-				AND pp.id NOT IN (SELECT id FROM temp_pre_programmings) AND pp.year = $2`, uID, p.Year); err != nil {
+				AND pp.id NOT IN (SELECT id FROM temp_pre_programmings) AND pp.year = $2`,
+			uID, p.Year); err != nil {
 			tx.Rollback()
 			return
 		}
@@ -161,7 +161,8 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 	if _, err = tx.Exec(`INSERT INTO pre_programmings (value, physical_op_id, commission_id, 
 		year, total_value, state_ratio, descript)
 	(SELECT value, physical_op_id, commission_id, year, total_value, state_ratio, descript 
-		FROM temp_pre_programmings WHERE id NOT IN (SELECT DISTINCT id FROM pre_programmings))`); err != nil {
+		FROM temp_pre_programmings 
+		WHERE id NOT IN (SELECT DISTINCT id FROM pre_programmings))`); err != nil {
 		tx.Rollback()
 		return
 	}

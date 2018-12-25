@@ -26,11 +26,6 @@ type scenarioResp struct {
 	Scenario models.Scenario `json:"Scenario"`
 }
 
-type sentScenarioReq struct {
-	Name     *string `json:"name"`
-	Descript *string `json:"descript"`
-}
-
 // CreateScenario handles put request to create a new scenario.
 func CreateScenario(ctx iris.Context) {
 	var req models.Scenario

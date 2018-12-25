@@ -9,10 +9,10 @@ import (
 
 // PaymentRatio model
 type PaymentRatio struct {
-	ID            int64     `json:"id" gorm:"column:id"`
-	PaymentTypeID NullInt64 `json:"payment_types_id" gorm:"column:payment_types_id"`
-	Ratio         float64   `json:"ratio" gorm:"column:ratio"`
-	Index         int64     `json:"index" gorm:"column:index"`
+	ID            int64     `json:"id"`
+	PaymentTypeID NullInt64 `json:"payment_types_id"`
+	Ratio         float64   `json:"ratio"`
+	Index         int64     `json:"index"`
 }
 
 // PaymentRatios embeddes an array of PaymentRatio for json export.
@@ -20,7 +20,7 @@ type PaymentRatios struct {
 	PaymentRatios []PaymentRatio `json:"PaymentRatio"`
 }
 
-// PaymentRatioLine embeddes a line sent to set the payments ratios of a payment type.
+// PaymentRatioLine embeddes a line sent for  payments ratios batch.
 type PaymentRatioLine struct {
 	Ratio float64 `json:"ratio"`
 	Index int64   `json:"index"`
@@ -101,7 +101,8 @@ func (p *PaymentRatiosBatch) Save(paymentTypeID int64, db *sql.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	if _, err = tx.Exec(`DELETE FROM payment_ratios WHERE payment_types_id = $1`, paymentTypeID); err != nil {
+	if _, err = tx.Exec(`DELETE FROM payment_ratios WHERE payment_types_id = $1`,
+		paymentTypeID); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -112,7 +113,8 @@ func (p *PaymentRatiosBatch) Save(paymentTypeID int64, db *sql.DB) (err error) {
 		value = "(" + sPtID + ", " + toSQL(pr.Ratio) + "," + toSQL(pr.Index) + ")"
 		values = append(values, value)
 	}
-	qry := "INSERT into payment_ratios (payment_types_id, ratio, index) VALUES " + strings.Join(values, ",")
+	qry := "INSERT into payment_ratios (payment_types_id, ratio, index) VALUES " +
+		strings.Join(values, ",")
 	if _, err = tx.Exec(qry); err != nil {
 		tx.Rollback()
 		return err
@@ -124,11 +126,12 @@ func (p *PaymentRatiosBatch) Save(paymentTypeID int64, db *sql.DB) (err error) {
 // GetAll fetches the ratios of payment transformation of commitment of a given year.
 func (y *YearRatios) GetAll(year int64, db *sql.DB) (err error) {
 	sy := strconv.FormatInt(year, 10)
-	rows, err := db.Query(`WITH yc AS (SELECT f.id FROM financial_commitment f WHERE f.coriolis_year = $1),
-	total AS (SELECT sum(f.value) as total FROM financial_commitment f WHERE f.id IN (SELECT id FROM yc))
-	SELECT extract(YEAR from p.date) - $2 AS index, SUM(p.value/total.total)::double precision AS ratio
+	rows, err := db.Query(`WITH yc AS (SELECT id FROM financial_commitment WHERE coriolis_year=$1),
+	total AS (SELECT sum(value) as total FROM financial_commitment WHERE id IN (SELECT id FROM yc))
+	SELECT extract(YEAR from p.date)-$2 AS index, SUM(p.value/total.total) AS ratio
 	FROM payment p, total
-	WHERE p.financial_commitment_id IN (SELECT id FROM yc) GROUP BY index ORDER BY index`, sy, year)
+	WHERE p.financial_commitment_id IN (SELECT id FROM yc) 
+	GROUP BY index ORDER BY index`, sy, year)
 	if err != nil {
 		return err
 	}

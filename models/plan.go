@@ -8,11 +8,11 @@ import (
 
 // Plan model
 type Plan struct {
-	ID        int64      `json:"id" gorm:"column:id"`
-	Name      string     `json:"name" gorm:"column:name"`
-	Descript  NullString `json:"descript" gorm:"column:descript"`
-	FirstYear NullInt64  `json:"first_year" gorm:"column:first_year"`
-	LastYear  NullInt64  `json:"last_year" gorm:"column:last_year"`
+	ID        int64      `json:"id"`
+	Name      string     `json:"name"`
+	Descript  NullString `json:"descript"`
+	FirstYear NullInt64  `json:"first_year"`
+	LastYear  NullInt64  `json:"last_year"`
 }
 
 // Plans embeddes an array of Plan for json exports.
@@ -117,7 +117,8 @@ func (p *Plan) GetFirstAndLastYear(db *sql.DB) (firstYear int64, lastYear int64,
 	if p.LastYear.Valid {
 		lastYear = p.LastYear.Int64
 	} else {
-		if err = db.QueryRow("SELECT max(year) FROM prev_commitment").Scan(&lastYear); err != nil {
+		if err = db.QueryRow("SELECT max(year) FROM prev_commitment").
+			Scan(&lastYear); err != nil {
 			return 0, 0, err
 		}
 	}

@@ -8,12 +8,12 @@ import (
 
 // Event model
 type Event struct {
-	ID           int64      `json:"id" gorm:"column:id"`
-	PhysicalOpID int64      `json:"physical_op_id" gorm:"column:physical_op_id"`
-	Name         string     `json:"name" gorm:"column:name"`
-	Date         time.Time  `json:"date" gorm:"column:date"`
-	IsCertain    bool       `json:"iscertain" gorm:"column:iscertain"`
-	Descript     NullString `json:"descript" gorm:"column:descript"`
+	ID           int64      `json:"id"`
+	PhysicalOpID int64      `json:"physical_op_id"`
+	Name         string     `json:"name"`
+	Date         time.Time  `json:"date"`
+	IsCertain    bool       `json:"iscertain"`
+	Descript     NullString `json:"descript"`
 }
 
 // Events embeddes an array of documents for json export.
@@ -39,7 +39,8 @@ func (e *Events) GetOpAll(opID int64, db *sql.DB) (err error) {
 	var r Event
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&r.ID, &r.PhysicalOpID, &r.Name, &r.Date, &r.IsCertain, &r.Descript); err != nil {
+		if err = rows.Scan(&r.ID, &r.PhysicalOpID, &r.Name, &r.Date,
+			&r.IsCertain, &r.Descript); err != nil {
 			return err
 		}
 		e.Events = append(e.Events, r)

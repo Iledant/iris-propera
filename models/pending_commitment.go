@@ -55,7 +55,7 @@ type CompletePendingCommitment struct {
 	OpName        string    `json:"opName"`
 }
 
-// CompletePendingCommitments embeddes an array of CompletePendingCommitment forjson export.
+// CompletePendingCommitments embeddes an array of CompletePendingCommitment for json export.
 type CompletePendingCommitments struct {
 	CompletePendingCommitments []CompletePendingCommitment `json:"LinkedPendingCommitments"`
 }
@@ -199,9 +199,9 @@ func (p *PendingsBatch) Save(db *sql.DB) (err error) {
 	var value string
 	var values []string
 	for _, pc := range p.PendingsBatch {
-		value = "(" + toSQL(pc.Chapter) + ", " + toSQL(pc.Action) + ", " + toSQL(pc.IrisCode) + ", " +
-			toSQL(pc.Name) + ", " + toSQL(pc.Beneficiary) + ", " + toSQL(pc.CommissionDate) + ", " +
-			toSQL(pc.ProposedValue) + ")"
+		value = "(" + toSQL(pc.Chapter) + ", " + toSQL(pc.Action) + ", " +
+			toSQL(pc.IrisCode) + ", " + toSQL(pc.Name) + ", " + toSQL(pc.Beneficiary) +
+			", " + toSQL(pc.CommissionDate) + ", " + toSQL(pc.ProposedValue) + ")"
 		values = append(values, value)
 	}
 	_, err = tx.Exec(`INSERT INTO temp_pending (chapter, action, iris_code, name, 
@@ -217,8 +217,10 @@ func (p *PendingsBatch) Save(db *sql.DB) (err error) {
 				proposed_value = tp.proposed_value
 		FROM (SELECT * FROM temp_pending) tp WHERE tp.iris_code = pending_commitments.iris_code`,
 		`INSERT INTO pending_commitments 
-			(physical_op_id, chapter, action, iris_code, name,  beneficiary, commission_date, proposed_value)
-			SELECT NULL,* FROM temp_pending WHERE iris_code NOT IN (SELECT iris_code FROM pending_commitments)`,
+			(physical_op_id, chapter, action, iris_code, name,  beneficiary, 
+				commission_date, proposed_value)
+			SELECT NULL,* FROM temp_pending 
+			  WHERE iris_code NOT IN (SELECT iris_code FROM pending_commitments)`,
 		`DELETE FROM pending_commitments 
 			WHERE iris_code NOT IN (SELECT iris_code FROM temp_pending)`,
 		`DROP TABLE IF EXISTS temp_pending`}
@@ -245,8 +247,8 @@ FROM pending_commitments pe, physical_op op WHERE pe.physical_op_id = op.id`)
 	var r CompletePendingCommitment
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&r.ID, &r.PeName, &r.PeIrisCode, &r.PeDate, &r.PeBeneficiary,
-			&r.PeName, &r.OpName); err != nil {
+		if err = rows.Scan(&r.ID, &r.PeName, &r.PeIrisCode, &r.PeDate,
+			&r.PeBeneficiary, &r.PeName, &r.OpName); err != nil {
 			return err
 		}
 		c.CompletePendingCommitments = append(c.CompletePendingCommitments, r)

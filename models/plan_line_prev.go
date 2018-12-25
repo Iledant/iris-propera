@@ -23,12 +23,12 @@ func (p *PlanLineAndPrevisions) GetAll(plan *Plan, plID int64, db *sql.DB) (err 
 	var whereQry, beneficiaryIdsQry string
 	if plID != 0 {
 		whereQry = "p.id=" + toSQL(plID) + " "
-		beneficiaryIdsQry = "SELECT DISTINCT beneficiary_id FROM plan_line_ratios WHERE plan_line_id = " +
-			toSQL(plID) + " "
+		beneficiaryIdsQry = `SELECT DISTINCT beneficiary_id FROM plan_line_ratios 
+		WHERE plan_line_id = ` + toSQL(plID) + " "
 	} else {
 		whereQry = "p.plan_id=" + toSQL(plan.ID) + " "
-		beneficiaryIdsQry = "SELECT DISTINCT beneficiary_id FROM plan_line_ratios WHERE plan_line_id IN (SELECT id FROM plan_line WHERE plan_id=" +
-			toSQL(plan.ID) + ") "
+		beneficiaryIdsQry = `SELECT DISTINCT beneficiary_id FROM plan_line_ratios 
+		WHERE plan_line_id IN (SELECT id FROM plan_line WHERE plan_id=` + toSQL(plan.ID) + ") "
 	}
 	bIDs, bID := []int64{}, int64(0)
 	rows, err := db.Query(beneficiaryIdsQry)
@@ -57,8 +57,10 @@ func (p *PlanLineAndPrevisions) GetAll(plan *Plan, plID int64, db *sql.DB) (err 
 		benQry = ", " + strings.Join(bb, ",")
 		jsonBenQry = ", " + strings.Join(jj, ",")
 		benCrossQry = strings.Join(bc, ",")
-		benCrossQry = " LEFT JOIN (SELECT * FROM crosstab('SELECT plan_line_id, beneficiary_id, ratio FROM plan_line_ratios ORDER BY 1,2', '" +
-			beneficiaryIdsQry + "') AS (plan_line_id INTEGER, " + benCrossQry + ")) b ON b.plan_line_id = p.id"
+		benCrossQry = ` LEFT JOIN (SELECT * FROM crosstab('SELECT plan_line_id, 
+		beneficiary_id, ratio FROM plan_line_ratios ORDER BY 1,2', '` +
+			beneficiaryIdsQry + "') AS (plan_line_id INTEGER, " + benCrossQry +
+			")) b ON b.plan_line_id = p.id"
 	} else {
 		benQry = ""
 		jsonBenQry = ""

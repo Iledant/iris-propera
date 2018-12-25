@@ -7,9 +7,9 @@ import (
 
 // Beneficiary model
 type Beneficiary struct {
-	ID   int    `json:"id" gorm:"column:id"`
-	Code int    `json:"code" gorm:"column:code"`
-	Name string `json:"name" gorm:"column:name"`
+	ID   int    `json:"id"`
+	Code int    `json:"code"`
+	Name string `json:"name"`
 }
 
 // Beneficiaries an array of Beneficiary model with json schema

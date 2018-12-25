@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// OpFCLine embeddes a line of operation / financial commitment link batch request.
+// OpFCLine embeddes a line of operation / commitment link batch request.
 type OpFCLine struct {
 	OpNumber        string `json:"op_number"`
 	CoriolisYear    string `json:"coriolis_year"`
@@ -14,12 +14,12 @@ type OpFCLine struct {
 	CoriolisEgtLine string `json:"coriolis_egt_line"`
 }
 
-// OpFCsBatch embeddes datas sent by a operations / financial commitment link request.
+// OpFCsBatch embeddes datas sent by a operation / commitments link request.
 type OpFCsBatch struct {
 	OpFCs []OpFCLine `json:"Attachment"`
 }
 
-// Save a batch of link between physical operations and financial commitments to the database.
+// Save a batch of link between operations and  commitments to the database.
 func (o *OpFCsBatch) Save(db *sql.DB) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
@@ -38,7 +38,8 @@ func (o *OpFCsBatch) Save(db *sql.DB) (err error) {
 		values = append(values, value)
 	}
 	if _, err = tx.Exec(`INSERT INTO temp_attachment (op_number, coriolis_year,
-		coriolis_egt_code, coriolis_egt_num, coriolis_egt_line) VALUES ` + strings.Join(values, ",")); err != nil {
+		coriolis_egt_code, coriolis_egt_num, coriolis_egt_line) VALUES ` +
+		strings.Join(values, ",")); err != nil {
 		tx.Rollback()
 		return err
 	}

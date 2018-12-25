@@ -7,9 +7,9 @@ import (
 
 // TodayMessage model
 type TodayMessage struct {
-	ID    int        `json:"id" gorm:"column:id"`
-	Title NullString `json:"title" gorm:"column:title"`
-	Text  NullString `json:"text" gorm:"column:text"`
+	ID    int        `json:"id"`
+	Title NullString `json:"title"`
+	Text  NullString `json:"text"`
 }
 
 // Get fetches the first entry of today messages from database.
@@ -21,7 +21,7 @@ func (t *TodayMessage) Get(db *sql.DB) (err error) {
 
 // Update modifies the first entry of today messages in database.
 func (t *TodayMessage) Update(db *sql.DB) (err error) {
-	res, err := db.Exec(`UPDATE today_messages SET title = $1, text = $2 WHERE id = 1`,
+	res, err := db.Exec(`UPDATE today_messages SET title=$1, text=$2 WHERE id=1`,
 		t.Title, t.Text)
 	if err != nil {
 		return err

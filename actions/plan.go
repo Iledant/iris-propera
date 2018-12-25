@@ -25,11 +25,6 @@ type planResp struct {
 	Plan models.Plan `json:"Plan"`
 }
 
-// Invalid checks of sent plan is well formated.
-func Invalid(p *models.Plan) bool {
-	return p.Name == "" || len(p.Name) > 255
-}
-
 // CreatePlan handles post request for creating a plan.
 func CreatePlan(ctx iris.Context) {
 	var req models.Plan

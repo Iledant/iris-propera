@@ -244,13 +244,13 @@ func toSQL(i interface{}) string {
 		return strconv.FormatFloat(v, 'f', -1, 64)
 	case string:
 		return "$$" + v + "$$"
+	case time.Time:
+		return "'" + v.Format("2006-01-02") + "'"
 	case NullInt64:
 		if !v.Valid {
 			return "null"
 		}
 		return strconv.FormatInt(v.Int64, 10)
-	case time.Time:
-		return "'" + v.Format("2006-01-02") + "'"
 	case NullString:
 		if !v.Valid {
 			return "null"

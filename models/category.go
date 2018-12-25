@@ -7,8 +7,8 @@ import (
 
 // Category model
 type Category struct {
-	ID   int64  `json:"id" gorm:"column:id"`
-	Name string `json:"name" gorm:"column:name"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // Categories embeddes an array of categories for json export.
@@ -44,13 +44,15 @@ func (c *Categories) GetAll(db *sql.DB) (err error) {
 
 // Create insert a new category into database.
 func (c *Category) Create(db *sql.DB) (err error) {
-	err = db.QueryRow("INSERT INTO category (name) VALUES($1) RETURNING id", c.Name).Scan(&c.ID)
+	err = db.QueryRow("INSERT INTO category (name) VALUES($1) RETURNING id",
+		c.Name).Scan(&c.ID)
 	return err
 }
 
 // Update modify a category in database.
 func (c *Category) Update(db *sql.DB) (err error) {
-	res, err := db.Exec(`UPDATE category SET name = $1 WHERE id = $2`, c.Name, c.ID)
+	res, err := db.Exec(`UPDATE category SET name=$1 WHERE id=$2`,
+		c.Name, c.ID)
 	if err != nil {
 		return err
 	}

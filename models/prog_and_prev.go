@@ -17,7 +17,8 @@ type ProgrammingAndPrevisions struct {
 
 // GetAll fetches programmation and commitments prevision for the given year
 func (p *ProgrammingAndPrevisions) GetAll(year int64, db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT op.number, op.name, pr.value as programmings, pc.value as prevision FROM physical_op op
+	rows, err := db.Query(`SELECT op.number, op.name, pr.value as programmings, 
+	  pc.value as prevision FROM physical_op op
 	LEFT OUTER JOIN
 	(SELECT p.physical_op_id, SUM(value) AS value FROM programmings p, commissions c 
 	WHERE p.commission_id = c.id AND extract(year FROM c.date) = $1 GROUP BY 1) pr

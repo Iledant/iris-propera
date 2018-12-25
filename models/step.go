@@ -16,11 +16,6 @@ type Steps struct {
 	Steps []Step `json:"Step"`
 }
 
-// TableName ensures table name for step
-func (Step) TableName() string {
-	return "step"
-}
-
 // Validate checks if fields are correctly formed.
 func (s Step) Validate() error {
 	if s.Name == "" || len(s.Name) > 50 {
@@ -31,7 +26,8 @@ func (s Step) Validate() error {
 
 // Create insert a new step into database.
 func (s *Step) Create(db *sql.DB) (err error) {
-	err = db.QueryRow("INSERT INTO step (name) VALUES($1) RETURNING id", s.Name).Scan(&s.ID)
+	err = db.QueryRow("INSERT INTO step (name) VALUES($1) RETURNING id",
+		s.Name).Scan(&s.ID)
 	return err
 }
 

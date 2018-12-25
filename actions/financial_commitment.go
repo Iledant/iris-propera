@@ -63,7 +63,7 @@ func GetMonthFC(ctx iris.Context) {
 		year = time.Now().Year()
 	}
 	db := ctx.Values().Get("db").(*gorm.DB)
-	var resp models.MonthFinancialCommitments
+	var resp models.MonthCommitments
 	if err = resp.GetAll(year, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Engagements par mois, requête : " + err.Error()})

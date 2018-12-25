@@ -187,18 +187,19 @@ func isObserver(ctx iris.Context) (bool, error) {
 // AdminMiddleware checks if there's a token and if it belongs to admin user otherwise prompt error
 func AdminMiddleware(ctx iris.Context) {
 	admin, err := isAdmin(ctx)
-
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{Error: err.Error()})
 		ctx.StopExecution()
-	} else if !admin {
+		return
+	}
+	if !admin {
 		ctx.StatusCode(http.StatusUnauthorized)
 		ctx.JSON(jsonError{Error: "Droits administrateur requis"})
 		ctx.StopExecution()
-	} else {
-		ctx.Next()
+		return
 	}
+	ctx.Next()
 }
 
 // ActiveMiddleware checks if there's a valid token and user is active otherwise prompt error
@@ -209,11 +210,13 @@ func ActiveMiddleware(ctx iris.Context) {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{Error: err.Error()})
 		ctx.StopExecution()
-	} else if !active {
+		return
+	}
+	if !active {
 		ctx.StatusCode(http.StatusUnauthorized)
 		ctx.JSON(jsonError{Error: "Connexion requise"})
 		ctx.StopExecution()
-	} else {
-		ctx.Next()
+		return
 	}
+	ctx.Next()
 }

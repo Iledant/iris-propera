@@ -7,19 +7,14 @@ import (
 
 // BudgetChapter model
 type BudgetChapter struct {
-	ID   int64  `json:"id" gorm:"column:id"`
-	Code int    `json:"code" gorm:"column:code"`
-	Name string `json:"name" gorm:"column:name"`
+	ID   int64  `json:"id"`
+	Code int    `json:"code"`
+	Name string `json:"name"`
 }
 
 // BudgetChapters embeddes an array of budget chapters to json export
 type BudgetChapters struct {
 	BudgetChapters []BudgetChapter `json:"BudgetChapter"`
-}
-
-// TableName ensures table name for budget_chapter
-func (BudgetChapter) TableName() string {
-	return "budget_chapter"
 }
 
 // Validate checks if fields are correctly formed.

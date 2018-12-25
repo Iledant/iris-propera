@@ -9,16 +9,16 @@ import (
 
 // OpDptRatio model
 type OpDptRatio struct {
-	ID           int64   `json:"id" gorm:"column:id"`
-	PhysicalOpID int64   `json:"physical_op_id" gorm:"column:physical_op_id"`
-	R75          float64 `json:"r75" gorm:"column:r75"`
-	R77          float64 `json:"r77" gorm:"column:r77"`
-	R78          float64 `json:"r78" gorm:"column:r78"`
-	R91          float64 `json:"r91" gorm:"column:r91"`
-	R92          float64 `json:"r92" gorm:"column:r92"`
-	R93          float64 `json:"r93" gorm:"column:r93"`
-	R94          float64 `json:"r94" gorm:"column:r94"`
-	R95          float64 `json:"r95" gorm:"column:r95"`
+	ID           int64   `json:"id"`
+	PhysicalOpID int64   `json:"physical_op_id"`
+	R75          float64 `json:"r75"`
+	R77          float64 `json:"r77"`
+	R78          float64 `json:"r78"`
+	R91          float64 `json:"r91"`
+	R92          float64 `json:"r92"`
+	R93          float64 `json:"r93"`
+	R94          float64 `json:"r94"`
+	R95          float64 `json:"r95"`
 }
 
 // OpDptRatioLine embeddes a line of sent datas for a batch of datas.
@@ -60,9 +60,9 @@ type FCPerDepartments struct {
 // DetailedFCPerDpt is used to decode one row of detailed financial commitment per department query
 type DetailedFCPerDpt struct {
 	FCPerDpt
-	ID     int64  `json:"id" gorm:"id"`
-	Number string `json:"number" gorm:"number"`
-	Name   string `json:"name" gorm:"name"`
+	ID     int64  `json:"id"`
+	Number string `json:"number"`
+	Name   string `json:"name"`
 }
 
 // DetailedFCPerDepartments embeddes an array ofFcPerDpt for json export.
@@ -148,8 +148,12 @@ func (o *OpDptRatioBatch) Save(uID int64, db *sql.DB) (err error) {
 	}
 	var andClause, andInsertClause string
 	if uID != 0 {
-		andClause = "AND op_dpt_ratios.physical_op_id IN (SELECT physical_op_id FROM rights WHERE users_id = " + strconv.FormatInt(uID, 10) + ")"
-		andInsertClause = "AND physical_op_id IN (SELECT physical_op_id FROM rights WHERE users_id = " + strconv.FormatInt(uID, 10) + ")"
+		andClause = `AND op_dpt_ratios.physical_op_id IN 
+		(SELECT physical_op_id FROM rights WHERE users_id = ` +
+			strconv.FormatInt(uID, 10) + ")"
+		andInsertClause = `AND physical_op_id IN 
+		(SELECT physical_op_id FROM rights WHERE users_id = ` +
+			strconv.FormatInt(uID, 10) + ")"
 	}
 	if _, err = tx.Exec("DROP TABLE IF EXISTS temp_op_dpt_ratios"); err != nil {
 		tx.Rollback()
@@ -168,7 +172,8 @@ func (o *OpDptRatioBatch) Save(uID int64, db *sql.DB) (err error) {
 			toSQL(o.R77)+","+toSQL(o.R78)+","+toSQL(o.R91)+","+toSQL(o.R92)+","+
 			toSQL(o.R93)+","+toSQL(o.R94)+","+toSQL(o.R95)+")")
 	}
-	if _, err = tx.Exec(`INSERT INTO temp_op_dpt_ratios VALUES` + strings.Join(values, ",")); err != nil {
+	if _, err = tx.Exec(`INSERT INTO temp_op_dpt_ratios VALUES` +
+		strings.Join(values, ",")); err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -211,7 +216,7 @@ func (f *FCPerDepartments) GetAll(firstYear int, lastYear int, db *sql.DB) (err 
 	FROM financial_commitment fc
 	LEFT OUTER JOIN physical_op op ON fc.physical_op_id = op.id
 	LEFT OUTER JOIN op_dpt_ratios r ON r.physical_op_id = op.id
-	WHERE extract(year FROM fc.date) >= ` + sy0 + ` AND extract(year FROM fc.date) <= ` + sy1
+	WHERE extract(year FROM fc.date)>=` + sy0 + ` AND extract(year FROM fc.date)<=` + sy1
 	rows, err := db.Query(query)
 	if err != nil {
 		return err
@@ -241,7 +246,7 @@ func (f *DetailedFCPerDepartments) GetAll(firstYear int, lastYear int, db *sql.D
 	FROM financial_commitment fc
 	LEFT OUTER JOIN physical_op op ON fc.physical_op_id = op.id
 	LEFT OUTER JOIN op_dpt_ratios r ON r.physical_op_id = op.id
-	WHERE extract(year FROM fc.date) >= ` + sy0 + ` AND extract(year FROM fc.date) <= ` +
+	WHERE extract(year FROM fc.date)>=` + sy0 + ` AND extract(year FROM fc.date)<=` +
 		sy1 + ` GROUP BY 1,2,3 ORDER BY 2,3`
 	rows, err := db.Query(query)
 	if err != nil {
@@ -250,8 +255,8 @@ func (f *DetailedFCPerDepartments) GetAll(firstYear int, lastYear int, db *sql.D
 	var r DetailedFCPerDpt
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&r.ID, &r.Number, &r.Name, &r.Total, &r.FC75, &r.FC77, &r.FC78, &r.FC91,
-			&r.FC92, &r.FC93, &r.FC94, &r.FC95); err != nil {
+		if err = rows.Scan(&r.ID, &r.Number, &r.Name, &r.Total, &r.FC75, &r.FC77,
+			&r.FC78, &r.FC91, &r.FC92, &r.FC93, &r.FC94, &r.FC95); err != nil {
 			return err
 		}
 		f.DetailedFCPerDepartments = append(f.DetailedFCPerDepartments, r)

@@ -9,9 +9,9 @@ import (
 	"github.com/kataras/iris"
 )
 
-// GetMultiannualProgrammation handles theget request to fetch multiannual programmation.
-func GetMultiannualProgrammation(ctx iris.Context) {
-	var resp models.MultiannualProgrammation
+// GetMuntilannualProg handles theget request to fetch multiannual programmation.
+func GetMuntilannualProg(ctx iris.Context) {
+	var resp models.MuntilannualProg
 	y1, err := ctx.URLParamInt64("y1")
 	if err != nil {
 		y1 = int64(time.Now().Year())
@@ -22,8 +22,7 @@ func GetMultiannualProgrammation(ctx iris.Context) {
 		ctx.JSON(jsonError{"Programmation pluriannuelle, requête : " + err.Error()})
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.ContentType("application/json")
-	ctx.Write(resp)
+	ctx.JSON(resp)
 }
 
 // annualProgResp embeddes an array of annualProg for the annual programmation response.

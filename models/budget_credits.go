@@ -17,11 +17,6 @@ type BudgetCredit struct {
 	ReservedCommitment int64     `json:"reserved_commitment"`
 }
 
-// TableName ensures table name for budget_credits
-func (BudgetCredit) TableName() string {
-	return "budget_credits"
-}
-
 // BudgetCredits embeddes an array of BudgetCredit for json export.
 type BudgetCredits struct {
 	BudgetCredits []BudgetCredit `json:"BudgetCredits"`
@@ -113,7 +108,7 @@ func (c *CompleteBudgetCredits) GetAll(db *sql.DB) (err error) {
 	return err
 }
 
-// Create insert a new line of budget credits  with datas stored in CompleteBudgetCredit.
+// Create insert a new line of budget credits with datas stored in CompleteBudgetCredit.
 func (b *BudgetCredit) Create(c *CompleteBudgetCredit, db *sql.DB) (err error) {
 	err = db.QueryRow(`INSERT INTO budget_credits (commission_date, chapter_id,
 		primary_commitment, frozen_commitment, reserved_commitment) 

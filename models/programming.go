@@ -7,13 +7,13 @@ import (
 
 // Programming model
 type Programming struct {
-	ID           int64       `json:"id" gorm:"column:id"`
-	Value        int64       `json:"value" gorm:"column:value"`
-	PhysicalOpID int64       `json:"physical_op_id" gorm:"column:physical_op_id"`
-	CommissionID int64       `json:"commission_id" gorm:"column:commission_id"`
-	Year         NullInt64   `json:"year" gorm:"column:year"`
-	StateRatio   NullFloat64 `json:"state_ratio" gorm:"column:state_ratio"`
-	TotalValue   NullInt64   `json:"total_value" gorm:"column:total_value"`
+	ID           int64       `json:"id"`
+	Value        int64       `json:"value"`
+	PhysicalOpID int64       `json:"physical_op_id"`
+	CommissionID int64       `json:"commission_id"`
+	Year         NullInt64   `json:"year"`
+	StateRatio   NullFloat64 `json:"state_ratio"`
+	TotalValue   NullInt64   `json:"total_value"`
 }
 
 // ProgrammingFullDatas embeddes physical operations and linked programmings for json expert.
@@ -82,9 +82,10 @@ LEFT OUTER JOIN (SELECT * FROM pre_programmings WHERE year=$1) pp ON op.id = pp.
 	var r ProgrammingFullDatas
 	for rows.Next() {
 		err = rows.Scan(&r.ID, &r.Value, &r.TotalValue, &r.StateRatio, &r.PhysicalOpID,
-			&r.CommissionID, &r.OpNumber, &r.OpName, &r.Prevision, &r.TotalPrevision, &r.StateRatioPrevision,
-			&r.PreProgValue, &r.PreProgTotalValue, &r.PreProgStateRatio, &r.PreProgDescript, &r.PlanName,
-			&r.PlanLineName, &r.PlanLineValue, &r.PlanLineTotalValue)
+			&r.CommissionID, &r.OpNumber, &r.OpName, &r.Prevision, &r.TotalPrevision,
+			&r.StateRatioPrevision, &r.PreProgValue, &r.PreProgTotalValue,
+			&r.PreProgStateRatio, &r.PreProgDescript, &r.PlanName, &r.PlanLineName,
+			&r.PlanLineValue, &r.PlanLineTotalValue)
 		if err != nil {
 			return err
 		}
@@ -136,8 +137,10 @@ type ProgrammingsPerMonthes struct {
 
 // GetAll fetches programmings values of a given year.
 func (p *ProgrammingsPerMonthes) GetAll(year int, db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT extract(month from c.date)::integer as month, sum(p.value)::bigint as value
-	FROM commissions c, programmings p WHERE p.commission_id=c.id AND year = ` + strconv.Itoa(year) +
+	rows, err := db.Query(`SELECT extract(month from c.date)::integer as month, 
+	sum(p.value)::bigint as value
+	FROM commissions c, programmings p 
+	WHERE p.commission_id=c.id AND year = ` + strconv.Itoa(year) +
 		` GROUP BY 1 ORDER BY 1`)
 	if err != nil {
 		return err
@@ -161,18 +164,19 @@ func (p *ProgrammingBatch) Save(db *sql.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	if _, err := tx.Exec("DELETE from programmings WHERE year = $1", p.Year); err != nil {
+	if _, err := tx.Exec("DELETE from programmings WHERE year=$1", p.Year); err != nil {
 		tx.Rollback()
 		return err
 	}
-	stmt, err := tx.Prepare(`INSERT INTO programmings (value, physical_op_id, commission_id, year, 
-		total_value, state_ratio) VALUES ($1,$2,$3,$4,$5,$6)`)
+	stmt, err := tx.Prepare(`INSERT INTO programmings (value, physical_op_id, 
+		commission_id, year, total_value, state_ratio) VALUES ($1,$2,$3,$4,$5,$6)`)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
 	for _, p := range p.Programmings {
-		if _, err := stmt.Exec(p.Value, p.PhysicalOpID, p.CommissionID, p.Year, p.TotalValue, p.StateRatio); err != nil {
+		if _, err := stmt.Exec(p.Value, p.PhysicalOpID, p.CommissionID, p.Year,
+			p.TotalValue, p.StateRatio); err != nil {
 			tx.Rollback()
 			return err
 		}

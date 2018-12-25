@@ -138,8 +138,8 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 	for _, p := range p.PaymentBatch {
 		value = `(` + toSQL(p.CoriolisYear) + `,` + toSQL(p.CoriolisEgtCode) + `,` +
 			toSQL(p.CoriolisEgtNum) + `,` + toSQL(p.CoriolisEgtLine) + `,` + toSQL(p.BeneficiaryCode) +
-			`,` + toSQL(p.Date) + `,` + toSQL(int64(100*p.Value)) + `,` + toSQL(int64(100*p.CancelledValue)) + `,` +
-			toSQL(p.Number) + `)`
+			`,` + toSQL(p.Date) + `,` + toSQL(int64(100*p.Value)) + `,` +
+			toSQL(int64(100*p.CancelledValue)) + `,` + toSQL(p.Number) + `)`
 		values = append(values, value)
 	}
 	if _, err = tx.Exec(`INSERT INTO temp_payment (coriolis_year, coriolis_egt_code, 
@@ -156,13 +156,13 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 	FROM new WHERE payment.id = new.id`,
 		`INSERT INTO PAYMENT (financial_commitment_id, coriolis_year, coriolis_egt_code,
 		coriolis_egt_num, coriolis_egt_line, date, number, value, cancelled_value, beneficiary_code)
-		SELECT NULL financial_commitment_id, coriolis_year, coriolis_egt_code, coriolis_egt_num, 
+		SELECT NULL, coriolis_year, coriolis_egt_code, coriolis_egt_num, 
 	 coriolis_egt_line, date, number, value, cancelled_value, beneficiary_code FROM temp_payment t
 		WHERE (t.number, t.date) NOT IN (SELECT number, date FROM payment)`,
 		`WITH ref AS (
 			SELECT DISTINCT ON (coriolis_year, coriolis_egt_code, coriolis_egt_num, coriolis_egt_line) 
 			id, coriolis_year, coriolis_egt_code, coriolis_egt_num, coriolis_egt_line 
-			FROM financial_commitment ORDER BY coriolis_year, coriolis_egt_code, coriolis_egt_num, coriolis_egt_line) 
+			FROM financial_commitment ORDER BY 2,3,4,5) 
 			 UPDATE payment SET 
 				 financial_commitment_id = ref.id 
 			 FROM ref WHERE (payment.coriolis_year = ref.coriolis_year AND 
@@ -176,7 +176,7 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 			return err
 		}
 	}
-	if _, err = tx.Exec("UPDATE import_logs SET last_date = $1 WHERE category = 'Payments'",
+	if _, err = tx.Exec("UPDATE import_logs SET last_date=$1 WHERE category='Payments'",
 		time.Now()); err != nil {
 		tx.Rollback()
 		return err
@@ -187,13 +187,13 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 
 // GetAll calculates payement previsions and realized from database.
 func (p *PrevisionsRealized) GetAll(year int64, ptID int64, db *sql.DB) (err error) {
-	rows, err := db.Query(`WITH pr AS (SELECT * FROM payment_ratios WHERE payment_types_id = $1),
+	rows, err := db.Query(`WITH pr AS (SELECT * FROM payment_ratios WHERE payment_types_id=$1),
 	fc_sum AS (SELECT beneficiary_code, EXTRACT(year FROM date)::integer AS year, SUM(value) AS value 
-								FROM financial_commitment WHERE EXTRACT(year FROM date) < $2 GROUP BY 1,2),
+								FROM financial_commitment WHERE EXTRACT(year FROM date)<$2 GROUP BY 1,2),
 	fc AS (SELECT fc_sum.beneficiary_code, SUM(fc_sum.value * pr.ratio) AS value 
-						FROM fc_sum, pr WHERE fc_sum.year + pr.index = $2 GROUP BY 1),
+						FROM fc_sum, pr WHERE fc_sum.year + pr.index=$2 GROUP BY 1),
 	p AS (SELECT beneficiary_code, SUM(value) AS value 
-						FROM payment WHERE EXTRACT(YEAR from date) = $2 GROUP BY 1)
+						FROM payment WHERE EXTRACT(YEAR from date)=$2 GROUP BY 1)
 	SELECT b.name, fc.value::bigint AS prev_payment, COALESCE(p.value,0) AS payment FROM fc
 	LEFT JOIN beneficiary b ON fc.beneficiary_code = b.code
 	LEFT OUTER JOIN p ON p.beneficiary_code = b.code
@@ -217,12 +217,18 @@ func (p *PrevisionsRealized) GetAll(year int64, ptID int64, db *sql.DB) (err err
 func (m *MonthCumulatedPayments) GetAll(bID int64, db *sql.DB) (err error) {
 	var rows *sql.Rows
 	if bID != 0 {
-		rows, err = db.Query(`SELECT tot.year, tot.month, sum(tot.value) OVER (PARTITION BY tot.year ORDER BY tot.month) as cumulated FROM
-		(SELECT extract(month from p.date) as month, EXTRACT (year FROM p.date) AS year, 0.01*sum(p.value) as value 
-			 FROM payment p, beneficiary b WHERE p.beneficiary_code = b.code AND b.id = $1 GROUP BY 1,2 ORDER BY 2,1) tot ORDER BY 1,2`, bID)
+		rows, err = db.Query(`SELECT tot.year, tot.month, sum(tot.value) 
+		OVER (PARTITION BY tot.year ORDER BY tot.month) as cumulated FROM
+		(SELECT extract(month from p.date) as month, EXTRACT(year FROM p.date) AS year, 
+				0.01*sum(p.value) as value 
+			FROM payment p, beneficiary b 
+			WHERE p.beneficiary_code=b.code AND b.id=$1 GROUP BY 1,2 ORDER BY 2,1) tot
+		ORDER BY 1,2`, bID)
 	} else {
-		rows, err = db.Query(`SELECT tot.year, tot.month, sum(tot.value) OVER (PARTITION BY tot.year ORDER BY tot.month) as cumulated FROM
-		(SELECT extract(month from DATE) as month, EXTRACT (year FROM date) AS year, 0.01*sum(value) as value 
+		rows, err = db.Query(`SELECT tot.year, tot.month, sum(tot.value) OVER
+		 (PARTITION BY tot.year ORDER BY tot.month) as cumulated FROM
+		(SELECT extract(month from DATE) as month, EXTRACT(year FROM date) AS year,
+		 0.01*sum(value) as value 
 			 FROM payment GROUP BY 1,2 ORDER BY 2,1) tot ORDER BY 1,2`)
 	}
 	if err != nil {

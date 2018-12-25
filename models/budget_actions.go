@@ -7,11 +7,11 @@ import (
 
 // BudgetAction model
 type BudgetAction struct {
-	ID        int64  `json:"id" gorm:"column:id"`
-	Code      string `json:"code" gorm:"column:code"`
-	Name      string `json:"name" gorm:"column:name"`
-	ProgramID int64  `json:"program_id" gorm:"column:program_id"`
-	SectorID  int64  `json:"sector_id" gorm:"column:sector_id"`
+	ID        int64  `json:"id"`
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	ProgramID int64  `json:"program_id"`
+	SectorID  int64  `json:"sector_id"`
 }
 
 // BudgetActionLine embeddes one line of batch of budget actions.

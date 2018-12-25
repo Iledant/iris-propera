@@ -44,13 +44,15 @@ func (p *PaymentTypes) GetAll(db *sql.DB) (err error) {
 
 // Create inserts a new payent type into database.
 func (p *PaymentType) Create(db *sql.DB) (err error) {
-	err = db.QueryRow("INSERT INTO payment_types (name) VALUES($1) RETURNING id", p.Name).Scan(&p.ID)
+	err = db.QueryRow("INSERT INTO payment_types (name) VALUES($1) RETURNING id",
+		p.Name).Scan(&p.ID)
 	return err
 }
 
 // Update modifies the payment type's name in database.
 func (p *PaymentType) Update(db *sql.DB) (err error) {
-	res, err := db.Exec(`UPDATE payment_types SET name = $1 WHERE id = $2`, p.Name, p.ID)
+	res, err := db.Exec(`UPDATE payment_types SET name = $1 WHERE id = $2`,
+		p.Name, p.ID)
 	if err != nil {
 		return err
 	}

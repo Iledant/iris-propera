@@ -7,9 +7,9 @@ import (
 
 // BudgetSector model
 type BudgetSector struct {
-	ID   int64  `json:"id" gorm:"column:id"`
-	Code string `json:"code" gorm:"column:code"`
-	Name string `json:"name" gorm:"column:name"`
+	ID   int64  `json:"id"`
+	Code string `json:"code"`
+	Name string `json:"name"`
 }
 
 // BudgetSectors embeddes an array of BudgetSectors for json export.
@@ -27,13 +27,15 @@ func (b *BudgetSector) Validate() error {
 
 // Create save a new budget sector in the database.
 func (b *BudgetSector) Create(db *sql.DB) (err error) {
-	err = db.QueryRow("INSERT INTO budget_sector (code,name) VALUES($1,$2) RETURNING id", b.Code, b.Name).Scan(&b.ID)
+	err = db.QueryRow("INSERT INTO budget_sector (code,name) VALUES($1,$2) RETURNING id",
+		b.Code, b.Name).Scan(&b.ID)
 	return err
 }
 
 // Update modifies a budget sector in the database.
 func (b *BudgetSector) Update(db *sql.DB) (err error) {
-	res, err := db.Exec(`UPDATE budget_sector SET code = $1, name = $2 WHERE id = $3`, b.Code, b.Name, b.ID)
+	res, err := db.Exec(`UPDATE budget_sector SET code=$1, name=$2 WHERE id=$3`,
+		b.Code, b.Name, b.ID)
 	if err != nil {
 		return err
 	}

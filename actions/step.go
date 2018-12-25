@@ -13,11 +13,6 @@ type stResp struct {
 	Step models.Step `json:"Step"`
 }
 
-// stReq is used for creation and modification of a step.
-type stReq struct {
-	Name *string `json:"name"`
-}
-
 // GetSteps handles request get all steps.
 func GetSteps(ctx iris.Context) {
 	var resp models.Steps
