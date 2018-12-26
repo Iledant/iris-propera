@@ -49,19 +49,25 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Delete("/budget_sectors/{bsID:int}", DeleteBudgetSector)
 
 	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs", CreateBudgetProgram)
-	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}", ModifyBudgetProgram)
-	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}", DeleteBudgetProgram)
+	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}",
+		ModifyBudgetProgram)
+	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}",
+		DeleteBudgetProgram)
 
 	adminParty.Post("/budget_credits", CreateBudgetCredit)
 	adminParty.Put("/budget_credits/{brID:int}", ModifyBudgetCredit)
 	adminParty.Post("/budget_credits/array", BatchBudgetCredits)
 	adminParty.Delete("/budget_credits/{brID:int}", DeleteBudgetCredit)
 
-	adminParty.Get("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions", GetProgramBudgetActions)
-	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions", CreateBudgetAction)
+	adminParty.Get("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions",
+		GetProgramBudgetActions)
+	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions",
+		CreateBudgetAction)
 	adminParty.Post("/budget_actions", BatchBudgetActions)
-	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}", ModifyBudgetAction)
-	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}", DeleteBudgetAction)
+	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}",
+		ModifyBudgetAction)
+	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}",
+		DeleteBudgetAction)
 
 	adminParty.Get("/categories", GetCategories)
 	adminParty.Post("/categories", CreateCategory)
@@ -122,6 +128,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Delete("/scenarios/{sID:int}", DeleteScenario)
 	adminParty.Get("/scenarios/{sID:int}", GetScenarioDatas)
 	adminParty.Post("/scenarios/{sID:int}/offsets", SetScenarioOffsets)
+	adminParty.Get("/scenarios/{sID:int}/payment_per_budget_action",
+		GetScenarioActionPayments)
+	adminParty.Get("/scenarios/{sID:int}/statistical_payment_per_budget_action",
+		GetScenarioStatActionPayments)
 
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/user/logout", Logout)
@@ -147,8 +157,9 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Delete("/physical_ops/{opID:int}/documents/{doID:int}", DeleteDocument)
 
 	userParty.Get("/physical_ops/{opID:int}/events", GetEvents)
-	userParty.Get("/physical_ops/{opID:int}/financial_commitments", GetOpFcs)                         // changed, before financialcommitments
-	userParty.Get("/physical_ops/{opID:int}/financial_commitments/{fcID:int}/payments", GetFcPayment) // changed, before financialcommitments
+	userParty.Get("/physical_ops/{opID:int}/financial_commitments", GetOpFcs) // changed, before financialcommitments
+	userParty.Get("/physical_ops/{opID:int}/financial_commitments/{fcID:int}/payments",
+		GetFcPayment) // changed, before financialcommitments
 	userParty.Get("/events", GetNextMonthEvent)
 	userParty.Post("/physical_ops/{opID:int}/events", CreateEvent)
 	userParty.Put("/physical_ops/{opID:int}/events/{evID:int}", ModifyEvent)
@@ -188,12 +199,15 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/summaries/programmation_prevision", GetProgrammingAndPrevisions)
 	userParty.Get("/summaries/budget_action_programmation", GetActionProgrammation)
 	userParty.Get("/summaries/commitment_per_budget_action", GetActionCommitment)
-	userParty.Get("/summaries/detailed_commitment_per_budget_action", GetDetailedActionCommitment)
+	userParty.Get("/summaries/detailed_commitment_per_budget_action",
+		GetDetailedActionCommitment)
 	userParty.Get("/summaries/payment_per_budget_action", GetActionPayment)
 	userParty.Get("/summaries/statistical_payment_per_budget_action", GetStatActionPayment)
 	userParty.Get("/summaries/detailed_payment_per_budget_action", GetDetailedActionPayment)
-	userParty.Get("/summaries/statistical_detailed_payment_per_budget_action", GetStatDetailedActionPayment)
-	userParty.Get("/summaries/statistical_current_year_payment_per_budget_action", GetStatCurrentYearPayment)
+	userParty.Get("/summaries/statistical_detailed_payment_per_budget_action",
+		GetStatDetailedActionPayment)
+	userParty.Get("/summaries/statistical_current_year_payment_per_budget_action",
+		GetStatCurrentYearPayment)
 
 	userParty.Get("/today_message", GetTodayMessage)
 

@@ -14,6 +14,8 @@ func TestScenario(t *testing.T) {
 	t.Run("Scenario", func(t *testing.T) {
 		getScenarioTest(testCtx.E, t)
 		ID := createScenarioTest(testCtx.E, t)
+		getScenarioActionPaymentTest(testCtx.E, t)
+		getScenarioStatActionPaymentTest(testCtx.E, t)
 		modifyScenarioTest(testCtx.E, t, ID)
 		getScenarioDatasTest(testCtx.E, t, ID)
 		setScenarioOffsetsText(testCtx.E, t, ID)
@@ -72,9 +74,78 @@ func createScenarioTest(e *httpexpect.Expect, t *testing.T) (ID int) {
 		if tc.Status == http.StatusOK {
 			ID = int(response.JSON().Object().Value("Scenario").Object().Value("id").Number().Raw())
 		}
-
 	}
 	return ID
+}
+
+// getScenarioActionPaymentTest check route is protected and created scenarios works properly.
+func getScenarioActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			BodyContains: []string{"ScenarioPaymentPerBudgetAction",
+				`"chapter":"908","sector":"TC","subfunction":"811","program":"281005","action":"2810050101","action_name":"Liaisons tramways","y1":2767866.8312180256,"y2":-327128.643554943,"y3":-766460.1789780867`},
+			ArraySize: 53},
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/scenarios/1/payment_per_budget_action").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("FirstYear", 2018).
+			WithQuery("DefaultPaymentTypeID", 5).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetScenarioActionPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetScenarioActionPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"chapter"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetScenarioActionPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
+}
+
+// getScenarioStatActionPaymentTest check route is protected and created scenarios works properly.
+func getScenarioStatActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			BodyContains: []string{"ScenarioStatisticalPaymentPerBudgetAction",
+				`"chapter":"908","sector":"TC","subfunction":"811","program":"281005","action":"2810050101","action_name":"Liaisons tramways","y1":2767866.8312180256,"y2":-327128.643554943,"y3":-766460.1789780867`},
+			ArraySize: 53},
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/scenarios/1/statistical_payment_per_budget_action").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("FirstYear", 2018).
+			WithQuery("DefaultPaymentTypeID", 5).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetScenarioStatActionPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetScenarioStatActionPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"chapter"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetScenarioStatActionPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
 }
 
 // modifyScenarioTest check route is protected and modify works properly.

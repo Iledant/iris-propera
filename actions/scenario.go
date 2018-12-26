@@ -154,3 +154,66 @@ func SetScenarioOffsets(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Offsets créés"})
 }
+
+// GetScenarioActionPayments handles the get request to calculate the
+// multiannual payment previsions of a scenario.
+func GetScenarioActionPayments(ctx iris.Context) {
+	sID, err := ctx.Params().GetInt64("sID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions de payment de scénario, paramètre : " + err.Error()})
+		return
+	}
+	firstYear, err := ctx.URLParamInt64("FirstYear")
+	if err != nil {
+		firstYear = int64(time.Now().Year() + 1)
+	}
+	ptID, err := ctx.URLParamInt64("DefaultPaymentTypeID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions de payment de scénario, paramètre : " + err.Error()})
+		return
+	}
+	var resp models.ScenarioActionPayments
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err = resp.GetAll(firstYear, sID, ptID, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions de payment de scénario, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
+// GetScenarioStatActionPayments handles the get request to calculate the
+// multiannual payment previsions of a scenario.
+func GetScenarioStatActionPayments(ctx iris.Context) {
+	sID, err := ctx.Params().GetInt64("sID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions statistique de payment de scénario, paramètre : " +
+			err.Error()})
+		return
+	}
+	firstYear, err := ctx.URLParamInt64("FirstYear")
+	if err != nil {
+		firstYear = int64(time.Now().Year() + 1)
+	}
+	ptID, err := ctx.URLParamInt64("DefaultPaymentTypeID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions statistique de payment de scénario, paramètre : " +
+			err.Error()})
+		return
+	}
+	var resp models.ScenarioStatActionPayments
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err = resp.GetAll(firstYear, sID, ptID, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions statistique de payment de scénario, requête : " +
+			err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
