@@ -31,7 +31,8 @@ type annualProgResp struct {
 	models.ImportLogs
 }
 
-// GetAnnualProgrammation handles the get request to fetch datas comparing programmation, commitments and pending commitments.
+// GetAnnualProgrammation handles the get request to fetch datas comparing
+// programmation, commitments and pending commitments.
 func GetAnnualProgrammation(ctx iris.Context) {
 	year, err := ctx.URLParamInt("year")
 	if err != nil {
@@ -53,7 +54,8 @@ func GetAnnualProgrammation(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
-// GetProgrammingAndPrevisions handles the get request to compare precisely programmation and previsions.
+// GetProgrammingAndPrevisions handles the get request to compare precisely
+// programmation and previsions.
 func GetProgrammingAndPrevisions(ctx iris.Context) {
 	year, err := ctx.URLParamInt64("y1")
 	if err != nil {
@@ -103,7 +105,8 @@ func GetActionCommitment(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
-// GetDetailedActionCommitment handles the get request to have detailed commitment per budget actions.
+// GetDetailedActionCommitment handles the get request to have detailed
+// commitment per budget actions.
 func GetDetailedActionCommitment(ctx iris.Context) {
 	y1, err := ctx.URLParamInt64("FirstYear")
 	if err != nil {
@@ -120,7 +123,9 @@ func GetDetailedActionCommitment(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
-// GetDetailedActionPayment handles the get request to get payment prevision by physical operation.
+// GetDetailedActionPayment handles the get request to get payment prevision
+// per physical operation using payment prevision if available, statistical
+// approach otherwise.
 func GetDetailedActionPayment(ctx iris.Context) {
 	y1, err := ctx.URLParamInt64("FirstYear")
 	if err != nil {
@@ -143,8 +148,9 @@ func GetDetailedActionPayment(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
-// GetActionPayment handles the get request to get payment prevision by budget action.
-func GetActionPayment(ctx iris.Context) {
+// GetStatDetailedActionPayment handles the get request to get payment prevision
+// per physical operation using only statistical approach.
+func GetStatDetailedActionPayment(ctx iris.Context) {
 	y1, err := ctx.URLParamInt64("FirstYear")
 	if err != nil {
 		y1 = int64(time.Now().Year()) + 1
@@ -155,11 +161,80 @@ func GetActionPayment(ctx iris.Context) {
 		ctx.JSON(jsonError{"Paiement détaillé par action, décodage : " + err.Error()})
 		return
 	}
+	var resp models.StatDetailedActionPayments
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err = resp.GetAll(y1, dID, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Paiement détaillé par action, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
+// GetActionPayment handles the get request to get payment prevision by budget action.
+func GetActionPayment(ctx iris.Context) {
+	y1, err := ctx.URLParamInt64("FirstYear")
+	if err != nil {
+		y1 = int64(time.Now().Year()) + 1
+	}
+	dID, err := ctx.URLParamInt64("DefaultPaymentTypeId")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Paiement par action, décodage : " + err.Error()})
+		return
+	}
 	var resp models.ActionPayments
 	db := ctx.Values().Get("db").(*gorm.DB)
 	if err = resp.GetAll(y1, dID, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Paiement détaillé par action, décodage : " + err.Error()})
+		ctx.JSON(jsonError{"Paiement par action, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
+// GetStatActionPayment handles the get request to get payment prevision by budget action.
+func GetStatActionPayment(ctx iris.Context) {
+	y1, err := ctx.URLParamInt64("FirstYear")
+	if err != nil {
+		y1 = int64(time.Now().Year()) + 1
+	}
+	dID, err := ctx.URLParamInt64("DefaultPaymentTypeId")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Paiement statistique par action, décodage : " + err.Error()})
+		return
+	}
+	var resp models.ActionPayments
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err = resp.GetStatAll(y1, dID, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Paiement statistique par action, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
+// GetStatCurrentYearPayment handles the get request to get payment prevision by budget action.
+func GetStatCurrentYearPayment(ctx iris.Context) {
+	y, err := ctx.URLParamInt64("Year")
+	if err != nil {
+		y = int64(time.Now().Year()) + 1
+	}
+	dID, err := ctx.URLParamInt64("DefaultPaymentTypeId")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision annuelle statistique, décodage : " + err.Error()})
+		return
+	}
+	var resp models.CurrentYearPrevPayments
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err = resp.GetAll(y, dID, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision annuelle statistique, requête : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)

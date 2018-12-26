@@ -18,7 +18,10 @@ func TestSummaries(t *testing.T) {
 		actionCommitmentTest(testCtx.E, t)
 		detailedActionCommitmentTest(testCtx.E, t)
 		detailedActionPaymentTest(testCtx.E, t)
+		detailedStatActionPaymentTest(testCtx.E, t)
 		actionPaymentTest(testCtx.E, t)
+		statActionPaymentTest(testCtx.E, t)
+		statCurrentYearPaymentTest(testCtx.E, t)
 	})
 }
 
@@ -238,6 +241,36 @@ func detailedActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
+// detailedStatActionPaymentTest check route is protected and datas sent has got items and number of lines.
+func detailedStatActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
+			BodyContains: []string{"DetailedPaymentPerBudgetAction", "chapter", "sector", "subfunction", "program",
+				"action", "action_name", "number", "name", "y1", "y2", "y3"}, ArraySize: 433},
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/summaries/statistical_detailed_payment_per_budget_action").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nDetailedStatActionPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDetailedStatActionPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"chapter"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nDetailedStatActionPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
+}
+
 // actionPaymentTest check route is protected and datas sent has got items and number of lines.
 func actionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
@@ -265,6 +298,69 @@ func actionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 			count := strings.Count(content, `"chapter"`)
 			if count != tc.ArraySize {
 				t.Errorf("\nActionPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
+}
+
+// statActionPaymentTest check route is protected and datas sent has got items and number of lines.
+func statActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
+			BodyContains: []string{"PaymentPerBudgetAction",
+				`"chapter":908,"sector":"TC","subfunction":"811","program":"381006","action":"381006015","action_name":"Métro","y1":46221880.838196725,"y2":20857793.16879844,"y3":18905566.532886185`}, ArraySize: 58},
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/summaries/statistical_payment_per_budget_action").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nStatActionPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nStatActionPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"chapter"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nStatActionPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
+}
+
+// statCurrentYearPaymentTest check route is protected and datas sent has got items.
+func statCurrentYearPaymentTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: "fake", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
+			BodyContains: []string{"StatisticalCurrentYearPaymentPerAction",
+				`"chapter":908,"sector":"TC","subfunction":"811","program":"381005","action":"381005015","action_name":"Liaisons tramways","prevision":7881246.130225793,"payment":null`},
+			ArraySize: 53},
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/summaries/statistical_current_year_payment_per_budget_action").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nStatCurrentYearPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nStatCurrentYearPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"chapter"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nStatCurrentYearPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
 			}
 		}
 	}

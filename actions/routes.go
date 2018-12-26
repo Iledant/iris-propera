@@ -190,7 +190,10 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/summaries/commitment_per_budget_action", GetActionCommitment)
 	userParty.Get("/summaries/detailed_commitment_per_budget_action", GetDetailedActionCommitment)
 	userParty.Get("/summaries/payment_per_budget_action", GetActionPayment)
+	userParty.Get("/summaries/statistical_payment_per_budget_action", GetStatActionPayment)
 	userParty.Get("/summaries/detailed_payment_per_budget_action", GetDetailedActionPayment)
+	userParty.Get("/summaries/statistical_detailed_payment_per_budget_action", GetStatDetailedActionPayment)
+	userParty.Get("/summaries/statistical_current_year_payment_per_budget_action", GetStatCurrentYearPayment)
 
 	userParty.Get("/today_message", GetTodayMessage)
 
