@@ -194,7 +194,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/programmings", GetProgrammings)
 	userParty.Get("/programmings/years", GetProgrammingsYear)
 
-	userParty.Get("/summaries/multiannual_programmation", GetMuntilannualProg)
+	userParty.Get("/summaries/multiannual_programmation", GetMultiannualProg)
 	userParty.Get("/summaries/annual_programmation", GetAnnualProgrammation)
 	userParty.Get("/summaries/programmation_prevision", GetProgrammingAndPrevisions)
 	userParty.Get("/summaries/budget_action_programmation", GetActionProgrammation)

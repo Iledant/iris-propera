@@ -39,6 +39,9 @@ func (c *Categories) GetAll(db *sql.DB) (err error) {
 		c.Categories = append(c.Categories, r)
 	}
 	err = rows.Err()
+	if len(c.Categories) == 0 {
+		c.Categories = []Category{}
+	}
 	return err
 }
 

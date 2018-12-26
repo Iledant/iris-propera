@@ -40,6 +40,9 @@ func (b *BudgetChapters) GetAll(db *sql.DB) (err error) {
 		b.BudgetChapters = append(b.BudgetChapters, r)
 	}
 	err = rows.Err()
+	if len(b.BudgetChapters) == 0 {
+		b.BudgetChapters = []BudgetChapter{}
+	}
 	return err
 }
 

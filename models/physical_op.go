@@ -352,6 +352,9 @@ func (o *OpCommitments) GetOpAll(opID int64, db *sql.DB) (err error) {
 		o.OpCommitments = append(o.OpCommitments, r)
 	}
 	err = rows.Err()
+	if len(o.OpCommitments) == 0 {
+		o.OpCommitments = []OpCommitment{}
+	}
 	return err
 }
 
@@ -415,6 +418,9 @@ func (op *PhysicalOp) GetPrevCommitments(p *PrevCommitments, db *sql.DB) (err er
 		p.PrevCommitments = append(p.PrevCommitments, r)
 	}
 	err = rows.Err()
+	if len(p.PrevCommitments) == 0 {
+		p.PrevCommitments = []PrevCommitment{}
+	}
 	return err
 }
 
@@ -434,6 +440,9 @@ func (op *PhysicalOp) GetPrevPayments(p *PrevPayments, db *sql.DB) (err error) {
 		p.PrevPayments = append(p.PrevPayments, r)
 	}
 	err = rows.Err()
+	if len(p.PrevPayments) == 0 {
+		p.PrevPayments = []PrevPayment{}
+	}
 	return err
 }
 
@@ -454,6 +463,9 @@ func (op *PhysicalOp) GetYearPrevCommitments(p *PrevCommitments, year int64, db 
 		p.PrevCommitments = append(p.PrevCommitments, r)
 	}
 	err = rows.Err()
+	if len(p.PrevCommitments) == 0 {
+		p.PrevCommitments = []PrevCommitment{}
+	}
 	return err
 }
 
@@ -473,6 +485,9 @@ func (op *PhysicalOp) GetYearPrevPayments(p *PrevPayments, year int64, db *sql.D
 		p.PrevPayments = append(p.PrevPayments, r)
 	}
 	err = rows.Err()
+	if len(p.PrevPayments) == 0 {
+		p.PrevPayments = []PrevPayment{}
+	}
 	return err
 }
 
@@ -506,5 +521,8 @@ func (ops *PhysicalOps) GetAll(db *sql.DB) (err error) {
 		ops.PhysicalOps = append(ops.PhysicalOps, r)
 	}
 	err = rows.Err()
+	if len(ops.PhysicalOps) == 0 {
+		ops.PhysicalOps = []PhysicalOp{}
+	}
 	return err
 }

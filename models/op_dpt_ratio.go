@@ -137,6 +137,9 @@ func (o *OpWithDptRatios) GetAll(uID int64, db *sql.DB) (err error) {
 		o.OpWithDptRatios = append(o.OpWithDptRatios, r)
 	}
 	err = rows.Err()
+	if len(o.OpWithDptRatios) == 0 {
+		o.OpWithDptRatios = []OpWithDptRatio{}
+	}
 	return err
 }
 
@@ -231,6 +234,9 @@ func (f *FCPerDepartments) GetAll(firstYear int, lastYear int, db *sql.DB) (err 
 		f.FCPerDepartments = append(f.FCPerDepartments, r)
 	}
 	err = rows.Err()
+	if len(f.FCPerDepartments) == 0 {
+		f.FCPerDepartments = []FCPerDpt{}
+	}
 	return err
 }
 
@@ -262,6 +268,9 @@ func (f *DetailedFCPerDepartments) GetAll(firstYear int, lastYear int, db *sql.D
 		f.DetailedFCPerDepartments = append(f.DetailedFCPerDepartments, r)
 	}
 	err = rows.Err()
+	if len(f.DetailedFCPerDepartments) == 0 {
+		f.DetailedFCPerDepartments = []DetailedFCPerDpt{}
+	}
 	return err
 }
 
@@ -292,5 +301,8 @@ func (f *DetailedPrgPerDepartments) GetAll(year int, db *sql.DB) (err error) {
 		f.DetailedPrgPerDepartments = append(f.DetailedPrgPerDepartments, r)
 	}
 	err = rows.Err()
+	if len(f.DetailedPrgPerDepartments) == 0 {
+		f.DetailedPrgPerDepartments = []DetailedPrgPerDpt{}
+	}
 	return err
 }

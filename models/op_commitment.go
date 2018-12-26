@@ -34,5 +34,8 @@ func (o *OpAndCommitments) GetAll(db *sql.DB) (err error) {
 		o.OpAndCommitments = append(o.OpAndCommitments, r)
 	}
 	err = rows.Err()
+	if len(o.OpAndCommitments) == 0 {
+		o.OpAndCommitments = []OpAndCommitment{}
+	}
 	return err
 }

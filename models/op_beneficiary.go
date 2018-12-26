@@ -38,6 +38,9 @@ func (p *PaymentsPerBeneficiary) GetOpAll(opID int64, db *sql.DB) (err error) {
 		p.Payments = append(p.Payments, r)
 	}
 	err = rows.Err()
+	if len(p.Payments) == 0 {
+		p.Payments = []OpBeneficiaryValue{}
+	}
 	return err
 }
 
@@ -59,5 +62,8 @@ func (p *FCsPerBeneficiary) GetOpAll(opID int64, db *sql.DB) (err error) {
 		p.Commitments = append(p.Commitments, r)
 	}
 	err = rows.Err()
+	if len(p.Commitments) == 0 {
+		p.Commitments = []OpBeneficiaryValue{}
+	}
 	return err
 }

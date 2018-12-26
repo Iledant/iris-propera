@@ -83,6 +83,9 @@ func (b *BudgetCredits) GetLatest(year int64, db *sql.DB) (err error) {
 		b.BudgetCredits = append(b.BudgetCredits, r)
 	}
 	err = rows.Err()
+	if len(b.BudgetCredits) == 0 {
+		b.BudgetCredits = []BudgetCredit{}
+	}
 	return err
 }
 
@@ -105,6 +108,9 @@ func (c *CompleteBudgetCredits) GetAll(db *sql.DB) (err error) {
 		c.CompleteBudgetCredits = append(c.CompleteBudgetCredits, r)
 	}
 	err = rows.Err()
+	if len(c.CompleteBudgetCredits) == 0 {
+		c.CompleteBudgetCredits = []CompleteBudgetCredit{}
+	}
 	return err
 }
 

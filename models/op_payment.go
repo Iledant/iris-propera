@@ -38,5 +38,8 @@ func (o *OpPayments) GetOpAll(opID int64, db *sql.DB) (err error) {
 		o.OpPayments = append(o.OpPayments, r)
 	}
 	err = rows.Err()
+	if len(o.OpPayments) == 0 {
+		o.OpPayments = []OpPayment{}
+	}
 	return err
 }

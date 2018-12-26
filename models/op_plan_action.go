@@ -54,6 +54,9 @@ func (o *OpWithPlanAndActions) GetAll(uID int64, db *sql.DB) (err error) {
 		o.OpWithPlanAndActions = append(o.OpWithPlanAndActions, r)
 	}
 	err = rows.Err()
+	if len(o.OpWithPlanAndActions) == 0 {
+		o.OpWithPlanAndActions = []OpWithPlanAndAction{}
+	}
 	return err
 }
 

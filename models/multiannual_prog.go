@@ -7,13 +7,13 @@ import (
 	"strings"
 )
 
-// MuntilannualProg embeddes an array of bytes for json export.
-type MuntilannualProg struct {
-	MuntilannualProg json.RawMessage `json:"MuntilannualProg"`
+// MultiannualProg embeddes an array of bytes for json export.
+type MultiannualProg struct {
+	MultiannualProg json.RawMessage `json:"MultiannualProg"`
 }
 
 // GetAll fetches multi annual programmation from database.
-func (m *MuntilannualProg) GetAll(firstYear int64, db *sql.DB) (err error) {
+func (m *MultiannualProg) GetAll(firstYear int64, db *sql.DB) (err error) {
 	var lastYear int64
 	if err = db.QueryRow("SELECT max(year) FROM prev_commitment").Scan(&lastYear); err != nil {
 		return err
@@ -58,6 +58,6 @@ func (m *MuntilannualProg) GetAll(firstYear int64, db *sql.DB) (err error) {
 	if err != nil {
 		return err
 	}
-	m.MuntilannualProg = json.RawMessage("[" + strings.Join(rr, ",") + "]")
+	m.MultiannualProg = json.RawMessage("[" + strings.Join(rr, ",") + "]")
 	return nil
 }

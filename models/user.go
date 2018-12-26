@@ -75,6 +75,9 @@ func (users *Users) GetAll(db *sql.DB) (err error) {
 		users.Users = append(users.Users, r)
 	}
 	err = rows.Err()
+	if len(users.Users) == 0 {
+		users.Users = []User{}
+	}
 	return err
 }
 
@@ -95,6 +98,9 @@ func (users *Users) GetRole(role string, db *sql.DB) (err error) {
 		users.Users = append(users.Users, r)
 	}
 	err = rows.Err()
+	if len(users.Users) == 0 {
+		users.Users = []User{}
+	}
 	return err
 }
 

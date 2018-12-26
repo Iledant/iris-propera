@@ -43,6 +43,9 @@ func (p *Plans) GetAll(db *sql.DB) (err error) {
 		p.Plans = append(p.Plans, r)
 	}
 	err = rows.Err()
+	if len(p.Plans) == 0 {
+		p.Plans = []Plan{}
+	}
 	return err
 }
 

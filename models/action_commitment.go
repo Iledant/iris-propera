@@ -64,6 +64,9 @@ GROUP BY 1,2,3,4,5,6 ORDER BY 1,2,3,4,5`, year)
 		}
 		a.ActionCommitments = append(a.ActionCommitments, r)
 	}
+	if len(a.ActionCommitments) == 0 {
+		a.ActionCommitments = []ActionCommitment{}
+	}
 	err = rows.Err()
 	return err
 }

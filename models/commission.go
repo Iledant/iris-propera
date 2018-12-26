@@ -41,6 +41,9 @@ func (c *Commissions) GetAll(db *sql.DB) (err error) {
 		c.Commissions = append(c.Commissions, r)
 	}
 	err = rows.Err()
+	if len(c.Commissions) == 0 {
+		c.Commissions = []Commission{}
+	}
 	return err
 }
 

@@ -86,6 +86,9 @@ ORDER BY 1,2,3,4,5,6`)
 		}
 		a.ActionPayments = append(a.ActionPayments, r)
 	}
+	if len(a.ActionPayments) == 0 {
+		a.ActionPayments = []ActionPayment{}
+	}
 	err = rows.Err()
 	return err
 
@@ -164,6 +167,9 @@ func (a *ActionPayments) GetStatAll(year int64, ptID int64, db *sql.DB) (err err
 			return err
 		}
 		a.ActionPayments = append(a.ActionPayments, r)
+	}
+	if len(a.ActionPayments) == 0 {
+		a.ActionPayments = []ActionPayment{}
 	}
 	err = rows.Err()
 	return err

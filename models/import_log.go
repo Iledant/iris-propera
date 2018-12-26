@@ -29,5 +29,8 @@ func (i *ImportLogs) GetAll(db *sql.DB) (err error) {
 		i.ImportLogs = append(i.ImportLogs, r)
 	}
 	err = rows.Err()
+	if len(i.ImportLogs) == 0 {
+		i.ImportLogs = []ImportLog{}
+	}
 	return err
 }

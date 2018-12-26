@@ -78,5 +78,8 @@ func (s *Steps) GetAll(db *sql.DB) (err error) {
 		s.Steps = append(s.Steps, r)
 	}
 	err = rows.Err()
+	if len(s.Steps) == 0 {
+		s.Steps = []Step{}
+	}
 	return err
 }

@@ -40,5 +40,8 @@ func (p *ProgrammingAndPrevisions) GetAll(year int64, db *sql.DB) (err error) {
 		p.ProgrammingAndPrevisions = append(p.ProgrammingAndPrevisions, r)
 	}
 	err = rows.Err()
+	if len(p.ProgrammingAndPrevisions) == 0 {
+		p.ProgrammingAndPrevisions = []ProgrammingAndPrevision{}
+	}
 	return err
 }

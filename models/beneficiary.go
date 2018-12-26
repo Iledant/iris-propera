@@ -56,10 +56,11 @@ func (b *Beneficiaries) GetAll(db *sql.DB) (err error) {
 		}
 		b.Beneficiaries = append(b.Beneficiaries, r)
 	}
-	if err = rows.Err(); err != nil {
-		return err
+	err = rows.Err()
+	if len(b.Beneficiaries) == 0 {
+		b.Beneficiaries = []Beneficiary{}
 	}
-	return nil
+	return err
 }
 
 // GetPlanAll fetches all beneficiaries in the database linked to a plan
@@ -80,8 +81,9 @@ func (b *Beneficiaries) GetPlanAll(planID int64, db *sql.DB) (err error) {
 		}
 		b.Beneficiaries = append(b.Beneficiaries, r)
 	}
-	if err = rows.Err(); err != nil {
-		return err
+	err = rows.Err()
+	if len(b.Beneficiaries) == 0 {
+		b.Beneficiaries = []Beneficiary{}
 	}
-	return nil
+	return err
 }

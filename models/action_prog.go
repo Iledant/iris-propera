@@ -37,6 +37,9 @@ func (a *ActionProgrammations) GetAll(year int64, db *sql.DB) (err error) {
 		}
 		a.ActionProgrammations = append(a.ActionProgrammations, r)
 	}
+	if len(a.ActionProgrammations) == 0 {
+		a.ActionProgrammations = []ActionProgrammation{}
+	}
 	err = rows.Err()
 	return err
 }

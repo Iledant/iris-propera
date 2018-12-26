@@ -102,6 +102,9 @@ LEFT OUTER JOIN (SELECT * FROM pre_programmings WHERE year = $1) pp ON op.id = p
 		f.FullPreProgrammings = append(f.FullPreProgrammings, r)
 	}
 	err = rows.Err()
+	if len(f.FullPreProgrammings) == 0 {
+		f.FullPreProgrammings = []FullPreProgramming{}
+	}
 	return err
 }
 

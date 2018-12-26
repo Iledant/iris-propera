@@ -29,5 +29,8 @@ func (m *MonthCommitments) GetAll(year int, db *sql.DB) (err error) {
 		m.MonthCommitments = append(m.MonthCommitments, r)
 	}
 	err = rows.Err()
+	if len(m.MonthCommitments) == 0 {
+		m.MonthCommitments = []MonthCommitment{}
+	}
 	return err
 }

@@ -92,6 +92,9 @@ LEFT OUTER JOIN (SELECT * FROM pre_programmings WHERE year=$1) pp ON op.id = pp.
 		p.Programmings = append(p.Programmings, r)
 	}
 	err = rows.Err()
+	if len(p.Programmings) == 0 {
+		p.Programmings = []ProgrammingFullDatas{}
+	}
 	return err
 }
 
@@ -121,6 +124,9 @@ func (p *ProgrammingsYears) GetAll(db *sql.DB) (err error) {
 		p.Years = append(p.Years, row)
 	}
 	err = rows.Err()
+	if len(p.Years) == 0 {
+		p.Years = []ProgrammingsYear{}
+	}
 	return err
 }
 
@@ -155,6 +161,9 @@ func (p *ProgrammingsPerMonthes) GetAll(year int, db *sql.DB) (err error) {
 		p.ProgrammingsPerMonth = append(p.ProgrammingsPerMonth, row)
 	}
 	err = rows.Err()
+	if len(p.ProgrammingsPerMonth) == 0 {
+		p.ProgrammingsPerMonth = []ProgrammingsPerMonth{}
+	}
 	return err
 }
 

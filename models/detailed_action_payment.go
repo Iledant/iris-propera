@@ -115,6 +115,9 @@ func (d *DetailedActionPayments) GetAll(year int64, ptID int64, db *sql.DB) (err
 		d.DetailedActionPayments = append(d.DetailedActionPayments, r)
 	}
 	err = rows.Err()
+	if len(d.DetailedActionPayments) == 0 {
+		d.DetailedActionPayments = []DetailedActionPayment{}
+	}
 	return err
 }
 
@@ -191,5 +194,8 @@ func (d *StatDetailedActionPayments) GetAll(year int64, ptID int64, db *sql.DB) 
 		d.DetailedActionPayments = append(d.DetailedActionPayments, r)
 	}
 	err = rows.Err()
+	if len(d.DetailedActionPayments) == 0 {
+		d.DetailedActionPayments = []DetailedActionPayment{}
+	}
 	return err
 }

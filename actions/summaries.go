@@ -9,9 +9,9 @@ import (
 	"github.com/kataras/iris"
 )
 
-// GetMuntilannualProg handles theget request to fetch multiannual programmation.
-func GetMuntilannualProg(ctx iris.Context) {
-	var resp models.MuntilannualProg
+// GetMultiannualProg handles theget request to fetch multiannual programmation.
+func GetMultiannualProg(ctx iris.Context) {
+	var resp models.MultiannualProg
 	y1, err := ctx.URLParamInt64("y1")
 	if err != nil {
 		y1 = int64(time.Now().Year())

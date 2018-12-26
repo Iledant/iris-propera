@@ -82,6 +82,9 @@ func (p *PendingCommitments) GetAll(db *sql.DB) (err error) {
 		p.PendingCommitments = append(p.PendingCommitments, r)
 	}
 	err = rows.Err()
+	if len(p.PendingCommitments) == 0 {
+		p.PendingCommitments = []PendingCommitment{}
+	}
 	return err
 }
 
@@ -103,6 +106,9 @@ func (p *PendingCommitments) GetAllUnlinked(db *sql.DB) (err error) {
 		p.PendingCommitments = append(p.PendingCommitments, r)
 	}
 	err = rows.Err()
+	if len(p.PendingCommitments) == 0 {
+		p.PendingCommitments = []PendingCommitment{}
+	}
 	return err
 }
 
@@ -124,6 +130,9 @@ func (p *PendingCommitments) GetAllLinked(db *sql.DB) (err error) {
 		p.PendingCommitments = append(p.PendingCommitments, r)
 	}
 	err = rows.Err()
+	if len(p.PendingCommitments) == 0 {
+		p.PendingCommitments = []PendingCommitment{}
+	}
 	return err
 }
 
@@ -254,5 +263,8 @@ FROM pending_commitments pe, physical_op op WHERE pe.physical_op_id = op.id`)
 		c.CompletePendingCommitments = append(c.CompletePendingCommitments, r)
 	}
 	err = rows.Err()
+	if len(c.CompletePendingCommitments) == 0 {
+		c.CompletePendingCommitments = []CompletePendingCommitment{}
+	}
 	return err
 }

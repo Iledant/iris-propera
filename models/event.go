@@ -129,6 +129,9 @@ func (n *NextMonthEvents) Get(uID int64, db *sql.DB) (err error) {
 		}
 		n.NextMonthEvents = append(n.NextMonthEvents, r)
 	}
+	if len(n.NextMonthEvents) == 0 {
+		n.NextMonthEvents = []NextMonthEvent{}
+	}
 	err = rows.Err()
 	return err
 }

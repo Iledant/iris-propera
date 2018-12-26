@@ -48,6 +48,9 @@ func (b *BudgetPrograms) GetAll(db *sql.DB) (err error) {
 		b.BudgetPrograms = append(b.BudgetPrograms, r)
 	}
 	err = rows.Err()
+	if len(b.BudgetPrograms) == 0 {
+		b.BudgetPrograms = []BudgetProgram{}
+	}
 	return err
 }
 
@@ -68,6 +71,9 @@ func (b *BudgetPrograms) GetAllChapterLinked(chapterID int64, db *sql.DB) (err e
 		b.BudgetPrograms = append(b.BudgetPrograms, r)
 	}
 	err = rows.Err()
+	if len(b.BudgetPrograms) == 0 {
+		b.BudgetPrograms = []BudgetProgram{}
+	}
 	return err
 }
 

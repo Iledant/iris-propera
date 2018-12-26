@@ -31,7 +31,7 @@ func multiannualProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
-			BodyContains: []string{"MuntilannualProg"}, ArraySize: 318},
+			BodyContains: []string{"MultiannualProg"}, ArraySize: 318},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/multiannual_programmation").
@@ -49,7 +49,7 @@ func multiannualProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 		if tc.ArraySize > 0 {
 			count := strings.Count(content, `"number"`)
 			if count != tc.ArraySize {
-				t.Errorf("\nMuntilannualProg[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+				t.Errorf("\nMultiannualProg[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
 			}
 		}
 	}

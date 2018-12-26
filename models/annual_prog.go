@@ -87,6 +87,9 @@ func (a *AnnualProgrammation) GetAll(year int, db *sql.DB) (err error) {
 		}
 		a.AnnualProgrammation = append(a.AnnualProgrammation, r)
 	}
+	if len(a.AnnualProgrammation) == 0 {
+		a.AnnualProgrammation = []AnnualProgLine{}
+	}
 	err = rows.Err()
 	return err
 }

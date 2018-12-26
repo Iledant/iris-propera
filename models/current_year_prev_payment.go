@@ -81,5 +81,8 @@ func (c *CurrentYearPrevPayments) GetAll(year int64, ptID int64, db *sql.DB) (er
 		c.CurrentYearPrevPayments = append(c.CurrentYearPrevPayments, r)
 	}
 	err = rows.Err()
+	if len(c.CurrentYearPrevPayments) == 0 {
+		c.CurrentYearPrevPayments = []CurrentYearPrevPayment{}
+	}
 	return err
 }

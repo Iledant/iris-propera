@@ -23,8 +23,10 @@ func (b *YearBudgetCredits) GetAll(year int, db *sql.DB) (err error) {
 	chapter_id, primary_commitment, frozen_commitment, reserved_commitment
 	FROM budget_credits 
 	WHERE (extract(day FROM commission_date), extract(month FROM commission_date)) in
-	(SELECT max(extract(day FROM commission_date)), extract(month FROM commission_date) FROM budget_credits 
-		WHERE extract(year FROM commission_date) = $1 GROUP BY 2 ORDER BY 2,1) AND extract(year FROM commission_date) = $1
+	(SELECT max(extract(day FROM commission_date)), extract(month FROM commission_date)
+		FROM budget_credits 
+		WHERE extract(year FROM commission_date)=$1 GROUP BY 2 ORDER BY 2,1)
+		 AND extract(year FROM commission_date)=$1
 	ORDER BY 1,2`, year)
 	if err != nil {
 		return err
@@ -39,5 +41,8 @@ func (b *YearBudgetCredits) GetAll(year int, db *sql.DB) (err error) {
 		b.YearBudgetCredits = append(b.YearBudgetCredits, r)
 	}
 	err = rows.Err()
+	if len(b.YearBudgetCredits) == 0 {
+		b.YearBudgetCredits = []YearBudgetCredit{}
+	}
 	return err
 }

@@ -99,6 +99,9 @@ func (p *Payments) GetFcAll(fcID int64, db *sql.DB) (err error) {
 		p.Payments = append(p.Payments, r)
 	}
 	err = rows.Err()
+	if len(p.Payments) == 0 {
+		p.Payments = []Payment{}
+	}
 	return err
 }
 
@@ -120,6 +123,9 @@ FROM payment WHERE date >= $1 GROUP BY 1,2 ORDER BY 1,2`, d0)
 		p.PaymentPerMonths = append(p.PaymentPerMonths, r)
 	}
 	err = rows.Err()
+	if len(p.PaymentPerMonths) == 0 {
+		p.PaymentPerMonths = []PaymentPerMonth{}
+	}
 	return err
 }
 
@@ -210,6 +216,9 @@ func (p *PrevisionsRealized) GetAll(year int64, ptID int64, db *sql.DB) (err err
 		p.PrevisionsRealized = append(p.PrevisionsRealized, r)
 	}
 	err = rows.Err()
+	if len(p.PrevisionsRealized) == 0 {
+		p.PrevisionsRealized = []PrevisionRealized{}
+	}
 	return err
 }
 
@@ -243,5 +252,8 @@ func (m *MonthCumulatedPayments) GetAll(bID int64, db *sql.DB) (err error) {
 		m.MonthCumulatedPayments = append(m.MonthCumulatedPayments, r)
 	}
 	err = rows.Err()
+	if len(m.MonthCumulatedPayments) == 0 {
+		m.MonthCumulatedPayments = []MonthCumulatedPayment{}
+	}
 	return err
 }

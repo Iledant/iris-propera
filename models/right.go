@@ -80,6 +80,9 @@ func (o *OpRights) UserGet(uID int64, db *sql.DB) (err error) {
 		o.OpIDs = append(o.OpIDs, opID)
 	}
 	err = rows.Err()
+	if len(o.OpIDs) == 0 {
+		o.OpIDs = []int64{}
+	}
 	return err
 }
 

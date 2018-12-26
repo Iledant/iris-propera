@@ -42,6 +42,9 @@ func (s *Scenarios) GetAll(db *sql.DB) (err error) {
 		s.Scenarios = append(s.Scenarios, r)
 	}
 	err = rows.Err()
+	if len(s.Scenarios) == 0 {
+		s.Scenarios = []Scenario{}
+	}
 	return err
 }
 

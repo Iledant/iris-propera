@@ -57,6 +57,9 @@ func (p *PaymentRatios) GetAll(db *sql.DB) (err error) {
 		p.PaymentRatios = append(p.PaymentRatios, r)
 	}
 	err = rows.Err()
+	if len(p.PaymentRatios) == 0 {
+		p.PaymentRatios = []PaymentRatio{}
+	}
 	return err
 }
 
@@ -76,6 +79,9 @@ func (p *PaymentRatios) GetPaymentTypeAll(paymentTypeID int64, db *sql.DB) (err 
 		p.PaymentRatios = append(p.PaymentRatios, r)
 	}
 	err = rows.Err()
+	if len(p.PaymentRatios) == 0 {
+		p.PaymentRatios = []PaymentRatio{}
+	}
 	return err
 }
 
@@ -144,5 +150,8 @@ func (y *YearRatios) GetAll(year int64, db *sql.DB) (err error) {
 		y.YearRatios = append(y.YearRatios, r)
 	}
 	err = rows.Err()
+	if len(y.YearRatios) == 0 {
+		y.YearRatios = []YearRatio{}
+	}
 	return err
 }

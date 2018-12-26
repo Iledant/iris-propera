@@ -41,6 +41,9 @@ func (d *Documents) GetOpAll(pID int64, db *sql.DB) (err error) {
 		}
 		d.Documents = append(d.Documents, r)
 	}
+	if len(d.Documents) == 0 {
+		d.Documents = []Document{}
+	}
 	err = rows.Err()
 	return err
 }

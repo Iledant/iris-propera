@@ -178,6 +178,9 @@ func (f *FinancialCommitments) GetOpAll(opID int64, db *sql.DB) (err error) {
 		f.FinancialCommitments = append(f.FinancialCommitments, r)
 	}
 	err = rows.Err()
+	if len(f.FinancialCommitments) == 0 {
+		f.FinancialCommitments = []FinancialCommitment{}
+	}
 	return err
 }
 
@@ -230,12 +233,16 @@ func (p *PaginatedUnlinkedItems) GetUnlinked(pattern FCSearchPattern, db *sql.DB
 	var r UnlinkedFinancialCommitment
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&r.ID, &r.Value, &r.IrisCode, &r.Name, &r.Date, &r.Beneficiary); err != nil {
+		if err = rows.Scan(&r.ID, &r.Value, &r.IrisCode, &r.Name, &r.Date,
+			&r.Beneficiary); err != nil {
 			return err
 		}
 		p.Data.UnlinkedFinancialCommitments = append(p.Data.UnlinkedFinancialCommitments, r)
 	}
 	err = rows.Err()
+	if len(p.Data.UnlinkedFinancialCommitments) == 0 {
+		p.Data.UnlinkedFinancialCommitments = []UnlinkedFinancialCommitment{}
+	}
 	return err
 }
 
@@ -278,7 +285,14 @@ func (p *PaginatedOpLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) 
 		p.Data.FinancialCommitments = append(p.Data.FinancialCommitments, r)
 	}
 	err = rows.Err()
-	tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	err = tx.Commit()
+	if len(p.Data.FinancialCommitments) == 0 {
+		p.Data.FinancialCommitments = []OpLinkedFinancialCommitment{}
+	}
 	return err
 }
 
@@ -320,7 +334,14 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 		p.Data.FinancialCommitments = append(p.Data.FinancialCommitments, r)
 	}
 	err = rows.Err()
-	tx.Commit()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	err = tx.Commit()
+	if len(p.Data.FinancialCommitments) == 0 {
+		p.Data.FinancialCommitments = []PlanLineLinkedFinancialCommitment{}
+	}
 	return err
 }
 

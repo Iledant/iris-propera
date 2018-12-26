@@ -114,6 +114,9 @@ ORDER BY 1,2,3,4,5,6`)
 		s.ScenarioActionPayments = append(s.ScenarioActionPayments, r)
 	}
 	err = rows.Err()
+	if len(s.ScenarioActionPayments) == 0 {
+		s.ScenarioActionPayments = []ScenarioActionPayment{}
+	}
 	return err
 }
 
@@ -194,5 +197,8 @@ ORDER BY 1,2,3,4,5,6`)
 		s.ScenarioStatActionPayments = append(s.ScenarioStatActionPayments, r)
 	}
 	err = rows.Err()
+	if len(s.ScenarioStatActionPayments) == 0 {
+		s.ScenarioStatActionPayments = []ScenarioActionPayment{}
+	}
 	return err
 }
