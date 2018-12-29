@@ -129,3 +129,21 @@ func DeleteBudgetProgram(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Programme supprimé"})
 }
+
+// BatchBudgetProgram handles the post request to import a batch of budget programs.
+func BatchBudgetProgram(ctx iris.Context) {
+	var req models.BudgetProgramBatch
+	if err := ctx.ReadJSON(&req); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Batch de programmes budgétaires, décodage : " + err.Error()})
+		return
+	}
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err := req.Save(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Batch de programmes budgétaires, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(jsonMessage{"Batch importé"})
+}

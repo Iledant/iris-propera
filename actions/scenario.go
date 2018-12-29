@@ -115,6 +115,7 @@ func GetScenarioDatas(ctx iris.Context) {
 	if err = resp.Populate(sID, firstYear, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Datas d'un scénario, requête : " + err.Error()})
+		return
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(resp)
@@ -168,7 +169,7 @@ func GetScenarioActionPayments(ctx iris.Context) {
 	if err != nil {
 		firstYear = int64(time.Now().Year() + 1)
 	}
-	ptID, err := ctx.URLParamInt64("DefaultPaymentTypeID")
+	ptID, err := ctx.URLParamInt64("DefaultPaymentTypeId")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions de payment de scénario, paramètre : " + err.Error()})
@@ -199,7 +200,7 @@ func GetScenarioStatActionPayments(ctx iris.Context) {
 	if err != nil {
 		firstYear = int64(time.Now().Year() + 1)
 	}
-	ptID, err := ctx.URLParamInt64("DefaultPaymentTypeID")
+	ptID, err := ctx.URLParamInt64("DefaultPaymentTypeId")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions statistique de payment de scénario, paramètre : " +
@@ -211,6 +212,32 @@ func GetScenarioStatActionPayments(ctx iris.Context) {
 	if err = resp.GetAll(firstYear, sID, ptID, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions statistique de payment de scénario, requête : " +
+			err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
+// GetMultiAnnualScenario handles the get request to calculate the
+// multiannual commitments prevision par budget entities of a scenario.
+func GetMultiAnnualScenario(ctx iris.Context) {
+	sID, err := ctx.Params().GetInt64("sID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision budgétaire pluriannuelle de scénario, paramètre : " +
+			err.Error()})
+		return
+	}
+	firstYear, err := ctx.URLParamInt64("firstYear")
+	if err != nil {
+		firstYear = int64(time.Now().Year() + 1)
+	}
+	var resp models.MultiAnnualBudgetScenario
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err = resp.GetAll(firstYear, sID, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision budgétaire pluriannuelle de scénario, requête : " +
 			err.Error()})
 		return
 	}

@@ -29,7 +29,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Delete("/user/{userID:int}", DeleteUser)
 	adminParty.Get("/user/{userID:int}/rights", GetRight)
 	adminParty.Post("/user/{userID:int}/rights", SetRight)
-	adminParty.Post("/user/{userID:int}/inherits", InheritRight)
+	adminParty.Post("/user/{userID:int}/inherit", InheritRight)
 
 	adminParty.Post("/physical_ops", CreatePhysicalOp)
 	adminParty.Post("/physical_ops/array", BatchPhysicalOps)
@@ -48,25 +48,24 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Put("/budget_sectors/{bsID:int}", ModifyBudgetSector)
 	adminParty.Delete("/budget_sectors/{bsID:int}", DeleteBudgetSector)
 
-	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs", CreateBudgetProgram)
-	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}",
-		ModifyBudgetProgram)
-	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{bpID:int}",
-		DeleteBudgetProgram)
+	adminParty.Post("/budget_chapters/{chpID:int}/programs", CreateBudgetProgram)
+	adminParty.Put("/budget_chapters/{chpID:int}/programs/{bpID:int}", ModifyBudgetProgram)
+	adminParty.Delete("/budget_chapters/{chpID:int}/programs/{bpID:int}", DeleteBudgetProgram)
+	adminParty.Post("/budget_programs", BatchBudgetProgram)
 
 	adminParty.Post("/budget_credits", CreateBudgetCredit)
 	adminParty.Put("/budget_credits/{brID:int}", ModifyBudgetCredit)
 	adminParty.Post("/budget_credits/array", BatchBudgetCredits)
 	adminParty.Delete("/budget_credits/{brID:int}", DeleteBudgetCredit)
 
-	adminParty.Get("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions",
+	adminParty.Get("/budget_chapters/{chpID:int}/programs/{prgID:int}/actions",
 		GetProgramBudgetActions)
-	adminParty.Post("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions",
+	adminParty.Post("/budget_chapters/{chpID:int}/programs/{prgID:int}/actions",
 		CreateBudgetAction)
 	adminParty.Post("/budget_actions", BatchBudgetActions)
-	adminParty.Put("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}",
+	adminParty.Put("/budget_chapters/{chpID:int}/programs/{prgID:int}/actions/{baID:int}",
 		ModifyBudgetAction)
-	adminParty.Delete("/budget_chapters/{chpID:int}/budget_programs/{prgID:int}/budget_actions/{baID:int}",
+	adminParty.Delete("/budget_chapters/{chpID:int}/programs/{prgID:int}/actions/{baID:int}",
 		DeleteBudgetAction)
 
 	adminParty.Get("/categories", GetCategories)
@@ -96,7 +95,6 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Get("/pending_commitments/unlinked", GetUnlinkedPendings)
 	adminParty.Get("/pending_commitments/linked", GetLinkedPendings)
 	adminParty.Post("/pending_commitments/physical_ops/{opID:int}", LinkPcToOp)
-	adminParty.Post("/pending_commitments/physical_ops/{opID:int}", LinkPcToOp)
 	adminParty.Post("/pending_commitments/unlink", UnlinkPCs)
 	adminParty.Post("/pending_commitments", BatchPendings)
 
@@ -105,6 +103,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Post("/plans/{pID:int}/planlines", CreatePlanLine)
 	adminParty.Put("/plans/{pID:int}/planlines/{plID:int}", ModifyPlanLine)
 	adminParty.Delete("/plans/{pID:int}/planlines/{plID:int}", DeletePlanLine)
+	adminParty.Post("/plans/{pID:int}/planlines/array", BatchPlanLines)
 
 	adminParty.Post("/plans", CreatePlan)
 	adminParty.Put("/plans/{pID:int}", ModifyPlan)
@@ -112,7 +111,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 
 	adminParty.Post("/prev_commitments", BatchPrevCommitments)
 
-	adminParty.Post("/programmings", BatchProgrammings)
+	adminParty.Post("/programmings/array", BatchProgrammings)
 
 	adminParty.Post("/steps", CreateStep)
 	adminParty.Put("/steps/{stID:int}", ModifyStep)
@@ -132,6 +131,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 		GetScenarioActionPayments)
 	adminParty.Get("/scenarios/{sID:int}/statistical_payment_per_budget_action",
 		GetScenarioStatActionPayments)
+	adminParty.Get("/scenarios/{sID:int}/budget", GetMultiAnnualScenario)
 
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/user/logout", Logout)
@@ -145,7 +145,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/budget_credits", GetBudgetCredits)
 
 	userParty.Get("/budget_programs", GetAllBudgetPrograms)
-	userParty.Get("/budget_chapters/{chpID:int}/budget_programs", GetChapterBudgetPrograms)
+	userParty.Get("/budget_chapters/{chpID:int}/programs", GetChapterBudgetPrograms)
 
 	userParty.Get("/budget_sectors", GetBudgetSectors)
 
@@ -179,7 +179,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	userParty.Get("/payments/month", GetPaymentsPerMonth)
 	userParty.Get("/payments/prevision_realized", GetPrevisionRealized)
 	userParty.Get("/payments/month_cumulated", GetCumulatedMonthPayment)
-	userParty.Get("/payments", GetAllBudgetPrograms)
+	userParty.Get("/payments", GetAllPayments)
 
 	userParty.Get("/pending_commitments", GetPendings)
 

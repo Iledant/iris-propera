@@ -27,6 +27,12 @@ type PendingCommitments struct {
 	PendingCommitments []PendingCommitment `json:"PendingCommitments"`
 }
 
+// UnlinkedPendingCommitments embeddes an array of PendinCommitment for
+// the query that fetches rows whitout a link to a physical operation.
+type UnlinkedPendingCommitments struct {
+	PendingCommitments []PendingCommitment `json:"UnlinkedPendingCommitments"`
+}
+
 // PendingLine is used to decode a row of array of a batch of pending commitments.
 type PendingLine struct {
 	Chapter        string    `json:"chapter"`
@@ -34,8 +40,8 @@ type PendingLine struct {
 	IrisCode       string    `json:"iris_code"`
 	Name           string    `json:"name"`
 	Beneficiary    string    `json:"beneficiary"`
-	CommissionDate time.Time `json:"commission_date"`
-	ProposedValue  int64     `json:"proposed_value"`
+	CommissionDate ExcelDate `json:"commission_date"`
+	ProposedValue  float64   `json:"proposed_value"`
 }
 
 // PendingsBatch embeddes an array of PendingLine for batch import.
@@ -47,12 +53,12 @@ type PendingsBatch struct {
 //linked to a physical operation for settings frontend page.
 type CompletePendingCommitment struct {
 	ID            int64     `json:"id"`
-	PeName        string    `json:"peName"`
-	PeIrisCode    string    `json:"peIrisCode"`
-	PeDate        time.Time `json:"peDate"`
-	PeBeneficiary string    `json:"peBeneficiary"`
-	PeValue       int64     `json:"peValue"`
-	OpName        string    `json:"opName"`
+	PeName        string    `json:"pe_name"`
+	PeIrisCode    string    `json:"pe_iris_code"`
+	PeDate        time.Time `json:"pe_date"`
+	PeBeneficiary string    `json:"pe_Beneficiary"`
+	PeValue       int64     `json:"pe_value"`
+	OpName        string    `json:"op_name"`
 }
 
 // CompletePendingCommitments embeddes an array of CompletePendingCommitment for json export.
@@ -88,8 +94,8 @@ func (p *PendingCommitments) GetAll(db *sql.DB) (err error) {
 	return err
 }
 
-// GetAllUnlinked fetches all pending commitments not linked to a physical operation from database.
-func (p *PendingCommitments) GetAllUnlinked(db *sql.DB) (err error) {
+// GetAll fetches all pending commitments not linked to a physical operation from database.
+func (p *UnlinkedPendingCommitments) GetAll(db *sql.DB) (err error) {
 	rows, err := db.Query(`SELECT id, physical_op_id, iris_code, name, chapter,
 	 proposed_value, action, commission_date, beneficiary FROM pending_commitments
 	 WHERE physical_op_id ISNULL`)
@@ -210,7 +216,7 @@ func (p *PendingsBatch) Save(db *sql.DB) (err error) {
 	for _, pc := range p.PendingsBatch {
 		value = "(" + toSQL(pc.Chapter) + ", " + toSQL(pc.Action) + ", " +
 			toSQL(pc.IrisCode) + ", " + toSQL(pc.Name) + ", " + toSQL(pc.Beneficiary) +
-			", " + toSQL(pc.CommissionDate) + ", " + toSQL(pc.ProposedValue) + ")"
+			", " + toSQL(pc.CommissionDate) + ", " + toSQL(int64(100*pc.ProposedValue)) + ")"
 		values = append(values, value)
 	}
 	_, err = tx.Exec(`INSERT INTO temp_pending (chapter, action, iris_code, name, 
@@ -246,10 +252,9 @@ func (p *PendingsBatch) Save(db *sql.DB) (err error) {
 
 // GetAll fetches explicit pending commitments linked to a physical operation from database.
 func (c *CompletePendingCommitments) GetAll(db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT pe.id, pe.name, pe.iris_code, 
-	pe.commission_date, pe.beneficiary, pe.proposed_value, 
-	op.number || ' - ' || op.name
-FROM pending_commitments pe, physical_op op WHERE pe.physical_op_id = op.id`)
+	rows, err := db.Query(`SELECT pe.id, pe.name,pe.iris_code, pe.commission_date, 
+	pe.beneficiary, pe.proposed_value, op.number || ' - ' || op.name 
+	FROM pending_commitments pe, physical_op op WHERE pe.physical_op_id = op.id`)
 	if err != nil {
 		return err
 	}
@@ -257,7 +262,7 @@ FROM pending_commitments pe, physical_op op WHERE pe.physical_op_id = op.id`)
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&r.ID, &r.PeName, &r.PeIrisCode, &r.PeDate,
-			&r.PeBeneficiary, &r.PeName, &r.OpName); err != nil {
+			&r.PeBeneficiary, &r.PeValue, &r.OpName); err != nil {
 			return err
 		}
 		c.CompletePendingCommitments = append(c.CompletePendingCommitments, r)

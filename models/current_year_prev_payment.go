@@ -10,7 +10,7 @@ type CurrentYearPrevPayment struct {
 	Program     NullString  `json:"program"`
 	Action      NullString  `json:"action"`
 	ActionName  NullString  `json:"action_name"`
-	Prevision   NullFloat64 `json:"prevision"`
+	Prevision   NullFloat64 `json:"prev"`
 	Payment     NullFloat64 `json:"payment"`
 }
 

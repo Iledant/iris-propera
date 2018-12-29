@@ -48,20 +48,20 @@ type OpPendings struct {
 // PhysicalOpLine is used to decode request for an upload of a batch of physical operations.
 // The struct uses pointer for optional fields.
 type PhysicalOpLine struct {
-	Number        *string    `json:"number"`
-	Name          *string    `json:"name"`
-	Descript      *string    `json:"descript"`
-	Isr           *bool      `json:"isr"`
-	Value         *int64     `json:"value"`
-	Valuedate     *time.Time `json:"valuedate"`
-	Length        *int64     `json:"length"`
-	Step          *string    `json:"step"`
-	Category      *string    `json:"category"`
-	TRI           *int64     `json:"tri"`
-	VAN           *int64     `json:"van"`
-	Action        *string    `json:"action"`
-	PaymentTypeID *int64     `json:"payment_types_id"`
-	PlanLineID    *int64     `json:"plan_line_id"`
+	Number        string        `json:"number"`
+	Name          string        `json:"name"`
+	Descript      NullString    `json:"descript"`
+	Isr           bool          `json:"isr"`
+	Value         NullInt64     `json:"value"`
+	Valuedate     NullExcelDate `json:"valuedate"`
+	Length        NullInt64     `json:"length"`
+	Step          NullString    `json:"step"`
+	Category      NullString    `json:"category"`
+	TRI           NullInt64     `json:"tri"`
+	VAN           NullInt64     `json:"van"`
+	Action        NullString    `json:"action"`
+	PaymentTypeID NullInt64     `json:"payment_types_id"`
+	PlanLineID    NullInt64     `json:"plan_line_id"`
 }
 
 // PhysicalOpsBatch embeddes an array of PhysicalOpLine for upload.
@@ -263,6 +263,9 @@ func (op *PhysicalOp) Delete(db *sql.DB) (err error) {
 
 // Save insert or update into database the batch of physical operations sent.
 func (op *PhysicalOpsBatch) Save(db *sql.DB) (err error) {
+	if len(op.PhysicalOps) == 0 {
+		return nil
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -271,56 +274,75 @@ func (op *PhysicalOpsBatch) Save(db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	if _, err = tx.Exec(`CREATE TABLE temp_physical_op ( 
-		number varchar(10) NOT NULL, name varchar(255) NOT NULL, descript text, 
-		isr boolean, value bigint, valuedate date, length bigint, 
-		tri integer, van bigint, action varchar(11), step varchar(50),
-		category varchar(50), payment_types_id integer, plan_line_id integer)`); err != nil {
+	if _, err = tx.Exec(`CREATE TABLE temp_physical_op (number varchar(10), 
+		name varchar(255), descript text, isr boolean, value bigint, 
+		valuedate date, length bigint, tri integer, van bigint, action varchar(11), 
+		step varchar(50), category varchar(50), payment_types_id integer, 
+		plan_line_id integer)`); err != nil {
 		tx.Rollback()
 		return err
 	}
+	var value string
+	var values []string
 	for _, o := range op.PhysicalOps {
-		if _, err = tx.Exec(`INSERT INTO temp_physical_op (number, name, descript, isr, value, 
-			valuedate, length, step, category, tri, van, action, payment_types_id, plan_line_id)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, o.Number, o.Name, o.Descript, o.Isr,
-			o.Value, o.Valuedate, o.Length, o.Step, o.Category, o.TRI, o.VAN, o.Action, o.PaymentTypeID,
-			o.PlanLineID); err != nil {
+		if len(o.Number) != 7 {
 			tx.Rollback()
-			return err
+			return errors.New("Number " + o.Number + " incorrect")
 		}
+		if len(o.Name) == 0 {
+			tx.Rollback()
+			return errors.New("Name vide")
+		}
+		value = "(" + toSQL(o.Number) + "," + toSQL(o.Name) + "," + toSQL(o.Descript) + "," +
+			toSQL(o.Isr) + "," + toSQL(o.Value) + "," + toSQL(o.Valuedate) + "," +
+			toSQL(o.Length) + "," + toSQL(o.Step) + "," + toSQL(o.Category) + "," +
+			toSQL(o.TRI) + "," + toSQL(o.VAN) + "," + toSQL(o.Action) + "," +
+			toSQL(o.PaymentTypeID) + "," + toSQL(o.PlanLineID) + ")"
+		values = append(values, value)
+	}
+	if _, err = tx.Exec(`INSERT INTO temp_physical_op (number, name, descript, isr, value, 
+		valuedate, length, step, category, tri, van, action, payment_types_id, plan_line_id)
+		VALUES ` + strings.Join(values, ",")); err != nil {
+		tx.Rollback()
+		return err
 	}
 	queries := []string{
 		`WITH new AS (
-			SELECT p.id, t.number, t.name, t.descript, t.isr, t.value, t.valuedate, t.length, t.tri, t.van, 
-						 b.id AS budget_action_id, t.payment_types_id, t.plan_line_id, s.id AS step_id, c.id AS category_id 
+			SELECT p.id, t.number, t.name, t.descript, t.isr, t.value, t.valuedate, t.length, 
+				t.tri, t.van, b.id AS budget_action_id, t.payment_types_id, t.plan_line_id, 
+				s.id AS step_id, c.id AS category_id 
 			FROM temp_physical_op t
 			LEFT JOIN physical_op p ON t.number = p.number
-			LEFT OUTER JOIN (SELECT ba.id,  (bp.code_contract || bp.code_function || bp.code_number || ba.code) AS code
+			LEFT OUTER JOIN 
+				(SELECT ba.id, bp.code_contract||bp.code_function||bp.code_number||ba.code AS code
 				 FROM budget_action ba, budget_program bp 
-				 WHERE ba.program_id = bp.id) b ON b.code = t.action
+				 WHERE ba.program_id = bp.id) b 
+			ON b.code = t.action
 			LEFT OUTER JOIN step s ON s.name = t.step
 			LEFT OUTER JOIN category c ON c.name = t.category)
 		UPDATE physical_op AS op SET 
-			name = new.name, descript = COALESCE(new.descript, op.descript),  isr = COALESCE(new.isr, op.isr),
-			value = COALESCE(new.value, op.value), valuedate = COALESCE(new.valuedate, op.valuedate),
-			length = COALESCE(new.length, op.length), tri = COALESCE(new.tri, op.tri), van = COALESCE(new.van, op.van), 
-			budget_action_id = COALESCE(new.budget_action_id, op.budget_action_id),
-			payment_types_id = COALESCE(new.payment_types_id, op.payment_types_id),
-			plan_line_id = COALESCE(new.plan_line_id, op.plan_line_id), step_id = COALESCE(new.step_id, op.step_id),
+			name=new.name, descript=COALESCE(new.descript, op.descript), isr = COALESCE(new.isr, op.isr),
+			value=COALESCE(new.value, op.value), valuedate=COALESCE(new.valuedate, op.valuedate),
+			length=COALESCE(new.length, op.length), tri=COALESCE(new.tri, op.tri), van=COALESCE(new.van, op.van), 
+			budget_action_id=COALESCE(new.budget_action_id, op.budget_action_id),
+			payment_types_id=COALESCE(new.payment_types_id, op.payment_types_id),
+			plan_line_id=COALESCE(new.plan_line_id, op.plan_line_id),
+			step_id = COALESCE(new.step_id, op.step_id),
 			category_id = COALESCE(new.category_id, op.category_id)
-		FROM new WHERE op.id = new.id;`,
+		FROM new WHERE op.id = new.id`,
 		`INSERT INTO physical_op (number, name, descript, isr, value, valuedate, length,
 			tri, van, payment_types_id, budget_action_id, plan_line_id, step_id, category_id)
-		SELECT t.number, t.name, t.descript, t.isr, t.value, t.valuedate, t.length, t.tri, t.van, t.payment_types_id, 
-		b.id AS budget_action_id, t.plan_line_id, s.id, c.id
+		SELECT t.number, t.name, t.descript, t.isr, t.value, t.valuedate, t.length, t.tri, 
+			t.van, t.payment_types_id, b.id AS budget_action_id, t.plan_line_id, s.id, c.id
 		FROM temp_physical_op t
-		LEFT OUTER JOIN (SELECT ba.id,  (bp.code_contract || bp.code_function || bp.code_number || ba.code) AS code
+		LEFT OUTER JOIN (SELECT ba.id, bp.code_contract||bp.code_function||bp.code_number||ba.code AS code
 			FROM budget_action ba, budget_program bp
-			WHERE ba.program_id = bp.id) b ON b.code = t.action
+			WHERE ba.program_id = bp.id) b 
+		ON b.code = t.action
 		LEFT OUTER JOIN step s ON s.name = t.step
 		LEFT OUTER JOIN category c ON c.name = t.category
-		WHERE t.number NOT IN (SELECT number FROM physical_op);`,
-		`DROP TABLE IF EXISTS temp_physical_op;`}
+		WHERE t.number NOT IN (SELECT DISTINCT number FROM physical_op)`,
+		`DROP TABLE IF EXISTS temp_physical_op`}
 	for _, qry := range queries {
 		if _, err = tx.Exec(qry); err != nil {
 			tx.Rollback()

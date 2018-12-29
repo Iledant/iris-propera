@@ -57,7 +57,7 @@ func GetAnnualProgrammation(ctx iris.Context) {
 // GetProgrammingAndPrevisions handles the get request to compare precisely
 // programmation and previsions.
 func GetProgrammingAndPrevisions(ctx iris.Context) {
-	year, err := ctx.URLParamInt64("y1")
+	year, err := ctx.URLParamInt64("year")
 	if err != nil {
 		year = int64(time.Now().Year())
 	}
@@ -74,7 +74,7 @@ func GetProgrammingAndPrevisions(ctx iris.Context) {
 
 // GetActionProgrammation handles the get request to fetch the programmation by budget actions.
 func GetActionProgrammation(ctx iris.Context) {
-	year, err := ctx.URLParamInt64("y1")
+	year, err := ctx.URLParamInt64("year")
 	if err != nil {
 		year = int64(time.Now().Year())
 	}

@@ -165,7 +165,7 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 		year, total_value, state_ratio, descript)
 	(SELECT value, physical_op_id, commission_id, year, total_value, state_ratio, descript 
 		FROM temp_pre_programmings 
-		WHERE id NOT IN (SELECT DISTINCT id FROM pre_programmings))`); err != nil {
+		WHERE id ISNULL OR id NOT IN (SELECT DISTINCT id FROM pre_programmings))`); err != nil {
 		tx.Rollback()
 		return
 	}

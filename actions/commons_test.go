@@ -83,7 +83,8 @@ func TestCommons(t *testing.T) {
 	}
 }
 
-// restoreTestDB executes the pg_restore command to restore a new database test. testing.FailNow is fired if an error happens.
+// restoreTestDB executes the pg_restore command to restore a new database test.
+// testing.FailNow is called if an error happens.
 func restoreTestDB(t *testing.T) {
 	properaRep, ok := os.LookupEnv("PROPERAREPO")
 	if !ok {
@@ -106,11 +107,14 @@ func restoreTestDB(t *testing.T) {
 
 // fetchTokens logins an user and send back the login response (token and user fiels)
 func fetchLoginResponse(e *httpexpect.Expect, t *testing.T, c *config.Credentials, role string) *LoginResponse {
-	response := e.POST("/api/user/signin").WithBytes([]byte(`{"email":"` + c.Email + `","password":"` + c.Password + `"}`)).Expect()
+	response := e.POST("/api/user/signin").
+		WithBytes([]byte(`{"email":"` + c.Email + `","password":"` + c.Password + `"}`)).
+		Expect()
 
 	lr := LoginResponse{}
 	if err := json.Unmarshal(response.Content, &lr); err != nil {
-		t.Errorf("Impossible de décoder la réponse du login %s sur réponse %s\n", role, string(response.Content))
+		t.Errorf("Impossible de décoder la réponse du login %s sur réponse %s\n",
+			role, string(response.Content))
 		t.FailNow()
 		return nil
 	}

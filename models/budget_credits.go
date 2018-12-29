@@ -37,6 +37,22 @@ type CompleteBudgetCredits struct {
 	CompleteBudgetCredits []CompleteBudgetCredit `json:"BudgetCredits"`
 }
 
+// BudgetCreditLine is used to decode budget credits batch.
+type BudgetCreditLine struct {
+	ID                 int64     `json:"id"`
+	CommissionDate     ExcelDate `json:"commission_date"`
+	Chapter            int64     `json:"chapter"`
+	PrimaryCommitment  float64   `json:"primary_commitment"`
+	FrozenCommitment   float64   `json:"frozen_commitment"`
+	ReservedCommitment float64   `json:"reserved_commitment"`
+}
+
+// BudgetCreditBatch embeddes an array of BudgetCreditLine
+// to decode budget credits batch.
+type BudgetCreditBatch struct {
+	Lines []BudgetCreditLine `json:"BudgetCredits"`
+}
+
 // Validate checks if fields are correctly formed.
 func (c *CompleteBudgetCredit) Validate() error {
 	if c.Chapter == 0 || c.CommissionDate.IsZero() {
@@ -158,7 +174,7 @@ func (b *BudgetCredit) Delete(db *sql.DB) (err error) {
 }
 
 // Save update or insert a batch of budget credits lines into database.
-func (c *CompleteBudgetCredits) Save(db *sql.DB) error {
+func (b *BudgetCreditBatch) Save(db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -174,14 +190,14 @@ func (c *CompleteBudgetCredits) Save(db *sql.DB) error {
 		return err
 	}
 	var values []string
-	for _, r := range c.CompleteBudgetCredits {
-		if r.CommissionDate.IsZero() || r.Chapter == 0 {
+	for _, r := range b.Lines {
+		if r.CommissionDate == 0 || r.Chapter == 0 {
 			tx.Rollback()
 			return errors.New("Date de commission ou chapitre incorrect")
 		}
 		values = append(values, "("+toSQL(r.CommissionDate)+","+toSQL(r.Chapter)+","+
-			toSQL(r.PrimaryCommitment)+","+toSQL(r.ReservedCommitment)+","+
-			toSQL(r.FrozenCommitment)+")")
+			toSQL(int64(100*r.PrimaryCommitment))+","+toSQL(int64(100*r.ReservedCommitment))+","+
+			toSQL(int64(100*r.FrozenCommitment))+")")
 	}
 	res, err := tx.Exec(`INSERT INTO temp_budget_credits (commission_date, chapter,
 		 primary_commitment, reserved_commitment, frozen_commitment) VALUES ` + strings.Join(values, ","))
@@ -194,7 +210,7 @@ func (c *CompleteBudgetCredits) Save(db *sql.DB) error {
 		tx.Rollback()
 		return err
 	}
-	if count != int64(len(c.CompleteBudgetCredits)) {
+	if count != int64(len(b.Lines)) {
 		tx.Rollback()
 		return errors.New("Impossible d'insérer tous les éléments")
 	}

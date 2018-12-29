@@ -46,6 +46,9 @@ func (e *Events) GetOpAll(opID int64, db *sql.DB) (err error) {
 		e.Events = append(e.Events, r)
 	}
 	err = rows.Err()
+	if len(e.Events) == 0 {
+		e.Events = []Event{}
+	}
 	return err
 }
 
@@ -60,7 +63,7 @@ func (e *Event) Create(db *sql.DB) (err error) {
 // Update modify an event in the database.
 func (e *Event) Update(db *sql.DB) (err error) {
 	res, err := db.Exec(`UPDATE event SET physical_op_id=$1, name=$2, date=$3, 
-	iscertain=$4, descript=$5 WHERE id = $6`,
+	iscertain=$4, descript=$5 WHERE id=$6`,
 		e.PhysicalOpID, e.Name, e.Date, e.IsCertain, e.Descript, e.ID)
 	if err != nil {
 		return err
@@ -107,13 +110,12 @@ type NextMonthEvents struct {
 // Get fetches next month events from database according to user ID, 0 is dedicated to admin.
 func (n *NextMonthEvents) Get(uID int64, db *sql.DB) (err error) {
 	var rows *sql.Rows
-	query := `SELECT e.id, e.date, o.name AS operation, e.name AS event 
-	  FROM event e, physical_op o 
-		WHERE e.date < CURRENT_DATE + interval '1 month' AND e.date >= CURRENT_DATE 
-			AND e.physical_op_id=o.id`
+	query := `SELECT e.id, e.date, o.name, e.name FROM event e, physical_op o 
+		WHERE e.date<CURRENT_DATE+interval '1 month' AND e.date>=CURRENT_DATE 
+					AND e.physical_op_id=o.id`
 	if uID != 0 {
 		query = query + ` AND o.id IN (SELECT rights.physical_op_id FROM rights 
-			WHERE rights.users_id = $1)`
+			WHERE rights.users_id=$1)`
 		rows, err = db.Query(query, uID)
 	} else {
 		rows, err = db.Query(query)
@@ -124,7 +126,7 @@ func (n *NextMonthEvents) Get(uID int64, db *sql.DB) (err error) {
 	var r NextMonthEvent
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&r.ID, &r.Date, &r.Event, &r.Operation); err != nil {
+		if err = rows.Scan(&r.ID, &r.Date, &r.Operation, &r.Event); err != nil {
 			return err
 		}
 		n.NextMonthEvents = append(n.NextMonthEvents, r)

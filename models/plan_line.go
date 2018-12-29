@@ -3,6 +3,8 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"strconv"
+	"strings"
 
 	"github.com/lib/pq"
 )
@@ -20,6 +22,12 @@ type PlanLine struct {
 // PlanLines embeddes an array of PlanLine for json export.
 type PlanLines struct {
 	PlanLines []PlanLine `json:"PlanLine"`
+}
+
+// PlanLineBatch is used to decode a batch of plan lines that can have variables
+// number of fields to store beneficiaries ratios.
+type PlanLineBatch struct {
+	PlanLines []map[string]interface{} `json:"PlanLine"`
 }
 
 // LinkFCs updates the financial commitments linked
@@ -125,5 +133,104 @@ func (p *PlanLine) Update(plr *PlanLineRatios, db *sql.DB) (err error) {
 		return err
 	}
 	tx.Commit()
+	return err
+}
+
+// Save insert plan lines and their beneficiary's ratios into database.
+func (p *PlanLineBatch) Save(planID int64, db *sql.DB) (err error) {
+	if len(p.PlanLines) == 0 {
+		return nil
+	}
+	var bKeys []string
+	for key := range p.PlanLines[0] {
+		_, err = strconv.Atoi(key)
+		if err == nil {
+			bKeys = append(bKeys, key)
+		}
+	}
+	var value, sqlDescript, sqlTotalValue string
+	var values []string
+	for _, l := range p.PlanLines {
+		if _, ok := l["name"]; !ok || l["name"] == nil {
+			return errors.New("Colonne name manquante")
+		}
+		if _, ok := l["value"]; !ok || l["value"] == nil {
+			return errors.New("Colonne value manquante")
+		}
+		if descript, ok := l["descript"]; !ok || descript == nil {
+			sqlDescript = "null"
+		} else {
+			sqlDescript = toSQL(descript.(string))
+		}
+		if totalValue, ok := l["total_value"]; !ok || totalValue == nil {
+			sqlTotalValue = "null"
+		} else {
+			sqlTotalValue = toSQL(100 * totalValue.(float64))
+		}
+		value = "(" + toSQL(l["name"].(string)) + "," + sqlDescript + "," +
+			toSQL(int64(100*l["value"].(float64))) + "," + sqlTotalValue + ")"
+		values = append(values, value)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	queries := []string{`DROP TABLE IF EXISTS temp_plan_line`,
+		`CREATE TABLE temp_plan_line (name varchar(255), descript text, 
+		value bigint, total_value bigint)`,
+		`INSERT INTO temp_plan_line (name,descript,value,total_value) VALUES ` +
+			strings.Join(values, ",")}
+	for _, qry := range queries {
+		if _, err = tx.Exec(qry); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	_, err = tx.Exec(`INSERT INTO plan_line (plan_id, name, descript, value, total_value) 
+	SELECT $1 AS plan_id, * FROM temp_plan_line t 
+	WHERE (t.name) NOT IN (SELECT name FROM plan_line WHERE plan_id=$1)`, planID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	if len(bKeys) > 0 {
+		var planLineID int64
+		var sPlID, sRatio string
+		for _, l := range p.PlanLines {
+			if err = tx.QueryRow(`SELECT id FROM plan_line WHERE name=$1 AND plan_id=$2`,
+				l["name"].(string), planID).Scan(&planLineID); err != nil {
+				tx.Rollback()
+				return err
+			}
+			if _, err = tx.Exec(`DELETE FROM plan_line_ratios WHERE plan_line_id=$1`,
+				planLineID); err != nil {
+				tx.Rollback()
+				return err
+			}
+			sPlID = strconv.FormatInt(planLineID, 10)
+			values = nil
+			for _, k := range bKeys {
+				ratio, ok := l[k]
+				if !ok || ratio == nil {
+					continue
+				}
+				sRatio = strconv.FormatFloat(ratio.(float64), 'f', -1, 64)
+				values = append(values, "("+sPlID+","+k+","+sRatio+")")
+			}
+			if len(values) == 0 {
+				continue
+			}
+			if _, err = tx.Exec(`INSERT INTO plan_line_ratios (plan_line_id,beneficiary_id,
+				ratio) VALUES` + strings.Join(values, ",")); err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+	if _, err = tx.Exec(`DROP TABLE IF EXISTS temp_plan_line`); err != nil {
+		tx.Rollback()
+		return err
+	}
+	err = tx.Commit()
 	return err
 }

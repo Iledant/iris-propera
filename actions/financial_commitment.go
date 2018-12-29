@@ -26,8 +26,7 @@ func parseParams(ctx iris.Context) (f models.FCSearchPattern, err error) {
 	f.LinkType = ctx.URLParam("LinkType")
 	minYear, err := ctx.URLParamInt("MinYear")
 	if err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		return f, errors.New("erreur sur MinYear :" + err.Error())
+		minYear = 2000
 	}
 	if f.LinkType != "PhysicalOp" && f.LinkType != "PlanLine" {
 		ctx.StatusCode(http.StatusBadRequest)
@@ -186,6 +185,8 @@ func GetOpFcs(ctx iris.Context) {
 
 type unlinkFcsReq struct {
 	LinkType string `json:"linkType"`
+	MinYear  int    `json:"minYear"`
+	Search   string `json:"search"`
 	reqFcIDs
 }
 
@@ -203,7 +204,11 @@ func UnlinkFcs(ctx iris.Context) {
 		ctx.JSON(jsonError{"Détachement d'engagements, requête : " + err.Error()})
 		return
 	}
-	pattern := models.FCSearchPattern{LinkType: req.LinkType, SearchText: "%", Page: 1}
+	pattern := models.FCSearchPattern{
+		LinkType:   req.LinkType,
+		SearchText: "%" + req.Search + "%",
+		MinDate:    time.Date(req.MinYear, 1, 1, 0, 0, 0, 0, time.UTC),
+		Page:       1}
 	if pattern.LinkType == "PhysicalOp" {
 		var resp models.PaginatedOpLinkedItems
 		if err := resp.GetLinked(pattern, db.DB()); err != nil {

@@ -8,8 +8,21 @@ import (
 	"time"
 )
 
+var b = time.Date(1899, 12, 30, 0, 0, 0, 0, time.UTC)
+
 type jsonError struct {
 	Erreur string `json:"Erreur"`
+}
+
+// ExcelDate is used for batch imports to decode an integer and transform it
+// into a SQL date using toSQL function. 0 value is coded to "null" by toSQL
+type ExcelDate int64
+
+// NullExcelDate is used for batch import to decde an nullable integer and
+// transfort it into en nullable SQL date using toSQL function
+type NullExcelDate struct {
+	Valid bool
+	Date  int64
 }
 
 // NullTime is used for gorm null time commands
@@ -52,6 +65,17 @@ func (nt *NullTime) UnmarshalJSON(b []byte) error {
 	}
 	err := json.Unmarshal(b, &nt.Time)
 	nt.Valid = (err == nil)
+	return err
+}
+
+// UnmarshalJSON implements the unmarshal interface
+func (ne *NullExcelDate) UnmarshalJSON(b []byte) error {
+	if len(b) == 4 && b[0] == 110 && b[1] == 117 && b[2] == 108 && b[3] == 108 {
+		ne.Valid = false
+		return nil
+	}
+	err := json.Unmarshal(b, &ne.Date)
+	ne.Valid = (err == nil)
 	return err
 }
 
@@ -246,6 +270,18 @@ func toSQL(i interface{}) string {
 		return "$$" + v + "$$"
 	case time.Time:
 		return "'" + v.Format("2006-01-02") + "'"
+	case ExcelDate:
+		if v == 0 {
+			return "null"
+		}
+		return "'" + b.Add(time.Duration(v*24)*time.Hour).Format("2006-01-02") + "'"
+	case int:
+		return strconv.Itoa(v)
+	case bool:
+		if v {
+			return "TRUE"
+		}
+		return "FALSE"
 	case NullInt64:
 		if !v.Valid {
 			return "null"
@@ -274,6 +310,11 @@ func toSQL(i interface{}) string {
 			return "null"
 		}
 		return "'" + v.Time.Format("2006-01-02") + "'"
+	case NullExcelDate:
+		if !v.Valid {
+			return "null"
+		}
+		return "'" + b.Add(time.Duration(v.Date*24)*time.Hour).Format("2006-01-02") + "'"
 	}
 	return ""
 }

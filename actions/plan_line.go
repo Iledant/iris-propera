@@ -226,4 +226,27 @@ func DeletePlanLine(ctx iris.Context) {
 	ctx.JSON(jsonMessage{"Ligne de plan supprimée"})
 }
 
-// TODO : implement batch with a variable number of columns
+// BatchPlanLines handle the post request to import a batch of plan lines
+// and their beneficiary ratios
+func BatchPlanLines(ctx iris.Context) {
+	pID, err := ctx.Params().GetInt64("pID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Batch lignes de plan, paramètre : " + err.Error()})
+		return
+	}
+	var req models.PlanLineBatch
+	if err = ctx.ReadJSON(&req); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Batch lignes de plan, décodage : " + err.Error()})
+		return
+	}
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err = req.Save(pID, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Batch lignes de plan, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(jsonMessage{"Batch lignes de plan importé"})
+}

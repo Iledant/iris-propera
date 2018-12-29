@@ -18,6 +18,7 @@ func TestBudgetProgram(t *testing.T) {
 		bpID := createBudgetProgramTest(testCtx.E, t)
 		modifyBudgetProgramTest(testCtx.E, t, bpID)
 		deleteBudgetProgramTest(testCtx.E, t, bpID)
+		batchBudgetProgramTest(testCtx.E, t)
 	})
 }
 
@@ -61,7 +62,7 @@ func getChapterBudgetProgramsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		response := e.GET("/api/budget_chapters/3/budget_programs").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		response := e.GET("/api/budget_chapters/3/programs").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -97,7 +98,7 @@ func createBudgetProgramTest(e *httpexpect.Expect, t *testing.T) (bpID int) {
 				`"code_number":"NNN"`, `"code_subfunction":null`}},
 	}
 	for i, tc := range testCases {
-		response := e.POST("/api/budget_chapters/"+tc.ID+"/budget_programs").
+		response := e.POST("/api/budget_chapters/"+tc.ID+"/programs").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -131,7 +132,7 @@ func modifyBudgetProgramTest(e *httpexpect.Expect, t *testing.T, bpID int) {
 	}
 
 	for i, tc := range testCases {
-		response := e.PUT("/api/budget_chapters/3/budget_programs/"+tc.ID).
+		response := e.PUT("/api/budget_chapters/3/programs/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -158,7 +159,7 @@ func deleteBudgetProgramTest(e *httpexpect.Expect, t *testing.T, bpID int) {
 	}
 
 	for i, tc := range testCases {
-		response := e.DELETE("/api/budget_chapters/3/budget_programs/"+tc.ID).
+		response := e.DELETE("/api/budget_chapters/3/programs/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -169,6 +170,40 @@ func deleteBudgetProgramTest(e *httpexpect.Expect, t *testing.T, bpID int) {
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
 			t.Errorf("\nDeleteBudgetProgram[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+	}
+}
+
+// batchBudgetProgramTest tests route is protected and modify work properly.
+func batchBudgetProgramTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
+			Sent:         []byte(`{fake}`),
+			BodyContains: []string{"Batch de programmes budgétaires, décodage : "}},
+		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
+			Sent: []byte(`{"BudgetProgram":[{"code":"12345","subfunction":null,"name":"Batch 1","chapter":907},
+			{"code":"12345678","subfunction":"999","name":"Batch 2","chapter":908}]}`),
+			BodyContains: []string{"Batch de programmes budgétaires, requête : Code 12345 trop court"}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			Sent: []byte(`{"BudgetProgram":[{"code":"1234567","subfunction":null,"name":"Batch 1","chapter":907},
+			{"code":"12345678","subfunction":"999","name":"Batch 2","chapter":908}]}`),
+			BodyContains: []string{"Batch importé"}},
+	}
+
+	for i, tc := range testCases {
+		response := e.POST("/api/budget_programs").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nBatchBudgetProgram[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchBudgetProgram[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 	}
 }

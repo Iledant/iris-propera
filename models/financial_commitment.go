@@ -3,7 +3,6 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -47,7 +46,7 @@ type UnlinkedFinancialCommitment struct {
 
 // UnlinkedFinancialCommitments embeddes an array of UnlinkedFinancialCommitment for json export.
 type UnlinkedFinancialCommitments struct {
-	UnlinkedFinancialCommitments []UnlinkedFinancialCommitment `json:"FinancialCommitment"`
+	Commitments []UnlinkedFinancialCommitment `json:"FinancialCommitment"`
 }
 
 // FCSearchPattern embeddes parameters to query unlinked financial commitments.
@@ -60,14 +59,14 @@ type FCSearchPattern struct {
 
 // PaginatedUnlinkedItems embeddes all datas for unlinked financial commitments query.
 type PaginatedUnlinkedItems struct {
-	Data        UnlinkedFinancialCommitments `json:"data"`
-	CurrentPage int64                        `json:"current_page"`
-	LastPage    int64                        `json:"last_page"`
+	Data        []UnlinkedFinancialCommitment `json:"data"`
+	CurrentPage int64                         `json:"current_page"`
+	LastPage    int64                         `json:"last_page"`
 }
 
 // OpLinkedFinancialCommitment embeddes a row for the query.
 type OpLinkedFinancialCommitment struct {
-	FcID          int       `json:"fcID"`
+	FcID          int       `json:"fcId"`
 	FcValue       int64     `json:"fcValue"`
 	FcName        string    `json:"fcName"`
 	IrisCode      string    `json:"iris_code"`
@@ -84,14 +83,14 @@ type OpLinkedFinancialCommitments struct {
 
 // PaginatedOpLinkedItems embeddes all datas for financial commitments linked to a physical operation query.
 type PaginatedOpLinkedItems struct {
-	Data        OpLinkedFinancialCommitments `json:"data"`
-	CurrentPage int64                        `json:"current_page"`
-	LastPage    int64                        `json:"last_page"`
+	Data        []OpLinkedFinancialCommitment `json:"data"`
+	CurrentPage int64                         `json:"current_page"`
+	LastPage    int64                         `json:"last_page"`
 }
 
 // PlanLineLinkedFinancialCommitment is used to query financial commitment linked to a plan line.
 type PlanLineLinkedFinancialCommitment struct {
-	FcID          int       `json:"fcID"`
+	FcID          int       `json:"fcId"`
 	FcValue       int64     `json:"fcValue"`
 	FcName        string    `json:"fcName"`
 	IrisCode      string    `json:"iris_code"`
@@ -107,9 +106,9 @@ type PlanLineLinkedFinancialCommitments struct {
 
 // PaginatedPlanLineLinkedItems embeddes all datas for financial commitments linked to a plan line query.
 type PaginatedPlanLineLinkedItems struct {
-	Data        PlanLineLinkedFinancialCommitments `json:"data"`
-	CurrentPage int64                              `json:"current_page"`
-	LastPage    int64                              `json:"last_page"`
+	Data        []PlanLineLinkedFinancialCommitment `json:"data"`
+	CurrentPage int64                               `json:"current_page"`
+	LastPage    int64                               `json:"last_page"`
 }
 
 // FinancialCommitmentLine embeddes a line of financial commitment batch request.
@@ -124,9 +123,9 @@ type FinancialCommitmentLine struct {
 	Name            string    `json:"name"`
 	Beneficiary     string    `json:"beneficiary"`
 	BeneficiaryCode int       `json:"beneficiary_code"`
-	Date            time.Time `json:"date"`
-	Value           int64     `json:"value"`
-	LapseDate       NullTime  `json:"lapse_date"`
+	Date            ExcelDate `json:"date"`
+	Value           float64   `json:"value"`
+	LapseDate       ExcelDate `json:"lapse_date"`
 }
 
 // FinancialCommitmentsBatch embeddes the data sent by a financial commitments batch request.
@@ -237,11 +236,11 @@ func (p *PaginatedUnlinkedItems) GetUnlinked(pattern FCSearchPattern, db *sql.DB
 			&r.Beneficiary); err != nil {
 			return err
 		}
-		p.Data.UnlinkedFinancialCommitments = append(p.Data.UnlinkedFinancialCommitments, r)
+		p.Data = append(p.Data, r)
 	}
 	err = rows.Err()
-	if len(p.Data.UnlinkedFinancialCommitments) == 0 {
-		p.Data.UnlinkedFinancialCommitments = []UnlinkedFinancialCommitment{}
+	if len(p.Data) == 0 {
+		p.Data = []UnlinkedFinancialCommitment{}
 	}
 	return err
 }
@@ -278,11 +277,11 @@ func (p *PaginatedOpLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) 
 	var r OpLinkedFinancialCommitment
 	defer rows.Close()
 	for rows.Next() {
-		if err = rows.Scan(&r.FcID, &r.FcValue, &r.FcName, &r.IrisCode, &r.FcDate, &r.OpNumber,
-			&r.OpName, &r.FcBeneficiary); err != nil {
+		if err = rows.Scan(&r.FcID, &r.FcValue, &r.FcName, &r.IrisCode, &r.FcDate,
+			&r.FcBeneficiary, &r.OpNumber, &r.OpName); err != nil {
 			return err
 		}
-		p.Data.FinancialCommitments = append(p.Data.FinancialCommitments, r)
+		p.Data = append(p.Data, r)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -290,8 +289,8 @@ func (p *PaginatedOpLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) 
 		return err
 	}
 	err = tx.Commit()
-	if len(p.Data.FinancialCommitments) == 0 {
-		p.Data.FinancialCommitments = []OpLinkedFinancialCommitment{}
+	if len(p.Data) == 0 {
+		p.Data = []OpLinkedFinancialCommitment{}
 	}
 	return err
 }
@@ -331,7 +330,7 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 			&r.PlName, &r.FcBeneficiary); err != nil {
 			return err
 		}
-		p.Data.FinancialCommitments = append(p.Data.FinancialCommitments, r)
+		p.Data = append(p.Data, r)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -339,8 +338,8 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 		return err
 	}
 	err = tx.Commit()
-	if len(p.Data.FinancialCommitments) == 0 {
-		p.Data.FinancialCommitments = []PlanLineLinkedFinancialCommitment{}
+	if len(p.Data) == 0 {
+		p.Data = []PlanLineLinkedFinancialCommitment{}
 	}
 	return err
 }
@@ -358,20 +357,16 @@ func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
 	var values []string
 	var value string
 	for _, fc := range f.FinancialCommitments {
-		value = fmt.Sprintf("('%s',$$%s$$,'%s','%s','%s','%s','%s',$$%s$$,$$%s$$,'%d','%d-%d-%d','%d',",
-			fc.Chapter, fc.Action, fc.IrisCode, fc.CoriolisYear, fc.CoriolisEgtCode,
-			fc.CoriolisEgtNum, fc.CoriolisEgtLine, fc.Name, fc.Beneficiary, fc.BeneficiaryCode,
-			fc.Date.Year(), fc.Date.Month(), fc.Date.Day(), 100*fc.Value)
-		if fc.LapseDate.Valid {
-			value = value + fmt.Sprintf("'%d-%d-%d')", fc.LapseDate.Time.Year(),
-				fc.LapseDate.Time.Month(), fc.LapseDate.Time.Day())
-		} else {
-			value = value + "NULL)"
-		}
+		value = "(" + toSQL(fc.Chapter) + "," + toSQL(fc.Action) + "," +
+			toSQL(fc.IrisCode) + "," + toSQL(fc.CoriolisYear) + "," +
+			toSQL(fc.CoriolisEgtCode) + "," + toSQL(fc.CoriolisEgtNum) + "," +
+			toSQL(fc.CoriolisEgtLine) + "," + toSQL(fc.Name) + "," +
+			toSQL(fc.Beneficiary) + "," + toSQL(fc.BeneficiaryCode) + "," +
+			toSQL(fc.Date) + "," + toSQL(int64(100*fc.Value)) + "," + toSQL(fc.LapseDate) + ")"
 		values = append(values, value)
 	}
-	if _, err = tx.Exec(`INSERT INTO temp_commitment (chapter,action, iris_code,coriolis_year,
-		coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
+	if _, err = tx.Exec(`INSERT INTO temp_commitment (chapter,action,iris_code,
+		coriolis_year,coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
 		beneficiary,beneficiary_code,date,value,lapse_date) VALUES ` + strings.Join(values, ",")); err != nil {
 		tx.Rollback()
 		return err

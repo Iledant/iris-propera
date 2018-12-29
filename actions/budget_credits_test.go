@@ -182,13 +182,13 @@ func batchBudgetCreditTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
 			Sent: []byte(`fake`), BodyContains: []string{"Erreur de lecture du batch crédits"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
-			Sent:         []byte(`{"BudgetCredits":[{"commission_date":"2018-04-01T00:00:00Z"}]}`),
+			Sent:         []byte(`{"BudgetCredits":[{"commission_date":43191}]}`),
 			BodyContains: []string{"Batch crédits, requête : Date de commission ou chapitre incorrect"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			Sent: []byte(`{"BudgetCredits":[
-				{"commission_date":"2018-07-04T20:00:00Z","chapter":907,
-				 "primary_commitment":999,"reserved_commitment":888,"frozen_commitment":777},
-				{"commission_date":"2018-04-01T00:00:00.000Z","chapter":907,
+				{"commission_date":43285,"chapter":907,
+				 "primary_commitment":999,"reserved_commitment":888.50,"frozen_commitment":777},
+				{"commission_date":43191,"chapter":907,
 				 "primary_commitment":999,"reserved_commitment":888,"frozen_commitment":777}
 				]}`), BodyContains: []string{"Credits importés"}},
 	}

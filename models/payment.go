@@ -44,7 +44,7 @@ type PaymentLine struct {
 	CoriolisEgtCode string    `json:"coriolis_egt_code"`
 	CoriolisEgtNum  string    `json:"coriolis_egt_num"`
 	CoriolisEgtLine string    `json:"coriolis_egt_line"`
-	Date            time.Time `json:"date"`
+	Date            ExcelDate `json:"date"`
 	Number          string    `json:"number"`
 	Value           float64   `json:"value"`
 	CancelledValue  float64   `json:"cancelled_value"`

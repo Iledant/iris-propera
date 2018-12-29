@@ -63,7 +63,7 @@ func getProgramBudgetActions(e *httpexpect.Expect, t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		response := e.GET("/api/budget_chapters/1/budget_programs/123/budget_actions").
+		response := e.GET("/api/budget_chapters/1/programs/123/actions").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -98,7 +98,7 @@ func createBudgetActionTest(e *httpexpect.Expect, t *testing.T) int {
 	var baID int
 
 	for i, tc := range testCases {
-		response := e.POST("/api/budget_chapters/1/budget_programs/123/budget_actions").
+		response := e.POST("/api/budget_chapters/1/programs/123/actions").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -128,7 +128,7 @@ func modifyBudgetActionTest(e *httpexpect.Expect, t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		response := e.PUT("/api/budget_chapters/1/budget_programs/123/budget_actions/"+tc.ID).
+		response := e.PUT("/api/budget_chapters/1/programs/123/actions/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -152,7 +152,7 @@ func deleteBudgetActionTest(e *httpexpect.Expect, t *testing.T, baID int) {
 	}
 
 	for i, tc := range testCases {
-		response := e.DELETE("/api/budget_chapters/1/budget_programs/123/budget_actions/"+tc.ID).
+		response := e.DELETE("/api/budget_chapters/1/programs/123/actions/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {

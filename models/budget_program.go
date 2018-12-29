@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"strings"
 )
 
 // BudgetProgram model
@@ -19,6 +20,19 @@ type BudgetProgram struct {
 // BudgetPrograms embeddes an array of BudgetPrograms for json export.
 type BudgetPrograms struct {
 	BudgetPrograms []BudgetProgram `json:"BudgetProgram"`
+}
+
+// BudgetProgramLine is used to decode one line par BudgetProgram batch.
+type BudgetProgramLine struct {
+	Code        string     `json:"code"`
+	Name        string     `json:"name"`
+	Chapter     int64      `json:"chapter"`
+	Subfunction NullString `json:"subfunction"`
+}
+
+// BudgetProgramBatch embeddes an array of BudgetProgramLine for batch import.
+type BudgetProgramBatch struct {
+	Lines []BudgetProgramLine `json:"BudgetProgram"`
 }
 
 // Validate checks if fields are well formed.
@@ -118,4 +132,65 @@ func (b *BudgetProgram) Delete(db *sql.DB) (err error) {
 		return errors.New("Programme introuvable")
 	}
 	return nil
+}
+
+// Save decodes, checks and insert into database a batch of budget programs.
+func (b *BudgetProgramBatch) Save(db *sql.DB) (err error) {
+	if len(b.Lines) == 0 {
+		return nil
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	if _, err = tx.Exec(`DROP TABLE IF EXISTS temp_programs`); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if _, err = tx.Exec(`CREATE TABLE temp_programs (code_contract varchar(1), 
+		code_function varchar(2), code_number varchar(3), code_subfunction varchar(1), 
+		name varchar(100),chapter integer)`); err != nil {
+		tx.Rollback()
+		return err
+	}
+	var value string
+	var values []string
+	for _, r := range b.Lines {
+		if r.Subfunction.Valid {
+			if len(r.Subfunction.String) > 2 {
+				r.Subfunction.String = r.Subfunction.String[2:3]
+			} else {
+				r.Subfunction.Valid = false
+			}
+		}
+		if len(r.Code) < 7 {
+			tx.Rollback()
+			return errors.New("Code " + r.Code + " trop court")
+		}
+		value = "(" + toSQL(r.Code[0:1]) + "," + toSQL(r.Code[1:3]) + "," +
+			toSQL(r.Code[3:6]) + "," + toSQL(r.Subfunction) + "," + toSQL(r.Name) + "," +
+			toSQL(r.Chapter) + ")"
+		values = append(values, value)
+	}
+	queries := []string{`INSERT into temp_programs (code_contract, code_function, 
+		code_number, code_subfunction, name,chapter) VALUES ` + strings.Join(values, ","),
+		`WITH new AS ( SELECT p.id, t.name FROM temp_programs t, budget_program p
+			WHERE p.code_contract = t.code_contract AND p.code_function = t.code_function
+				AND p.code_number = t.code_number )
+		UPDATE budget_program SET name = new.name FROM new WHERE budget_program.id = new.id`,
+		`INSERT INTO budget_program (chapter_id, code_contract, code_function, 
+		code_number, code_subfunction, name)
+		SELECT c.id AS chapter_id, t.code_contract, t.code_function, t.code_number, 
+			t.code_subfunction, t.name FROM temp_programs t, budget_chapter c
+		WHERE c.code = t.chapter AND (t.code_contract, t.code_function, t.code_number)
+		NOT IN (SELECT code_contract, code_function, code_number FROM budget_program)`,
+		`DROP TABLE temp_programs`}
+	for _, qry := range queries {
+		if _, err := tx.Exec(qry); err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	err = tx.Commit()
+	return err
 }

@@ -9,7 +9,7 @@ import (
 
 // MultiannualProg embeddes an array of bytes for json export.
 type MultiannualProg struct {
-	MultiannualProg json.RawMessage `json:"MultiannualProg"`
+	MultiannualProg json.RawMessage `json:"MultiannualProgrammation"`
 }
 
 // GetAll fetches multi annual programmation from database.

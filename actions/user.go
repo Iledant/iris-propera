@@ -16,7 +16,7 @@ type returnedToken struct {
 }
 
 type userResp struct {
-	User models.User `json:"user"`
+	User models.User `json:"User"`
 }
 
 // sentUser is used for creating or updating user

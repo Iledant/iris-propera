@@ -130,7 +130,7 @@ type batchBrr struct {
 
 // BatchBudgetCredits handles the post array request for budget credits
 func BatchBudgetCredits(ctx iris.Context) {
-	var req models.CompleteBudgetCredits
+	var req models.BudgetCreditBatch
 	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Erreur de lecture du batch crédits : " + err.Error()})

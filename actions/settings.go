@@ -20,7 +20,7 @@ type settingsResp struct {
 	models.PaymentTypes
 	models.Plans
 	models.CompleteBudgetCredits
-	models.PendingCommitments `json:"UnlinkedPendingCommitments"`
+	models.UnlinkedPendingCommitments
 	models.CompletePendingCommitments
 	models.Steps
 	models.Categories
@@ -80,7 +80,7 @@ func getSettings(ctx iris.Context) {
 		ctx.JSON(jsonError{"Settings budget credit : " + err.Error()})
 		return
 	}
-	if err := resp.PendingCommitments.GetAllUnlinked(db.DB()); err != nil {
+	if err := resp.UnlinkedPendingCommitments.GetAll(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings unlinked pendings : " + err.Error()})
 		return

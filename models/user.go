@@ -23,7 +23,7 @@ type User struct {
 
 // Users embeddes an array of User for json export.
 type Users struct {
-	Users []User `json:"user"`
+	Users []User `json:"User"`
 }
 
 const (

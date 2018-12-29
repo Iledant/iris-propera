@@ -17,6 +17,7 @@ func TestPlanLine(t *testing.T) {
 		plID := createPlanLineTest(testCtx.E, t)
 		modifyPlanLineTest(testCtx.E, t, plID)
 		deletePlanLineTest(testCtx.E, t, plID)
+		batchPlanLinesTest(testCtx.E, t)
 	})
 }
 
@@ -187,6 +188,43 @@ func deletePlanLineTest(e *httpexpect.Expect, t *testing.T, plID int) {
 			if strings.Contains(content, `"id" : `+tc.PlanLineID) {
 				t.Errorf("DeletePlanLine[%d] : identificateur %s trouvé après suppression :\n%s", i, tc.ID, content)
 			}
+		}
+	}
+}
+
+// batchPlanLinesTest check if route is protected and plan line sent back is correct.
+func batchPlanLinesTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{Token: testCtx.Admin.Token,
+			Status: http.StatusBadRequest, Sent: []byte(`{Plu}`),
+			BodyContains: []string{"Batch lignes de plan, décodage : "}},
+		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"PlanLine":[{"value":100.5}]}`),
+			BodyContains: []string{`Batch lignes de plan, requête : Colonne name manquante`}},
+		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
+			Sent:         []byte(`{"PlanLine":[{"name":"Ligne batch1"}]}`),
+			BodyContains: []string{`Batch lignes de plan, requête : Colonne value manquante`}},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+			Sent: []byte(`{"PlanLine":[{"name":"Ligne batch1","value":100.5,"502":0.3,"16":0.2},
+			{"name":"Ligne batch2","value":200,"descript":null,"total_value":400.5,"502":null},
+			{"name":"Ligne batch3","value":300,"descript":null,"total_value":400,"502":0.15},
+			{"name":"Ligne batch4","value":200,"descript":"Description lige batch3","total_value":null}]}`),
+			BodyContains: []string{`Batch lignes de plan importé`}},
+	}
+	for i, tc := range testCases {
+		response := e.POST("/api/plans/1/planlines/array").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nBatchPlanLinesTest[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchPlanLinesTest[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 	}
 }
