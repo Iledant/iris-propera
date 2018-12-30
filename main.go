@@ -14,10 +14,9 @@ func main() {
 	app := iris.New().Configure(iris.WithConfiguration(iris.Configuration{DisablePathCorrection: true}))
 	app.Logger().SetLevel("debug")
 
-	cfg := config.Get()
-	if cfg == nil {
-		log.Print("Erreur ===> impossible de récupérer la configuration")
-		os.Exit(1)
+	var cfg config.ProperaConf
+	if err := cfg.Get(); err != nil {
+		log.Fatal("Configuration : " + err.Error())
 	}
 
 	db, err := config.LaunchDB(&cfg.Databases.Development)
