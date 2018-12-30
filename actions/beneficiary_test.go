@@ -9,8 +9,7 @@ import (
 )
 
 // TestBeneficiary implements tests for beneficiary handlers.
-func TestBeneficiary(t *testing.T) {
-	TestCommons(t)
+func testBeneficiary(t *testing.T) {
 	t.Run("Beneficiary", func(t *testing.T) {
 		getBeneficiariesTest(testCtx.E, t)
 		updateBeneficiaryTest(testCtx.E, t)

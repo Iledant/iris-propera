@@ -8,8 +8,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestProgramming(t *testing.T) {
-	TestCommons(t)
+func testProgramming(t *testing.T) {
 	t.Run("Programming", func(t *testing.T) {
 		getProgrammingsTest(testCtx.E, t)
 		getProgrammingsYearsTest(testCtx.E, t)
@@ -23,7 +22,7 @@ func getProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", Param: "2018", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.Admin.Token, Param: "2018", Status: http.StatusOK,
-			BodyContains: []string{"Programmings"}, ArraySize: 623},
+			BodyContains: []string{"Programmings"}, ArraySize: 626},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/programmings").WithHeader("Authorization", "Bearer "+tc.Token).
@@ -93,7 +92,7 @@ func batchProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 	//cSpell:enable
 	for i, tc := range testCases {
-		response := e.POST("/api/programmings").WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.POST("/api/programmings/array").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {

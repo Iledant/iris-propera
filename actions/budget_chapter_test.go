@@ -10,8 +10,7 @@ import (
 )
 
 // TestBudgetChapter embeddes all tests for budget chapters insuring the configuration and DB are properly initialized.
-func TestBudgetChapter(t *testing.T) {
-	TestCommons(t)
+func testBudgetChapter(t *testing.T) {
 	t.Run("BudgetChapter", func(t *testing.T) {
 		getAllBudgetChapters(testCtx.E, t)
 		bcID := createBudgetChapterTest(testCtx.E, t)

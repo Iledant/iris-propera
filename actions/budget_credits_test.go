@@ -10,8 +10,7 @@ import (
 )
 
 // TestBudgetCredit embeddes all tests for budget credits insuring the configuration and DB are properly initialized.
-func TestBudgetCredit(t *testing.T) {
-	TestCommons(t)
+func testBudgetCredit(t *testing.T) {
 	t.Run("BudgetCredit", func(t *testing.T) {
 		getBudgetCredits(testCtx.E, t)
 		getLastBudgetCredits(testCtx.E, t)

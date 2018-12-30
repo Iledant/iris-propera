@@ -9,17 +9,16 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestScenario(t *testing.T) {
-	TestCommons(t)
+func testScenario(t *testing.T) {
 	t.Run("Scenario", func(t *testing.T) {
 		getScenarioTest(testCtx.E, t)
 		ID := createScenarioTest(testCtx.E, t)
-		getScenarioActionPaymentTest(testCtx.E, t)
-		getScenarioStatActionPaymentTest(testCtx.E, t)
 		modifyScenarioTest(testCtx.E, t, ID)
 		getScenarioDatasTest(testCtx.E, t, ID)
 		getMultiannualBudgetScenarioTest(testCtx.E, t, ID)
 		setScenarioOffsetsText(testCtx.E, t, ID)
+		getScenarioActionPaymentTest(testCtx.E, t, ID)
+		getScenarioStatActionPaymentTest(testCtx.E, t, ID)
 		deleteScenarioTest(testCtx.E, t, ID)
 	})
 }
@@ -80,19 +79,19 @@ func createScenarioTest(e *httpexpect.Expect, t *testing.T) (ID int) {
 }
 
 // getScenarioActionPaymentTest check route is protected and created scenarios works properly.
-func getScenarioActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
+func getScenarioActionPaymentTest(e *httpexpect.Expect, t *testing.T, ID int) {
 	testCases := []testCase{
-		{Token: "fake", Status: http.StatusInternalServerError,
+		{Token: "fake", Status: http.StatusInternalServerError, ID: strconv.Itoa(ID),
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, ID: strconv.Itoa(ID),
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+		{Token: testCtx.Admin.Token, Status: http.StatusOK, ID: strconv.Itoa(ID),
 			BodyContains: []string{"ScenarioPaymentPerBudgetAction",
 				`"chapter":"908","sector":"TC","subfunction":"811","program":"281005","action":"2810050101","action_name":"Liaisons tramways","y1":2767866.8312180256,"y2":-327128.643554943,"y3":-766460.1789780867`},
 			ArraySize: 53},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/scenarios/1/payment_per_budget_action").
+		response := e.GET("/api/scenarios/"+tc.ID+"/payment_per_budget_action").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("FirstYear", 2018).
 			WithQuery("DefaultPaymentTypeId", 5).Expect()
 		content := string(response.Content)
@@ -115,19 +114,19 @@ func getScenarioActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 }
 
 // getScenarioStatActionPaymentTest check route is protected and created scenarios works properly.
-func getScenarioStatActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
+func getScenarioStatActionPaymentTest(e *httpexpect.Expect, t *testing.T, ID int) {
 	testCases := []testCase{
-		{Token: "fake", Status: http.StatusInternalServerError,
+		{Token: "fake", Status: http.StatusInternalServerError, ID: strconv.Itoa(ID),
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, ID: strconv.Itoa(ID),
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+		{Token: testCtx.Admin.Token, Status: http.StatusOK, ID: strconv.Itoa(ID),
 			BodyContains: []string{"ScenarioStatisticalPaymentPerBudgetAction",
 				`"chapter":"908","sector":"TC","subfunction":"811","program":"281005","action":"2810050101","action_name":"Liaisons tramways","y1":2767866.8312180256,"y2":-327128.643554943,"y3":-766460.1789780867`},
 			ArraySize: 53},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/scenarios/1/statistical_payment_per_budget_action").
+		response := e.GET("/api/scenarios/"+tc.ID+"/statistical_payment_per_budget_action").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("FirstYear", 2018).
 			WithQuery("DefaultPaymentTypeId", 5).Expect()
 		content := string(response.Content)
@@ -222,10 +221,6 @@ func getScenarioDatasTest(e *httpexpect.Expect, t *testing.T, ID int) {
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			ID:           "0",
 			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
-			ID:           "0",
-			Param:        "2018",
-			BodyContains: []string{"Datas d'un scénario, requête : "}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			ID:           "1",
 			Param:        "2018",
@@ -264,7 +259,7 @@ func getMultiannualBudgetScenarioTest(e *httpexpect.Expect, t *testing.T, ID int
 			Param: "2018",
 			BodyContains: []string{"MultiannualBudgetScenario",
 				// cSpell:disable
-				`"number":"01BU003","name":"Bus - Tzen5 - Paris-Choisy (94)","chapter":908,"sector":"MO","subfunction":"818","program":"481015","action":"481015011","y0":0,"y1":1274000000,"y2":4047400000,"y3":0,"y4":0`}},
+				`"MultiannualBudgetScenario":[{"number":"01BU003","name":"Bus - Tzen5 - Paris-Choisy (94)","chapter":908,"sector":"MO","subfunction":"818","program":"481015","action":"481015011","y0":1274000000,"y1":4047400000,"y2":0,"y3":0,"y4":0}]}`}},
 		// cSpell:enable
 	}
 	for i, tc := range testCases {

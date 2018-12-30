@@ -8,8 +8,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestPaymentRatio(t *testing.T) {
-	TestCommons(t)
+func testPaymentRatio(t *testing.T) {
 	t.Run("PaymentRatios", func(t *testing.T) {
 		getRatiosTest(testCtx.E, t)
 		getPtRatiosTest(testCtx.E, t)
@@ -54,7 +53,7 @@ func getPtRatiosTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
-			ID: "0", BodyContains: []string{`"PaymentRatio":null`}},
+			ID: "0", BodyContains: []string{`"PaymentRatio":[]`}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
 			ID: "5", BodyContains: []string{"PaymentRatio"}, ArraySize: 8},
 	}
@@ -145,7 +144,7 @@ func deletePtRatiosTest(e *httpexpect.Expect, t *testing.T) {
 			resp := e.GET("/api/payment_types/"+tc.ID+"/payment_ratios").
 				WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 			content = string(resp.Content)
-			expected := `"PaymentRatio":null`
+			expected := `"PaymentRatio":[]`
 			if !strings.Contains(content, expected) {
 				t.Errorf("\nDeletePtRatios[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, expected, content)
 			}

@@ -10,8 +10,7 @@ import (
 )
 
 // TestEvent embeddes all tests for event insuring the configuration and DB are properly initialized.
-func TestEvent(t *testing.T) {
-	TestCommons(t)
+func testEvent(t *testing.T) {
 	t.Run("Event", func(t *testing.T) {
 		getEventTest(testCtx.E, t)
 		evID := createEventTest(testCtx.E, t)

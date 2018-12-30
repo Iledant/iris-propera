@@ -8,8 +8,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestSummaries(t *testing.T) {
-	TestCommons(t)
+func testSummaries(t *testing.T) {
 	t.Run("Summaries", func(t *testing.T) {
 		multiannualProgrammationTest(testCtx.E, t)
 		annualProgrammationTest(testCtx.E, t)
@@ -172,9 +171,6 @@ func actionCommitmentTest(e *httpexpect.Expect, t *testing.T) {
 			if count != tc.ArraySize {
 				t.Errorf("\nActionCommitment[%d] :\n  nombre attendu -> %d   nombre reçu <-%d", i, tc.ArraySize, count)
 			}
-		}
-		if tc.Status == http.StatusOK {
-			response.JSON().Object().Value("CommitmentPerBudgetAction").Array().Length().Equal(tc.ArraySize)
 		}
 	}
 }
@@ -340,9 +336,8 @@ func statCurrentYearPaymentTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
-			BodyContains: []string{"StatisticalCurrentYearPaymentPerAction",
-				`"chapter":908,"sector":"TC","subfunction":"811","program":"381005","action":"381005015","action_name":"Liaisons tramways","prevision":7881246.130225793,"payment":null`},
-			ArraySize: 53},
+			BodyContains: []string{`"StatisticalCurrentYearPaymentPerAction":[{"chapter":907,"sector":"EAE","subfunction":"77","program":"477003","action":"477003011","action_name":"Intégration environnementale des infrastructures de transport","prev":10668159.432043333,"payment":null`},
+			ArraySize:    53},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/statistical_current_year_payment_per_budget_action").

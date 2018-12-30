@@ -9,8 +9,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestPlanLine(t *testing.T) {
-	TestCommons(t)
+func testPlanLine(t *testing.T) {
 	t.Run("PlanLine", func(t *testing.T) {
 		getPlanLinesTest(testCtx.E, t)
 		getDetailedPlanLinesTest(testCtx.E, t)

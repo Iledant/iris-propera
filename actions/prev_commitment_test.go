@@ -8,8 +8,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestPrevCommitment(t *testing.T) {
-	TestCommons(t)
+func testPrevCommitment(t *testing.T) {
 	t.Run("Prevcommitment", func(t *testing.T) {
 		batchPrevCommitmentsTest(testCtx.E, t)
 	})

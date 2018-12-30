@@ -10,8 +10,7 @@ import (
 )
 
 // TestCommission embeddes all tests for category insuring the configuration and DB are properly initialized.
-func TestCommission(t *testing.T) {
-	TestCommons(t)
+func testCommission(t *testing.T) {
 	t.Run("Commissions", func(t *testing.T) {
 		getCommissionsTest(testCtx.E, t)
 		coID := createCommissionTest(testCtx.E, t)

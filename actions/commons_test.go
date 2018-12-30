@@ -52,8 +52,44 @@ type Credentials struct {
 
 var testCtx *TestContext
 
+func TestAll(t *testing.T) {
+	testCommons(t)
+	t.Run("Summaries", func(t *testing.T) { testSummaries(t) })
+	t.Run("Scenarios", func(t *testing.T) { testScenario(t) })
+	t.Run("Others", func(t *testing.T) {
+		testBeneficiary(t)
+		testBudgetAction(t)
+		testBudgetChapter(t)
+		testBudgetCredit(t)
+		testBudgetProgram(t)
+		testBudgetSector(t)
+		testCategory(t)
+		testCommission(t)
+		testDocument(t)
+		testEvent(t)
+		testFinancialCommitment(t)
+		testImportLog(t)
+		testOpDptRatio(t)
+		testPaymentRatio(t)
+		testPaymentType(t)
+		testPendingCommitment(t)
+		testPayment(t)
+		testPhysicalOps(t)
+		testPlanLine(t)
+		testPlan(t)
+		testPreProgramming(t)
+		testPrevCommitment(t)
+		testProgramming(t)
+		testRight(t)
+		testSettings(t)
+		testStep(t)
+		testTodayMessage(t)
+		testUser(t)
+	})
+}
+
 // Init initialize the database for testing by creating a test database, connecting to it and launching
-func TestCommons(t *testing.T) {
+func testCommons(t *testing.T) {
 	mutex := &sync.Mutex{}
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -61,9 +97,9 @@ func TestCommons(t *testing.T) {
 		restoreTestDB(t)
 
 		app := iris.New().Configure(iris.WithConfiguration(iris.Configuration{DisablePathCorrection: true}))
-		cfg := config.Get()
-		if cfg == nil {
-			t.Error("Impossible de récupérer la configuration")
+		var cfg config.ProperaConf
+		if err := cfg.Get(); err != nil {
+			t.Error("Configuration : " + err.Error())
 			t.FailNow()
 		}
 
@@ -78,7 +114,7 @@ func TestCommons(t *testing.T) {
 		admin := fetchLoginResponse(e, t, &cfg.Users.Admin, "ADMIN")
 		user := fetchLoginResponse(e, t, &cfg.Users.User, "USER")
 
-		t := TestContext{DB: db, App: app, E: e, Admin: admin, User: user, Config: cfg}
+		t := TestContext{DB: db, App: app, E: e, Admin: admin, User: user, Config: &cfg}
 		testCtx = &t
 	}
 }

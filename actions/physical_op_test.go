@@ -10,8 +10,7 @@ import (
 )
 
 //TestPhysicalOps includes all tests for physical operation handler.
-func TestPhysicalOps(t *testing.T) {
-	TestCommons(t)
+func testPhysicalOps(t *testing.T) {
 	t.Run("PhysicalOps", func(t *testing.T) {
 		getPhysicalOpsTest(testCtx.E, t)
 		ID := createPhysicalOpTest(testCtx.E, t)
@@ -260,7 +259,7 @@ func getOpAndFcsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			BodyContains: []string{"PhysicalOpFinancialCommitments", "number", "op_name", "iris_code", "iris_name"},
-			ArraySize:    4465},
+			ArraySize:    4467},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/physical_ops/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()

@@ -1,8 +1,8 @@
 package config
 
 import (
+	"errors"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/jinzhu/gorm"
@@ -47,7 +47,7 @@ type Credentials struct {
 var config *ProperaConf
 
 // Get fetches all parameters according to tne context : if proper environment variables are set, assumes beeing in prod, otherwise read the config.yml file
-func Get() *ProperaConf {
+func (p *ProperaConf) Get() error {
 	if config == nil {
 		// Check if RDS environment variables are set otherwise use database.yml
 		name, okDbName := os.LookupEnv("RDS_DB_NAME")
@@ -57,33 +57,34 @@ func Get() *ProperaConf {
 		password, okPwd := os.LookupEnv("RDS_PASSWORD")
 
 		if okDbName && okHostName && okPort && okUserName && okPwd {
-			config = &ProperaConf{Databases: Databases{Prod: DBConf{Name: name, Host: host, Port: port, UserName: username, Password: password}}}
-			return config
+			p = &ProperaConf{Databases: Databases{Prod: DBConf{
+				Name:     name,
+				Host:     host,
+				Port:     port,
+				UserName: username,
+				Password: password}}}
+			return nil
 		}
 
 		cfgFile, err := ioutil.ReadFile("../config.yml")
 		if err != nil {
 			// Try to read directly
 			cfgFile, err = ioutil.ReadFile("config.yml")
-
 			if err != nil {
-				log.Printf("Erreur lors de la lecture de config.yml : %s", err.Error())
-				return nil
+				return errors.New("Erreur lors de la lecture de config.yml : " + err.Error())
 			}
 		}
-
-		config = &ProperaConf{}
-		if err = yaml.Unmarshal(cfgFile, config); err != nil {
-			log.Printf("Erreur lors du décodage de config.yml : %s", err.Error())
-			config = nil
-			return nil
+		if err = yaml.Unmarshal(cfgFile, p); err != nil {
+			return errors.New("Erreur lors du décodage de config.yml : " + err.Error())
 		}
+	} else {
+		p = config
 	}
-
-	return config
+	return nil
 }
 
 // LaunchDB launch the DB with DBConf parameters
 func LaunchDB(cfg *DBConf) (*gorm.DB, error) {
-	return gorm.Open("postgres", "sslmode=disable host="+cfg.Host+" port="+cfg.Port+" user="+cfg.UserName+" dbname="+cfg.Name+" password= "+cfg.Password)
+	return gorm.Open("postgres", "sslmode=disable host="+cfg.Host+" port="+cfg.Port+
+		" user="+cfg.UserName+" dbname="+cfg.Name+" password= "+cfg.Password)
 }

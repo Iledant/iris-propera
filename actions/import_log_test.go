@@ -9,8 +9,7 @@ import (
 )
 
 // TestImportLog embeddes test for import logs insuring the configuration and DB are properly initialized.
-func TestImportLog(t *testing.T) {
-	TestCommons(t)
+func testImportLog(t *testing.T) {
 	t.Run("ImportLog", func(t *testing.T) {
 		getImportLogsTest(testCtx.E, t)
 	})

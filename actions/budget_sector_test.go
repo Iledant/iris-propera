@@ -10,8 +10,7 @@ import (
 )
 
 // TestBudgetSector embeddes all tests for budget programs insuring the configuration and DB are properly initialized.
-func TestBudgetSector(t *testing.T) {
-	TestCommons(t)
+func testBudgetSector(t *testing.T) {
 	t.Run("BudgetSector", func(t *testing.T) {
 		getBudgetSectorsTest(testCtx.E, t)
 		bsID := createBudgetSectorTest(testCtx.E, t)

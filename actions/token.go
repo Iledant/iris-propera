@@ -32,7 +32,7 @@ var (
 	signingKey   = []byte(os.Getenv("JWT_SIGNING_KEY"))
 	expireDelay  = time.Hour * 3
 	refreshDelay = time.Hour * 15 * 24
-	iss          = "https://www.propera.net/api/login"
+	iss          = "https://www.propera.net/user/signin"
 	tokens       = map[int]customClaims{}
 	// ErrNoToken happens when header have no or bad authorization bearer
 	ErrNoToken = errors.New("Token absent")
@@ -42,34 +42,33 @@ var (
 )
 
 // getTokenString store claims and return JWT token string
-func getTokenString(claims *customClaims) (string, error) {
+func getTokenString(claims *customClaims) (tokenString string, err error) {
 	mutex := &sync.Mutex{}
 	mutex.Lock()
 	defer mutex.Unlock()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(signingKey)
-
-	if err != nil {
+	if tokenString, err = token.SignedString(signingKey); err != nil {
 		return "", err
 	}
-
 	userID, err := strconv.Atoi(claims.Subject)
-
 	if err != nil {
 		return "", err
 	}
 	tokens[userID] = *claims
-
 	return tokenString, nil
 }
 
 // setToken creates or update a token for a given user
 func setToken(u *models.User) (string, error) {
 	t := time.Now()
-	claims := customClaims{u.Role, u.Active,
-		jwt.StandardClaims{Subject: strconv.Itoa(u.ID), ExpiresAt: t.Add(expireDelay).Unix(),
-			IssuedAt: t.Unix(), Issuer: iss}}
-
+	claims := customClaims{
+		Role:   u.Role,
+		Active: u.Active,
+		StandardClaims: jwt.StandardClaims{
+			Subject:   strconv.Itoa(u.ID),
+			ExpiresAt: t.Add(expireDelay).Unix(),
+			IssuedAt:  t.Unix(),
+			Issuer:    iss}}
 	return getTokenString(&claims)
 }
 
@@ -86,54 +85,42 @@ func refreshToken(ctx iris.Context, u *customClaims) error {
 	t := time.Now()
 	u.ExpiresAt = t.Add(expireDelay).Unix()
 	u.IssuedAt = t.Unix()
-
 	tokenString, err := getTokenString(u)
-
 	if err != nil {
 		return err
 	}
-
 	ctx.Header("Authorization", "Bearer "+tokenString)
-
 	return nil
 }
 
 // bearerToUser gets user claims (ID, role, active) from token in request header
 // and send refreshed token if first time expired
 func bearerToUser(ctx iris.Context) (u *customClaims, err error) {
-
 	bearer := ctx.GetHeader("Authorization")
 	if len(bearer) < 8 {
 		return nil, ErrNoToken
 	}
-
 	tokenString := strings.TrimPrefix(bearer, "Bearer ")
-
 	if tokenString == "" {
 		return nil, ErrNoToken
 	}
-
-	parser := jwt.Parser{ValidMethods: nil, UseJSONNumber: true, SkipClaimsValidation: true}
+	parser := jwt.Parser{ValidMethods: nil, UseJSONNumber: true,
+		SkipClaimsValidation: true}
 	token, err := parser.ParseWithClaims(tokenString, &customClaims{},
 		func(token *jwt.Token) (interface{}, error) { return []byte(signingKey), nil })
-
 	if err != nil || !token.Valid {
 		return nil, ErrBadToken
 	}
-
 	claims := token.Claims.(*customClaims)
-
 	// Check if previously disconnected or refreshed
 	userID, _ := strconv.Atoi(claims.Subject)
 	mutex := &sync.Mutex{}
 	mutex.Lock()
 	stored, ok := tokens[userID]
 	mutex.Unlock()
-
 	if !ok || stored != *claims {
 		return nil, ErrBadToken
 	}
-
 	// Refresh if expired
 	if t := time.Now().Unix(); t > claims.ExpiresAt {
 		err = refreshToken(ctx, claims)
@@ -145,42 +132,34 @@ func bearerToUser(ctx iris.Context) (u *customClaims, err error) {
 // userClaims converts a customClaims to UserClaims
 func (c *customClaims) userClaims() *UserClaims {
 	u := &UserClaims{Active: c.Active, Role: c.Role}
-
 	u.ID, _ = strconv.Atoi(c.Subject)
-
 	return u
 }
 
 // isActive check an existing token in header and, if succeed, parse returning user active field
 func isActive(ctx iris.Context) (bool, error) {
 	u, err := bearerToUser(ctx)
-
 	if err != nil {
 		return false, err
 	}
-
 	return u.Active, nil
 }
 
 // isAdmin check an existing token in header and, if succeed, parse check if user active and admin
 func isAdmin(ctx iris.Context) (bool, error) {
 	u, err := bearerToUser(ctx)
-
 	if err != nil {
 		return false, err
 	}
-
 	return u.Active && u.Role == models.AdminRole, nil
 }
 
 // isObserver check an existing token in header and, if succeed, parse check if user active and observer
 func isObserver(ctx iris.Context) (bool, error) {
 	u, err := bearerToUser(ctx)
-
 	if err != nil {
 		return false, err
 	}
-
 	return u.Active && u.Role == models.ObserverRole, nil
 }
 
@@ -205,7 +184,6 @@ func AdminMiddleware(ctx iris.Context) {
 // ActiveMiddleware checks if there's a valid token and user is active otherwise prompt error
 func ActiveMiddleware(ctx iris.Context) {
 	active, err := isActive(ctx)
-
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{Error: err.Error()})

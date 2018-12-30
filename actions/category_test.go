@@ -10,8 +10,7 @@ import (
 )
 
 // TestCategory embeddes all tests for category insuring the configuration and DB are properly initialized.
-func TestCategory(t *testing.T) {
-	TestCommons(t)
+func testCategory(t *testing.T) {
 	t.Run("Category", func(t *testing.T) {
 		getCategoriesTest(testCtx.E, t)
 		caID := createCategoryTest(testCtx.E, t)

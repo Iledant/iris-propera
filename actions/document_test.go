@@ -10,8 +10,7 @@ import (
 )
 
 // TestDocument embeddes all tests for document insuring the configuration and DB are properly initialized.
-func TestDocument(t *testing.T) {
-	TestCommons(t)
+func testDocument(t *testing.T) {
 	t.Run("Document", func(t *testing.T) {
 		getDocumentTest(testCtx.E, t)
 		doID := createDocumentTest(testCtx.E, t)
@@ -26,7 +25,7 @@ func getDocumentTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}, ArraySize: 0},
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusOK,
-			BodyContains: []string{`"Document":null`}, ArraySize: 0},
+			BodyContains: []string{`"Document":[]`}, ArraySize: 0},
 		{Token: testCtx.User.Token, ID: "403", Status: http.StatusOK,
 			BodyContains: []string{"Document"}, ArraySize: 1},
 	}

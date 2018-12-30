@@ -9,8 +9,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestPaymentType(t *testing.T) {
-	TestCommons(t)
+func testPaymentType(t *testing.T) {
 	t.Run("PaymentType", func(t *testing.T) {
 		getPaymentTypesTest(testCtx.E, t)
 		ptID := createPaymentTypeTest(testCtx.E, t)

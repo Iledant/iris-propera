@@ -10,8 +10,7 @@ import (
 )
 
 // TestBudgetAction embeddes all tests for budget actions insuring the configuration and DB are properly initialized.
-func TestBudgetAction(t *testing.T) {
-	TestCommons(t)
+func testBudgetAction(t *testing.T) {
 	t.Run("BudgetAction", func(t *testing.T) {
 		getAllBudgetActions(testCtx.E, t)
 		getProgramBudgetActions(testCtx.E, t)

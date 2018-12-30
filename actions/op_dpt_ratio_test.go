@@ -8,8 +8,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestOpDptRatio(t *testing.T) {
-	TestCommons(t)
+func testOpDptRatio(t *testing.T) {
 	t.Run("OpDptRatio", func(t *testing.T) {
 		getOpWithDptRatiosTest(testCtx.E, t)
 		batchOpDptRatiosTest(testCtx.E, t)
@@ -74,7 +73,7 @@ func getFCPerDptTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			BodyContains: []string{`"FinancialCommitmentPerDpt":[{"total":137901736223,"fc75":null,"fc77":null,"fc78":null,"fc91":null,"fc92":null,"fc93":null,"fc94":null,"fc95":null}]`}},
+			BodyContains: []string{`"FinancialCommitmentPerDpt":[{"total":137921605023,"fc75":null,"fc77":null,"fc78":null,"fc91":null,"fc92":null,"fc93":null,"fc94":null,"fc95":null}]`}},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/op_dpt_ratios/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("firstYear", 2016).WithQuery("lastYear", 2018).Expect()

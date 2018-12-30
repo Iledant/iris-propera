@@ -10,8 +10,7 @@ import (
 )
 
 // TestRight implements tests for users right handlers.
-func TestRight(t *testing.T) {
-	TestCommons(t)
+func testRight(t *testing.T) {
 	t.Run("Right", func(t *testing.T) {
 		getRightsTest(testCtx.E, t)
 		setRightsTest(testCtx.E, t)
@@ -83,7 +82,7 @@ func inheritsRightsTest(e *httpexpect.Expect, t *testing.T) {
 			Status: http.StatusOK, BodyContains: []string{"Right", "37", "541", "543"}},
 	}
 	for i, tc := range testCases {
-		response := e.POST("/api/user/"+tc.ID+"/inherits").WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.POST("/api/user/"+tc.ID+"/inherit").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {

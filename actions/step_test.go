@@ -9,8 +9,8 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestStep(t *testing.T) {
-	TestCommons(t)
+func testStep(t *testing.T) {
+	testCommons(t)
 	t.Run("Step", func(t *testing.T) {
 		getStepsTest(testCtx.E, t)
 		stID := createStepTest(testCtx.E, t)

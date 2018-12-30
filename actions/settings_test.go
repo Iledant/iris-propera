@@ -8,8 +8,8 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestSettings(t *testing.T) {
-	TestCommons(t)
+func testSettings(t *testing.T) {
+	testCommons(t)
 	t.Run("Settings", func(t *testing.T) {
 		getSettingsTest(testCtx.E, t)
 	})

@@ -9,8 +9,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestPlan(t *testing.T) {
-	TestCommons(t)
+func testPlan(t *testing.T) {
 	t.Run("Plan", func(t *testing.T) {
 		getPlansTest(testCtx.E, t)
 		pID := createPlanTest(testCtx.E, t)

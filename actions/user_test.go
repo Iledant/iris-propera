@@ -17,8 +17,7 @@ type SentUserCase struct {
 }
 
 // UserTest includes all tests for users
-func TestUser(t *testing.T) {
-	TestCommons(t)
+func testUser(t *testing.T) {
 	t.Run("User", func(t *testing.T) {
 		getUsers(testCtx.E, t)
 		createdUID := createUser(testCtx.E, t)
@@ -32,18 +31,18 @@ func TestUser(t *testing.T) {
 
 // getUsers test list returned
 func getUsers(e *httpexpect.Expect, t *testing.T) {
-	response := e.GET("/api/user").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).
-		Expect()
+	response := e.GET("/api/user").
+		WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).Expect()
 	content := string(response.Content)
-	if !strings.Contains(content, "user") {
+	if !strings.Contains(content, "User") {
 		t.Errorf("\nGetUsers[admin] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", "user", content)
 	}
 	statusCode := response.Raw().StatusCode
 	if statusCode != http.StatusOK {
 		t.Errorf("\nGetUsers[admin],statut :  attendu ->%v  reçu <-%v", http.StatusOK, statusCode)
 	}
-	response = e.GET("/api/user").WithHeader("Authorization", "Bearer "+testCtx.User.Token).
-		Expect()
+	response = e.GET("/api/user").
+		WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
 	statusCode = response.Raw().StatusCode
 	if statusCode != http.StatusUnauthorized {
 		t.Errorf("\nGetUsers[user],statut :  attendu ->%v  reçu <-%v", http.StatusUnauthorized, statusCode)
@@ -75,7 +74,7 @@ func createUser(e *httpexpect.Expect, t *testing.T) (createdUID string) {
 			t.Errorf("\nCreateUser[%d],statut :  attendu ->%v  reçu <-%v", i, ct.Status, statusCode)
 		}
 		if ct.Status == http.StatusCreated {
-			createdUID = strconv.Itoa(int(response.JSON().Object().Value("user").Object().Value("id").Number().Raw()))
+			createdUID = strconv.Itoa(int(response.JSON().Object().Value("User").Object().Value("id").Number().Raw()))
 		}
 	}
 	return createdUID
@@ -215,8 +214,11 @@ func logoutTest(e *httpexpect.Expect, t *testing.T) {
 	if statusCode != http.StatusInternalServerError {
 		t.Errorf("\nLogOut[%d],statut :  attendu ->%v  reçu <-%v", 1, http.StatusInternalServerError, statusCode)
 	}
-
-	cfg := config.Get()
+	var cfg config.ProperaConf
+	if err := cfg.Get(); err != nil {
+		t.Errorf("\nLogOut récupération de la configuration %s\n", err.Error())
+		t.FailNow()
+	}
 	newLRUser := fetchLoginResponse(e, t, &cfg.Users.User, "USER")
 	if newLRUser != nil {
 		testCtx.User = newLRUser

@@ -8,8 +8,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestPayment(t *testing.T) {
-	TestCommons(t)
+func testPayment(t *testing.T) {
 	t.Run("Payment", func(t *testing.T) {
 		getFcPaymentTest(testCtx.E, t)
 		getPaymentsPerMonthTest(testCtx.E, t)
@@ -25,7 +24,7 @@ func getFcPaymentTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "fake", ID: "219", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusOK,
-			BodyContains: []string{`"Payment":null`}},
+			BodyContains: []string{`"Payment":[]`}},
 		{Token: testCtx.User.Token, ID: "219", Status: http.StatusOK,
 			BodyContains: []string{"Payment"}, ArraySize: 9},
 	}
@@ -87,7 +86,7 @@ func getPrevisionRealizedTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Param: "", ID: "1", Status: http.StatusBadRequest,
 			BodyContains: []string{"Prévu réalisé erreur sur year"}, ArraySize: 0},
 		{Token: testCtx.User.Token, Param: "2017", ID: "1", Status: http.StatusOK,
-			BodyContains: []string{`"PaymentPrevisionAndRealized":null`}, ArraySize: 0},
+			BodyContains: []string{`"PaymentPrevisionAndRealized":[]`}, ArraySize: 0},
 		{Token: testCtx.User.Token, Param: "2017", ID: "4", Status: http.StatusOK,
 			//cSpell:disable
 			BodyContains: []string{`{"PaymentPrevisionAndRealized":[{"name":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","prev_payment":14879877199,"payment":21297216350},`},
@@ -155,16 +154,16 @@ func batchPaymentsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			//cSpell:disable
-			Sent: []byte(`{"Payment":[{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"501","date":"2018-03-09T00:00:00Z","number":"4784","value":445899.87,"cancelled_value":445899.87,"beneficiary_code":14154},
-			{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"504","date":"2018-02-01T00:00:00Z","number":"6078","value":445899.87,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":"2018-02-01T00:00:00Z","number":"1667","value":94254.15,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":"2018-02-01T00:00:00Z","number":"1668","value":183796.82,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":"2018-02-01T00:00:00Z","number":"1669","value":89345.01,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":"2017-12-13T00:00:00Z","number":"1670","value":99719.88,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":"2017-12-13T00:00:00Z","number":"47718","value":430151.97,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":"2017-12-13T00:00:00Z","number":"47719","value":351340.16,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":"2017-05-12T00:00:00Z","number":"47720","value":537107.87,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2005","coriolis_egt_code":"P0852","coriolis_egt_num":"170678","coriolis_egt_line":"1","date":"2018-01-25T00:00:00Z","number":"15390","value":5623.8,"cancelled_value":0,"beneficiary_code":22844}]}`),
+			Sent: []byte(`{"Payment":[{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"501","date":43168,"number":"4784","value":445899.87,"cancelled_value":445899.87,"beneficiary_code":14154},
+			{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"504","date":43132,"number":"6078","value":445899.87,"cancelled_value":0,"beneficiary_code":14154},
+			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":43132,"number":"1667","value":94254.15,"cancelled_value":0,"beneficiary_code":14154},
+			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":43132,"number":"1668","value":183796.82,"cancelled_value":0,"beneficiary_code":14154},
+			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":43132,"number":"1669","value":89345.01,"cancelled_value":0,"beneficiary_code":14154},
+			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":43082,"number":"1670","value":99719.88,"cancelled_value":0,"beneficiary_code":14154},
+			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":43082,"number":"47718","value":430151.97,"cancelled_value":0,"beneficiary_code":14154},
+			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":43082,"number":"47719","value":351340.16,"cancelled_value":0,"beneficiary_code":14154},
+			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":42867,"number":"47720","value":537107.87,"cancelled_value":0,"beneficiary_code":14154},
+			{"coriolis_year":"2005","coriolis_egt_code":"P0852","coriolis_egt_num":"170678","coriolis_egt_line":"1","date":43215,"number":"15390","value":5623.8,"cancelled_value":0,"beneficiary_code":22844}]}`),
 			BodyContains: []string{"Paiements importés"}},
 		//cSpell:enable
 	}

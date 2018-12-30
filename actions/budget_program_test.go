@@ -10,8 +10,7 @@ import (
 )
 
 // TestBudgetProgram embeddes all tests for budget programs insuring the configuration and DB are properly initialized.
-func TestBudgetProgram(t *testing.T) {
-	TestCommons(t)
+func testBudgetProgram(t *testing.T) {
 	t.Run("BudgetProgram", func(t *testing.T) {
 		getAllBudgetProgramsTest(testCtx.E, t)
 		getChapterBudgetProgramsTest(testCtx.E, t)

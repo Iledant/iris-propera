@@ -60,9 +60,9 @@ type FCPerDepartments struct {
 // DetailedFCPerDpt is used to decode one row of detailed financial commitment per department query
 type DetailedFCPerDpt struct {
 	FCPerDpt
-	ID     int64  `json:"id"`
-	Number string `json:"number"`
-	Name   string `json:"name"`
+	ID     NullInt64  `json:"id"`
+	Number NullString `json:"number"`
+	Name   NullString `json:"name"`
 }
 
 // DetailedFCPerDepartments embeddes an array ofFcPerDpt for json export.

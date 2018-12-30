@@ -9,8 +9,7 @@ import (
 )
 
 // TestFinancialCommitment embeddes all tests for financial commitment insuring the configuration and DB are properly initialized.
-func TestFinancialCommitment(t *testing.T) {
-	TestCommons(t)
+func testFinancialCommitment(t *testing.T) {
 	t.Run("FinancialCommitment", func(t *testing.T) {
 		getUnlinkedFcsTest(testCtx.E, t)
 		getMonthFCTest(testCtx.E, t)
@@ -37,15 +36,20 @@ func getUnlinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 	}{
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 1, LinkType: "PhysicalOp", Search: "", MinYear: 0,
-			BodyContains: []string{"FinancialCommitment", `"last_page":1`}},
+			BodyContains: []string{`"data":[],"current_page":0,"last_page":1`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 1, LinkType: "PlanLine", Search: "", MinYear: 0,
-			BodyContains: []string{"FinancialCommitment", `"last_page":268`}},
+			BodyContains: []string{`"data":[{"id":1,"value":6000000,"iris_code":"R-2007-UAD-217075-1","name":"SEINE AVAL","date":"2007-10-11T00:00:00Z","beneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
+				`"last_page":268`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 1, LinkType: "PlanLine", Search: "", MinYear: 2018,
-			BodyContains: []string{"FinancialCommitment", `"last_page":4`}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 1, LinkType: "PlanLine", Search: "", MinYear: 2018,
-			BodyContains: []string{"FinancialCommitment", `"last_page":4`}},
+			// cSpell:disable
+			BodyContains: []string{`"data":[{"id":4264,"value":56000000,"iris_code":"18002216","name":"LIGNE RER D - REHAUSSEMENT DES QUAIS EN GARE DE VILLENEUVE SAINT-GEORGES EN LIEN AVEC LE DEPLOIEMENT DU RER NG - CONVENTION ETUDES EP/APO","date":"2018-03-16T00:00:00Z","beneficiary":"RFF SNCF RESEAU"},`,
+				// cSpell:enable
+				`"last_page":4`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 10, LinkType: "PlanLine", Search: "RATP", MinYear: 2010,
-			BodyContains: []string{"FinancialCommitment", `"last_page":8`, `"current_page":8`}},
+			// cSpell:disable
+			BodyContains: []string{`{"data":[{"id":4042,"value":4216500000,"iris_code":"14014745","name":"PROLONGEMENT DE LA LIGNE 14 A MAIRIE DE SAINT-OUEN","date":"2014-11-20T00:00:00Z","beneficiary":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS"},`,
+				// cSpell:enable
+				`"last_page":8`, `"current_page":8`}},
 	}
 
 	for i, tc := range testCases {
@@ -109,17 +113,31 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 	}{
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 1, LinkType: "PhysicalOp", Search: "", MinYear: 0,
-			BodyContains: []string{"FinancialCommitment", `"last_page":285`}},
+			BodyContains: []string{`{"data":[{"fcId":1,"fcValue":6000000,"fcName":"SEINE AVAL","iris_code":"R-2007-UAD-217075-1","fcDate":"2007-10-11T00:00:00Z","opNumber":"18VN040","opName":"Hors fret - Aval - Autres ouvrages - Seine (78) (92)","fcBeneficiary":"VNF VOIES NAVIGABLES DE FRANCE"}`,
+				`"last_page":285`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 1, LinkType: "PhysicalOp", Search: "", MinYear: 2016,
-			BodyContains: []string{"FinancialCommitment", `"last_page":28`}},
+			// cSpell:disable
+			BodyContains: []string{`{"data":[{"fcId":123,"fcValue":1136100000,"fcName":"SCHEMA DIRECTEUR DU RER B SUD - AMENAGEMENT DES GARES - PRO/REA DE LA  GARE DE LA CROIX DE BERNY","iris_code":"16007501","fcDate":"2016-10-12T00:00:00Z","opNumber":"15RE001","opName":"RER B - sud - Modernisation des gares","fcBeneficiary":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS"},`,
+				// cSpell:enable
+				`"last_page":28`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 50, LinkType: "PhysicalOp", Search: "SNCF", MinYear: 0,
-			BodyContains: []string{"FinancialCommitment", `"last_page":39`, `"current_page":39`}},
+			// cSpell:disable
+			BodyContains: []string{`{"data":[{"fcId":4263,"fcValue":3000000000,"fcName":"SCHEMA DIRECTEUR D'ACCESSIBILITE - SNCF RESEAU (AFFECTATION 2017)","iris_code":"17011482","fcDate":"2017-11-23T00:00:00Z","opNumber":"11AC001","opName":"Accessibilité - SDA - tranche 1","fcBeneficiary":"RFF SNCF RESEAU"},`,
+				// cSpell:enable
+				`"last_page":39`, `"current_page":39`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 1, LinkType: "PlanLine", Search: "", MinYear: 0,
-			BodyContains: []string{"FinancialCommitment", `"last_page":17`}},
+			// cSpell:disable
+			BodyContains: []string{`{"data":[{"fcId":98,"fcValue":78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+				// cSpell:enable
+				`"last_page":17`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 1, LinkType: "PlanLine", Search: "", MinYear: 2016,
-			BodyContains: []string{"FinancialCommitment", `"last_page":15`}},
+			// cSpell:disable
+			BodyContains: []string{`{"data":[{"fcId":123,"fcValue":1136100000,"fcName":"SCHEMA DIRECTEUR DU RER B SUD - AMENAGEMENT DES GARES - PRO/REA DE LA  GARE DE LA CROIX DE BERNY","iris_code":"16007501","fcDate":"2016-10-12T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+				// cSpell:enable
+				`"last_page":15`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, Page: 50, LinkType: "PlanLine", Search: "SNCF", MinYear: 0,
-			BodyContains: []string{"FinancialCommitment", `"last_page":6`, `"current_page":6`}},
+			BodyContains: []string{`{"data":[{"fcId":4230,"fcValue":535367700,"fcName":"LIGNE TRANSILIEN J - ADAPTATION DES INFRASTRUCTURES - CONVENTION APO et REA","iris_code":"17012571","fcDate":"2017-10-18T00:00:00Z","plName":"RFF SNCF RESEAU","fcBeneficiary":"CPER02 - Schémas de secteurs Transilien"},`,
+				`"last_page":6`, `"current_page":6`}},
 	}
 
 	for i, tc := range testCases {
@@ -150,7 +168,7 @@ func getOpFcsTest(e *httpexpect.Expect, t *testing.T) {
 	}{
 		{Token: "fake", OpID: "0", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
-			OpID: "0", BodyContains: []string{"null"}},
+			OpID: "0", BodyContains: []string{`"FinancialCommitment":[]`}},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
 			OpID: "12", BodyContains: []string{"FinancialCommitment"}, FcsCount: 8},
 	}
@@ -188,14 +206,18 @@ func unlinkFcsTest(e *httpexpect.Expect, t *testing.T) {
 	}{
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			Sent:         []byte(`{"linkType":"PhysicalOp","fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
-			BodyContains: []string{"FinancialCommitment", `"last_page":284`}, OpID: "12", FcsCount: 3},
+			Sent: []byte(`{"linkType":"PhysicalOp","fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
+			BodyContains: []string{`{"data":[{"fcId":1,"fcValue":6000000,"fcName":"SEINE AVAL","iris_code":"R-2007-UAD-217075-1","fcDate":"2007-10-11T00:00:00Z","opNumber":"18VN040","opName":"Hors fret - Aval - Autres ouvrages - Seine (78) (92)","fcBeneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
+				`"last_page":284`}, OpID: "12", FcsCount: 3},
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
 			Sent:         []byte(`{"linkType":"PhysicalOp","fcIdList":[0]}`),
 			BodyContains: []string{"Détachement d'engagements, requête : Engagements incorrects"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			Sent:         []byte(`{"linkType":"PlanLine","fcIdList":[138,147,190,136,192]}`),
-			BodyContains: []string{"FinancialCommitment", `"last_page":17`}},
+			Sent: []byte(`{"linkType":"PlanLine","fcIdList":[138,147,190,136,192]}`),
+			// cSpell:disable
+			BodyContains: []string{`{"data":[{"fcId":98,"fcValue":78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+				// cSpell:enable
+				`"last_page":17`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
 			Sent:         []byte(`{"linkType":"PlanLine","fcIdList":[0]}`),
 			BodyContains: []string{"Détachement d'engagements, requête : Engagements incorrects"}},
@@ -243,7 +265,7 @@ func linkFcToOpTest(e *httpexpect.Expect, t *testing.T) {
 		},
 		{Token: testCtx.Admin.Token, OpID: "12", Status: http.StatusOK,
 			Sent:         []byte(`{"fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
-			BodyContains: []string{"FinancialCommitment", `"last_page":1`}, FcsCount: 8},
+			BodyContains: []string{`{"data":[],"current_page":0,"last_page":1}`}, FcsCount: 8},
 	}
 
 	for i, tc := range testCases {
@@ -286,8 +308,9 @@ func linkFcToPlTest(e *httpexpect.Expect, t *testing.T) {
 			Sent:         []byte(`{"fcIdList":[138,147,190,136,192]}`),
 			BodyContains: []string{"Rattachement engagements / ligne de plan, requête : pq"}},
 		{Token: testCtx.Admin.Token, PlID: "23", Status: http.StatusOK,
-			Sent:         []byte(`{"fcIdList":[138,147,190,136,192]}`),
-			BodyContains: []string{"FinancialCommitment", `"last_page":268`}, FcsCount: 8},
+			Sent: []byte(`{"fcIdList":[138,147,190,136,192]}`),
+			BodyContains: []string{`{"data":[{"id":1,"value":6000000,"iris_code":"R-2007-UAD-217075-1","name":"SEINE AVAL","date":"2007-10-11T00:00:00Z","beneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
+				`"last_page":268`}, FcsCount: 8},
 	}
 
 	for i, tc := range testCases {
@@ -324,8 +347,8 @@ func batchFcsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: []string{"Engagements importés et mis à jour"},
 			//cSpell:disable
 			Sent: []byte(`{"FinancialCommitment":[
-				{"chapter":"907","action":"17700301 - Intégration environnementale des infrastructures de transport","iris_code":"18002439","coriolis_year":"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"553827","coriolis_egt_line":"1","name":"ROUTE - INNOVATION INFRASTRUCTURE ROUTIERE - VAL D'OISE","beneficiary":"DEPARTEMENT DU VAL D'OISE","beneficiary_code":2306,"date":"2018-03-16T00:00:00Z","value":3000000,"lapse_date":"2021-03-16T00:00:00Z"},
-				{"chapter":"907","action":"17700301 - Intégration environnementale des infrastructures de transport","iris_code":"18003295","coriolis_year":"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"557246","coriolis_egt_line":"1","name":"RESORPTION DES POINTS NOIRS BRUIT DU FERROVIAIRE - PONT METALLIQUE DES CHANTIERS A VERSAILLES - AVENANT N°1 A LA CONVENTION DE FINANCEMENT ETUDES DE PROJET ET TRAVAUX","beneficiary":"RFF SNCF RESEAU","beneficiary_code":14154,"date":"2018-05-30T00:00:00Z","value":198688,"lapse_date":"2021-05-30T00:00:00Z"}]}`)},
+				{"chapter":"907","action":"17700301 - Intégration environnementale des infrastructures de transport","iris_code":"18002439","coriolis_year":"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"553827","coriolis_egt_line":"1","name":"ROUTE - INNOVATION INFRASTRUCTURE ROUTIERE - VAL D'OISE","beneficiary":"DEPARTEMENT DU VAL D'OISE","beneficiary_code":2306,"date":43175,"value":3000000,"lapse_date":44271},
+				{"chapter":"907","action":"17700301 - Intégration environnementale des infrastructures de transport","iris_code":"18003295","coriolis_year":"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"557246","coriolis_egt_line":"1","name":"RESORPTION DES POINTS NOIRS BRUIT DU FERROVIAIRE - PONT METALLIQUE DES CHANTIERS A VERSAILLES - AVENANT N°1 A LA CONVENTION DE FINANCEMENT ETUDES DE PROJET ET TRAVAUX","beneficiary":"RFF SNCF RESEAU","beneficiary_code":14154,"date":43250,"value":198688,"lapse_date":44346}]}`)},
 		//cSpell:enable
 	}
 

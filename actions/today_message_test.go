@@ -8,8 +8,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestTodayMessage(t *testing.T) {
-	TestCommons(t)
+func testTodayMessage(t *testing.T) {
 	t.Run("TodayMessage", func(t *testing.T) {
 		getTodayMessageTest(testCtx.E, t)
 		setTodayMessageTest(testCtx.E, t)

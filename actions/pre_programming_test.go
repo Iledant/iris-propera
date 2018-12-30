@@ -8,8 +8,7 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-func TestPreProgramming(t *testing.T) {
-	TestCommons(t)
+func testPreProgramming(t *testing.T) {
 	t.Run("PreProgramming", func(t *testing.T) {
 		getPreProgrammingsTest(testCtx.E, t)
 		batchPreProgrammingsTest(testCtx.E, t)
@@ -24,7 +23,7 @@ func getPreProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Param: "2018", Status: http.StatusOK,
 			BodyContains: []string{"PreProgrammings"}, ArraySize: 3},
 		{Token: testCtx.Admin.Token, Param: "2018", Status: http.StatusOK,
-			BodyContains: []string{"PreProgrammings"}, ArraySize: 619},
+			BodyContains: []string{"PreProgrammings"}, ArraySize: 622},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/pre_programmings").WithHeader("Authorization", "Bearer "+tc.Token).
