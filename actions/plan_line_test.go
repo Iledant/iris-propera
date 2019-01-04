@@ -57,10 +57,11 @@ func getDetailedPlanLinesTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, ID: "0", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Liste détaillée des lignes de plan, requête plan : "}},
 		{Token: testCtx.User.Token, ID: "1", Status: http.StatusOK,
-			BodyContains: []string{"DetailedPlanLine"}, ArraySize: 443},
+			BodyContains: []string{"DetailedPlanLine"}, ArraySize: 380},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/plans/"+tc.ID+"/planlines/detailed").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		response := e.GET("/api/plans/"+tc.ID+"/planlines/detailed").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {

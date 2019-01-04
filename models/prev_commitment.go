@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"strings"
 )
 
@@ -37,6 +38,22 @@ type PrevCommitmentBatch struct {
 
 // Save inserts and updates a batch of prevision commitments into database.
 func (p *PrevCommitmentBatch) Save(db *sql.DB) (err error) {
+	var value string
+	var values []string
+	for _, pc := range p.PrevCommitments {
+		if pc.Number == "" {
+			return errors.New("Numéro d'opération vide")
+		}
+		if pc.Year == 0 {
+			return errors.New("Année de prévision non renseignée")
+		}
+		if pc.Value == 0 {
+			return errors.New("Prévision nulle")
+		}
+		value = "(" + toSQL(pc.Number) + "," + toSQL(pc.Year) + "," + toSQL(pc.Value) +
+			"," + toSQL(pc.TotalValue) + "," + toSQL(pc.StateRatio) + ")"
+		values = append(values, value)
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -49,13 +66,6 @@ func (p *PrevCommitmentBatch) Save(db *sql.DB) (err error) {
 	year integer, value bigint, total_value bigint, state_ratio double precision)`); err != nil {
 		tx.Rollback()
 		return err
-	}
-	var value string
-	var values []string
-	for _, pc := range p.PrevCommitments {
-		value = "(" + toSQL(pc.Number) + "," + toSQL(pc.Year) + "," + toSQL(pc.Value) +
-			"," + toSQL(pc.TotalValue) + "," + toSQL(pc.StateRatio) + ")"
-		values = append(values, value)
 	}
 	if _, err = tx.Exec(`INSERT INTO temp_prev_commitment (number,year,value,
 		total_value,state_ratio) VALUES ` + strings.Join(values, ",")); err != nil {

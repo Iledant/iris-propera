@@ -13,8 +13,9 @@ import (
 
 // ProperaConf includes all configuration datas from config.yml for production, development and tests.
 type ProperaConf struct {
-	Databases Databases
-	Users     Users
+	Databases     Databases
+	Users         Users
+	TokenFileName string
 }
 
 // Users includes users credentials for test purposes.
@@ -49,12 +50,13 @@ var config *ProperaConf
 // Get fetches all parameters according to tne context : if proper environment variables are set, assumes beeing in prod, otherwise read the config.yml file
 func (p *ProperaConf) Get() error {
 	if config == nil {
-		// Check if RDS environment variables are set otherwise use database.yml
+		// Check if RDS environment variables are set
 		name, okDbName := os.LookupEnv("RDS_DB_NAME")
 		host, okHostName := os.LookupEnv("RDS_HOSTNAME")
 		port, okPort := os.LookupEnv("RDS_PORT")
 		username, okUserName := os.LookupEnv("RDS_USERNAME")
 		password, okPwd := os.LookupEnv("RDS_PASSWORD")
+		tokenFileName, _ := os.LookupEnv("TOKEN_FILE_NAME")
 
 		if okDbName && okHostName && okPort && okUserName && okPwd {
 			p = &ProperaConf{Databases: Databases{Prod: DBConf{
@@ -62,10 +64,11 @@ func (p *ProperaConf) Get() error {
 				Host:     host,
 				Port:     port,
 				UserName: username,
-				Password: password}}}
+				Password: password}},
+				TokenFileName: tokenFileName}
 			return nil
 		}
-
+		// Otherwise use database.yml
 		cfgFile, err := ioutil.ReadFile("../config.yml")
 		if err != nil {
 			// Try to read directly
@@ -77,6 +80,7 @@ func (p *ProperaConf) Get() error {
 		if err = yaml.Unmarshal(cfgFile, p); err != nil {
 			return errors.New("Erreur lors du décodage de config.yml : " + err.Error())
 		}
+		p.TokenFileName = tokenFileName
 	} else {
 		p = config
 	}

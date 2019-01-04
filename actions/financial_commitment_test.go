@@ -80,10 +80,9 @@ func getMonthFCTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: "", Status: http.StatusInternalServerError, BodyContains: []string{"Token absent"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK, Year: 2017,
 			BodyContains: []string{"FinancialCommitmentsPerMonth", `"month":3`, `"value":9681497875`}},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
+		{Token: testCtx.User.Token, Status: http.StatusOK, Year: 2018,
 			BodyContains: []string{"FinancialCommitmentsPerMonth", `"month":3`, `"value":10778560491`}},
 	}
-
 	for i, tc := range testCases {
 		response := e.GET("/api/financial_commitments/month").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("year", tc.Year).Expect()

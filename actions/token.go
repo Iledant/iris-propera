@@ -1,7 +1,9 @@
 package actions
 
 import (
+	"encoding/json"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -136,7 +138,8 @@ func (c *customClaims) userClaims() *UserClaims {
 	return u
 }
 
-// isActive check an existing token in header and, if succeed, parse returning user active field
+// isActive check an existing token in header and, if succeed,
+// parse returning user active field
 func isActive(ctx iris.Context) (bool, error) {
 	u, err := bearerToUser(ctx)
 	if err != nil {
@@ -145,7 +148,8 @@ func isActive(ctx iris.Context) (bool, error) {
 	return u.Active, nil
 }
 
-// isAdmin check an existing token in header and, if succeed, parse check if user active and admin
+// isAdmin check an existing token in header and, if succeed,
+// parse check if user active and admin
 func isAdmin(ctx iris.Context) (bool, error) {
 	u, err := bearerToUser(ctx)
 	if err != nil {
@@ -154,7 +158,8 @@ func isAdmin(ctx iris.Context) (bool, error) {
 	return u.Active && u.Role == models.AdminRole, nil
 }
 
-// isObserver check an existing token in header and, if succeed, parse check if user active and observer
+// isObserver check an existing token in header and, if succeed,
+// parse check if user active and observer
 func isObserver(ctx iris.Context) (bool, error) {
 	u, err := bearerToUser(ctx)
 	if err != nil {
@@ -163,7 +168,8 @@ func isObserver(ctx iris.Context) (bool, error) {
 	return u.Active && u.Role == models.ObserverRole, nil
 }
 
-// AdminMiddleware checks if there's a token and if it belongs to admin user otherwise prompt error
+// AdminMiddleware checks if there's a token and if it belongs to admin user
+//  otherwise prompt error
 func AdminMiddleware(ctx iris.Context) {
 	admin, err := isAdmin(ctx)
 	if err != nil {
@@ -197,4 +203,26 @@ func ActiveMiddleware(ctx iris.Context) {
 		return
 	}
 	ctx.Next()
+}
+
+// TokenRecover tries to load a previously saved file with tokens history.
+// Used to allow users keep beeing logged in even after a relaunch of server.
+func TokenRecover(fileName string) {
+	fileContent, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return
+	}
+	if err = json.Unmarshal(fileContent, &tokens); err != nil {
+		return
+	}
+}
+
+// TokenSave saves the current map of tokens to a file in order to persist them
+// for the next call of TokenRecover
+func TokenSave(fileName string) {
+	jsonTokens, err := json.Marshal(tokens)
+	if err != nil {
+		return
+	}
+	err = ioutil.WriteFile(fileName, jsonTokens, os.ModePerm)
 }

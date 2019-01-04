@@ -58,13 +58,13 @@ func multiannualProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 func annualProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
+		{Token: testCtx.User.Token, Status: http.StatusOK, Param: "2018",
 			BodyContains: []string{"AnnualProgrammation", "ImportLog", "operation_number",
 				"name", "step_name", "category_name", "date", "programmings", "total_programmings",
 				"state_ratio", "commitment", "pendings"}, ArraySize: 117},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/summaries/annual_programmation").
+		response := e.GET("/api/summaries/annual_programmation").WithQuery("year", tc.Param).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -90,12 +90,12 @@ func programmingPrevisionTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
+		{Token: testCtx.User.Token, Status: http.StatusOK, Param: "2018",
 			BodyContains: []string{"ProgrammingsPrevision", "number", "name",
 				"programmings", "prevision"}, ArraySize: 127},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/summaries/programmation_prevision").
+		response := e.GET("/api/summaries/programmation_prevision").WithQuery("year", tc.Param).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -120,11 +120,11 @@ func programmingPrevisionTest(e *httpexpect.Expect, t *testing.T) {
 func actionProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
+		{Token: testCtx.User.Token, Status: http.StatusOK, Param: "2018",
 			BodyContains: []string{"BudgetProgrammation", "action_code", "action_name", "value"}, ArraySize: 26},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/summaries/budget_action_programmation").
+		response := e.GET("/api/summaries/budget_action_programmation").WithQuery("year", tc.Param).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -149,12 +149,13 @@ func actionProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 func actionCommitmentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
+		{Token: testCtx.User.Token, Status: http.StatusOK, Param: "2019",
 			BodyContains: []string{"CommitmentPerBudgetAction", "chapter", "sector", "subfunction", "program",
 				"action", "action_name", "y0", "y1", "y2", "y3"}, ArraySize: 46},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/summaries/commitment_per_budget_action").WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.GET("/api/summaries/commitment_per_budget_action").WithQuery("FirstYear", tc.Param).
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -180,13 +181,14 @@ func detailedActionCommitmentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
+		{Token: testCtx.User.Token, Status: http.StatusOK, Param: "2019",
 			BodyContains: []string{"DetailedCommitmentPerBudgetAction", "chapter",
 				"sector", "subfunction", "program", "action", "action_name", "number", "name",
 				"y0", "y1", "y2", "y3"}, ArraySize: 150},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/summaries/detailed_commitment_per_budget_action").WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.GET("/api/summaries/detailed_commitment_per_budget_action").
+			WithQuery("FirstYear", tc.Param).WithHeader("Authorization", "Bearer "+tc.Token).
 			Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
@@ -211,13 +213,13 @@ func detailedActionCommitmentTest(e *httpexpect.Expect, t *testing.T) {
 func detailedActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
+		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5", Param: "2019",
 			BodyContains: []string{"DetailedPaymentPerBudgetAction", "chapter", "sector", "subfunction", "program",
 				"action", "action_name", "number", "name", "y1", "y2", "y3"}, ArraySize: 433},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/detailed_payment_per_budget_action").WithHeader("Authorization", "Bearer "+tc.Token).
-			WithQuery("DefaultPaymentTypeId", tc.ID).Expect()
+			WithQuery("DefaultPaymentTypeId", tc.ID).WithQuery("FirstYear", tc.Param).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -241,13 +243,14 @@ func detailedActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 func detailedStatActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
+		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5", Param: "2019",
 			BodyContains: []string{"DetailedPaymentPerBudgetAction", "chapter", "sector", "subfunction", "program",
 				"action", "action_name", "number", "name", "y1", "y2", "y3"}, ArraySize: 433},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/statistical_detailed_payment_per_budget_action").
-			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).Expect()
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).
+			WithQuery("FirstYear", tc.Param).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -304,13 +307,14 @@ func statActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
+		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5", Param: "2019",
 			BodyContains: []string{"PaymentPerBudgetAction",
 				`"chapter":908,"sector":"TC","subfunction":"811","program":"381006","action":"381006015","action_name":"Métro","y1":46221880.838196725,"y2":20857793.16879844,"y3":18905566.532886185`}, ArraySize: 58},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/statistical_payment_per_budget_action").
-			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).Expect()
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).
+			WithQuery("FirstYear", tc.Param).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
@@ -335,13 +339,14 @@ func statCurrentYearPaymentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{Token: "fake", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5",
+		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5", Param: "2019",
 			BodyContains: []string{`"StatisticalCurrentYearPaymentPerAction":[{"chapter":907,"sector":"EAE","subfunction":"77","program":"477003","action":"477003011","action_name":"Intégration environnementale des infrastructures de transport","prev":10668159.432043333,"payment":null`},
 			ArraySize:    53},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/statistical_current_year_payment_per_budget_action").
-			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).Expect()
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("DefaultPaymentTypeId", tc.ID).
+			WithQuery("Year", tc.Param).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {

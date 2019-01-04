@@ -259,11 +259,11 @@ func getMultiannualBudgetScenarioTest(e *httpexpect.Expect, t *testing.T, ID int
 			Param: "2018",
 			BodyContains: []string{"MultiannualBudgetScenario",
 				// cSpell:disable
-				`"MultiannualBudgetScenario":[{"number":"01BU003","name":"Bus - Tzen5 - Paris-Choisy (94)","chapter":908,"sector":"MO","subfunction":"818","program":"481015","action":"481015011","y0":1274000000,"y1":4047400000,"y2":0,"y3":0,"y4":0}]}`}},
+				`"MultiannualBudgetScenario":[{"number":"01BU003","name":"Bus - Tzen5 - Paris-Choisy (94)","chapter":908,"sector":"MO","subfunction":"818","program":"481015","action":"481015011","y0":0,"y1":1274000000,"y2":4047400000,"y3":0,"y4":0}]`}},
 		// cSpell:enable
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/scenarios/"+tc.ID+"/budget").WithQuery("FirstYear", tc.Param).
+		response := e.GET("/api/scenarios/"+tc.ID+"/budget").WithQuery("firstYear", tc.Param).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {

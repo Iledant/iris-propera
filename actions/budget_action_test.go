@@ -108,7 +108,10 @@ func createBudgetActionTest(e *httpexpect.Expect, t *testing.T) int {
 		if tc.Status == http.StatusOK {
 			baID = int(response.JSON().Object().Value("BudgetAction").Object().Value("id").Number().Raw())
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nCreateBudgetAction[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 	return baID
 }
@@ -135,7 +138,10 @@ func modifyBudgetActionTest(e *httpexpect.Expect, t *testing.T) {
 				t.Errorf("\nModifyBudgetAction[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nModifyBudgetAction[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -159,7 +165,10 @@ func deleteBudgetActionTest(e *httpexpect.Expect, t *testing.T, baID int) {
 				t.Errorf("\nDeleteBudgetAction[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nDeleteBudgetAction[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 }
 
@@ -186,11 +195,21 @@ func batchBudgetActionsTest(e *httpexpect.Expect, t *testing.T) {
 				t.Errorf("\nBatchBudgetAction[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
 			}
 		}
-		response.Status(tc.Status)
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nBatchBudgetAction[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
 	}
 
 	response := e.GET("/api/budget_actions").WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).Expect()
-	response.Body().Contains("batch BA name")
-	response.Body().Contains("batch BA name2")
-	response.JSON().Object().Value("BudgetAction").Array().Length().Equal(118)
+	content := string(response.Content)
+	for _, s := range []string{"batch BA name", "batch BA name2"} {
+		if !strings.Contains(content, s) {
+			t.Errorf("\nBatchBudgetAction[get] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", s, content)
+		}
+	}
+	count := strings.Count(content, `"id"`)
+	if count != 118 {
+		t.Errorf("\nBatchBudgetAction[get] :\n  nombre attendu -> %d\n  nombre reçu <-%d", 118, count)
+	}
 }

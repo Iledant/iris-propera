@@ -58,7 +58,7 @@ func getLastBudgetCredits(e *httpexpect.Expect, t *testing.T) {
 		{Token: "", Status: http.StatusInternalServerError,
 			BodyContains: []string{"Token absent"}, ArraySize: 0},
 		{Token: testCtx.User.Token, Status: http.StatusOK,
-			BodyContains: []string{"BudgetCredits", "2018-07-04"}, ArraySize: 3},
+			BodyContains: []string{"BudgetCredits"}, ArraySize: 0},
 	}
 
 	for i, tc := range testCases {
