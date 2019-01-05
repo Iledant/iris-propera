@@ -1,8 +1,8 @@
 package actions
 
 import (
+	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/Iledant/iris_propera/models"
 	"github.com/jinzhu/gorm"
@@ -69,13 +69,7 @@ func Login(ctx iris.Context) {
 
 // Logout handles users logout and destroy his token.
 func Logout(ctx iris.Context) {
-	u, err := bearerToUser(ctx)
-	if err != nil {
-		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Erreur de token"})
-		return
-	}
-	userID, _ := strconv.Atoi(u.Subject)
+	userID := ctx.Values().Get("uID").(int)
 	delToken(userID)
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Utilisateur déconnecté"})
@@ -237,15 +231,9 @@ func ChangeUserPwd(ctx iris.Context) {
 		ctx.JSON(jsonError{"Changement de mot de passe : Ancien et nouveau mots de passe requis"})
 		return
 	}
-	u, err := bearerToUser(ctx)
-	if err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Changement de mot de passe, user : " + err.Error()})
-		return
-	}
-	userID, _ := strconv.Atoi(u.Subject)
+	userID := ctx.Values().Get("uID").(int)
 	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{ID: userID}
-	if user.GetByID(db.DB()) != nil {
+	if err := user.GetByID(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Changement de mot de passe, get : " + err.Error()})
 		return
@@ -256,12 +244,12 @@ func ChangeUserPwd(ctx iris.Context) {
 		return
 	}
 	user.Password = newPwd
-	if err = user.CryptPwd(); err != nil {
+	if err := user.CryptPwd(); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Changement de mot de passe, password : " + err.Error()})
 		return
 	}
-	if err = user.Update(db.DB()); err != nil {
+	if err := user.Update(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Changement de mot de passe, requête : " + err.Error()})
 		return
@@ -272,15 +260,13 @@ func ChangeUserPwd(ctx iris.Context) {
 
 // getUserRoleAndID fetch user role and ID with the token
 func getUserID(ctx iris.Context) (uID int64, err error) {
-	u, err := bearerToUser(ctx)
-	if err != nil {
-		return 0, err
+	u := ctx.Values().Get("uID")
+	role := ctx.Values().Get("role")
+	if u == nil || role == nil {
+		return 0, errors.New("Utilisateur non enregistré")
 	}
-	uID, err = strconv.ParseInt(u.Subject, 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	if u.Role == models.AdminRole {
+	uID = int64(u.(int))
+	if role.(string) == models.AdminRole {
 		uID = 0
 	}
 	return uID, nil

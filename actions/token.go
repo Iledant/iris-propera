@@ -3,6 +3,7 @@ package actions
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -20,7 +21,6 @@ import (
 type UserClaims struct {
 	Role   string
 	Active bool
-	ID     int
 }
 
 // customClaims add role and active to token to avoid fetching database
@@ -32,10 +32,10 @@ type customClaims struct {
 
 var (
 	signingKey   = []byte(os.Getenv("JWT_SIGNING_KEY"))
-	expireDelay  = time.Hour * 3
-	refreshDelay = time.Hour * 15 * 24
-	iss          = "https://www.propera.net/user/signin"
-	tokens       = map[int]customClaims{}
+	expireDelay  = time.Second * 30
+	refreshDelay = int64((time.Hour * 15 * 24).Seconds())
+	iss          = "https://www.propera.net"
+	tokens       = map[int]bool{}
 	// ErrNoToken happens when header have no or bad authorization bearer
 	ErrNoToken = errors.New("Token absent")
 	// ErrBadToken happends when bearer token can't be verified
@@ -56,7 +56,7 @@ func getTokenString(claims *customClaims) (tokenString string, err error) {
 	if err != nil {
 		return "", err
 	}
-	tokens[userID] = *claims
+	tokens[userID] = true
 	return tokenString, nil
 }
 
@@ -92,12 +92,13 @@ func refreshToken(ctx iris.Context, u *customClaims) error {
 		return err
 	}
 	ctx.Header("Authorization", "Bearer "+tokenString)
+	ctx.Header("Access-Control-Expose-Headers", "Authorization")
 	return nil
 }
 
 // bearerToUser gets user claims (ID, role, active) from token in request header
 // and send refreshed token if first time expired
-func bearerToUser(ctx iris.Context) (u *customClaims, err error) {
+func bearerToUser(ctx iris.Context) (claims *customClaims, err error) {
 	bearer := ctx.GetHeader("Authorization")
 	if len(bearer) < 8 {
 		return nil, ErrNoToken
@@ -111,31 +112,32 @@ func bearerToUser(ctx iris.Context) (u *customClaims, err error) {
 	token, err := parser.ParseWithClaims(tokenString, &customClaims{},
 		func(token *jwt.Token) (interface{}, error) { return []byte(signingKey), nil })
 	if err != nil || !token.Valid {
+		fmt.Println("Erreur de décodage")
 		return nil, ErrBadToken
 	}
-	claims := token.Claims.(*customClaims)
-	// Check if previously disconnected or refreshed
+	claims = token.Claims.(*customClaims)
+	// Check if previously connected
 	userID, _ := strconv.Atoi(claims.Subject)
 	mutex := &sync.Mutex{}
 	mutex.Lock()
-	stored, ok := tokens[userID]
+	_, ok := tokens[userID]
 	mutex.Unlock()
-	if !ok || stored != *claims {
+	if !ok {
+		fmt.Println("Pas dans la base")
 		return nil, ErrBadToken
 	}
 	// Refresh if expired
-	if t := time.Now().Unix(); t > claims.ExpiresAt {
+	t := time.Now().Unix()
+	if t > claims.IssuedAt+refreshDelay {
+		return claims, errors.New("Token expiré")
+	}
+	if t > claims.ExpiresAt {
+		fmt.Println("Refresh token")
 		err = refreshToken(ctx, claims)
 	}
-	ctx.Values().Set("claims", claims)
+	ctx.Values().Set("uID", userID)
+	ctx.Values().Set("role", claims.Role)
 	return claims, err
-}
-
-// userClaims converts a customClaims to UserClaims
-func (c *customClaims) userClaims() *UserClaims {
-	u := &UserClaims{Active: c.Active, Role: c.Role}
-	u.ID, _ = strconv.Atoi(c.Subject)
-	return u
 }
 
 // isActive check an existing token in header and, if succeed,
