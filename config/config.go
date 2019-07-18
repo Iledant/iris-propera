@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/kataras/iris"
+
 	"github.com/jinzhu/gorm"
 	// Only place where the postgres is initialize to avoid duplication in tests
 	_ "github.com/jinzhu/gorm/dialects/postgres"
@@ -55,45 +57,71 @@ type Credentials struct {
 
 var config *ProperaConf
 
-// Get fetches all parameters according to tne context : if proper environment variables are set, assumes beeing in prod, otherwise read the config.yml file
-func (p *ProperaConf) Get() error {
-	if config == nil {
-		// Check if RDS environment variables are set
-		name, okDbName := os.LookupEnv("RDS_DB_NAME")
-		host, okHostName := os.LookupEnv("RDS_HOSTNAME")
-		port, okPort := os.LookupEnv("RDS_PORT")
-		username, okUserName := os.LookupEnv("RDS_USERNAME")
-		password, okPwd := os.LookupEnv("RDS_PASSWORD")
-
-		if okDbName && okHostName && okPort && okUserName && okPwd {
-			p = &ProperaConf{Databases: Databases{Prod: DBConf{
-				Name:     name,
-				Host:     host,
-				Port:     port,
-				UserName: username,
-				Password: password}}}
-			p.App.TokenFileName, _ = os.LookupEnv("TOKEN_FILE_NAME")
-			p.App.LogFileName, _ = os.LookupEnv("LOG_FILE_NAME")
-			p.App.Prod = true
-			p.App.LoggerLevel = "warn"
-			return nil
-		}
-		// Otherwise use database.yml
-		cfgFile, err := ioutil.ReadFile("../config.yml")
-		if err != nil {
-			// Try to read directly
-			cfgFile, err = ioutil.ReadFile("config.yml")
-			if err != nil {
-				return errors.New("Erreur lors de la lecture de config.yml : " + err.Error())
-			}
-		}
-		if err = yaml.Unmarshal(cfgFile, p); err != nil {
-			return errors.New("Erreur lors du décodage de config.yml : " + err.Error())
-		}
-	} else {
-		p = config
+func logFileOpen(name string, app *iris.Application) (*os.File, error) {
+	logFile, err := os.OpenFile(name, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	app.Logger().SetOutput(logFile)
+	app.Logger().Infof("Fichier log configuré")
+	return logFile, err
+}
+
+// Get fetches all parameters according to tne context : if proper environment variables are set, assumes beeing in prod, otherwise read the config.yml file
+func (p *ProperaConf) Get(app *iris.Application) (logFile *os.File, err error) {
+	if config != nil {
+		p = config
+		return nil, nil
+	}
+
+	// Configure the log file as first step to catch all messages
+	p.App.LogFileName = os.Getenv("LOG_FILE_NAME")
+	if p.App.LogFileName != "" {
+		logFile, err = logFileOpen(p.App.LogFileName, app)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Check if RDS environment variables are set
+	name, okDbName := os.LookupEnv("RDS_DB_NAME")
+	host, okHostName := os.LookupEnv("RDS_HOSTNAME")
+	port, okPort := os.LookupEnv("RDS_PORT")
+	username, okUserName := os.LookupEnv("RDS_USERNAME")
+	password, okPwd := os.LookupEnv("RDS_PASSWORD")
+
+	if okDbName && okHostName && okPort && okUserName && okPwd {
+		p = &ProperaConf{Databases: Databases{Prod: DBConf{
+			Name:     name,
+			Host:     host,
+			Port:     port,
+			UserName: username,
+			Password: password}}}
+		p.App.TokenFileName = os.Getenv("TOKEN_FILE_NAME")
+		p.App.Prod = true
+		p.App.LoggerLevel = "info"
+		return nil, nil
+	}
+	// Otherwise use database.yml
+	cfgFile, err := ioutil.ReadFile("../config.yml")
+	if err != nil {
+		// Try to read directly
+		cfgFile, err = ioutil.ReadFile("config.yml")
+		if err != nil {
+			return nil, errors.New("Erreur lors de la lecture de config.yml : " + err.Error())
+		}
+	}
+	if err = yaml.Unmarshal(cfgFile, p); err != nil {
+		return nil, errors.New("Erreur lors du décodage de config.yml : " + err.Error())
+	}
+	if p.App.LoggerLevel != "" {
+		app.Logger().SetLevel(p.App.LoggerLevel)
+	}
+	if logFile == nil && p.App.LogFileName != "" {
+		logFile, err = logFileOpen(p.App.LogFileName, app)
+	}
+	app.Logger().Infof("Utilisation de config.yml")
+	return logFile, nil
 }
 
 // LaunchDB launch the DB with DBConf parameters

@@ -84,7 +84,7 @@ func TestAll(t *testing.T) {
 		testSettings(t)
 		testStep(t)
 		testTodayMessage(t)
-		testUser(t)
+		testUser(t, &testCtx.Config.Users.User)
 	})
 }
 
@@ -98,7 +98,7 @@ func testCommons(t *testing.T) {
 
 		app := iris.New().Configure(iris.WithConfiguration(iris.Configuration{DisablePathCorrection: true}))
 		var cfg config.ProperaConf
-		if err := cfg.Get(); err != nil {
+		if _, err := cfg.Get(app); err != nil {
 			t.Error("Configuration : " + err.Error())
 			t.FailNow()
 		}

@@ -17,7 +17,7 @@ type SentUserCase struct {
 }
 
 // UserTest includes all tests for users
-func testUser(t *testing.T) {
+func testUser(t *testing.T, userCredentials *config.Credentials) {
 	t.Run("User", func(t *testing.T) {
 		getUsers(testCtx.E, t)
 		createdUID := createUser(testCtx.E, t)
@@ -25,7 +25,7 @@ func testUser(t *testing.T) {
 		chgPwd(testCtx.E, t)
 		deleteUser(testCtx.E, t, createdUID)
 		signupTest(testCtx.E, t)
-		logoutTest(testCtx.E, t)
+		logoutTest(testCtx.E, t, userCredentials)
 	})
 }
 
@@ -194,7 +194,7 @@ func signupTest(e *httpexpect.Expect, t *testing.T) {
 }
 
 // logoutTest for a connected user
-func logoutTest(e *httpexpect.Expect, t *testing.T) {
+func logoutTest(e *httpexpect.Expect, t *testing.T, userCredentials *config.Credentials) {
 	response := e.POST("/api/user/logout").WithHeader("Authorization", "Bearer "+testCtx.User.Token).Expect()
 	content := string(response.Content)
 	if !strings.Contains(content, "Utilisateur déconnecté") {
@@ -214,12 +214,7 @@ func logoutTest(e *httpexpect.Expect, t *testing.T) {
 	if statusCode != http.StatusInternalServerError {
 		t.Errorf("\nLogOut[%d],statut :  attendu ->%v  reçu <-%v", 1, http.StatusInternalServerError, statusCode)
 	}
-	var cfg config.ProperaConf
-	if err := cfg.Get(); err != nil {
-		t.Errorf("\nLogOut récupération de la configuration %s\n", err.Error())
-		t.FailNow()
-	}
-	newLRUser := fetchLoginResponse(e, t, &cfg.Users.User, "USER")
+	newLRUser := fetchLoginResponse(e, t, userCredentials, "USER")
 	if newLRUser != nil {
 		testCtx.User = newLRUser
 	}
