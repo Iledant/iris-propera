@@ -15,7 +15,6 @@ import (
 func main() {
 	app := iris.New().Configure(
 		iris.WithConfiguration(iris.Configuration{DisablePathCorrection: true}))
-	app.Logger().SetLevel("debug")
 
 	var cfg config.ProperaConf
 	if err := cfg.Get(); err != nil {
@@ -27,17 +26,22 @@ func main() {
 		log.Printf("Impossible de se connecter à la base de données : %s", err.Error())
 		os.Exit(1)
 	}
-	actions.TokenRecover(cfg.TokenFileName)
 	defer db.Close()
 	actions.SetRoutes(app, db)
+	if cfg.App.LoggerLevel != "" {
+		app.Logger().SetLevel(cfg.App.LoggerLevel)
+	}
 
-	iris.RegisterOnInterrupt(func() {
-		timeout := 2 * time.Second
-		ctx, cancel := stdContext.WithTimeout(stdContext.Background(), timeout)
-		defer cancel()
-		actions.TokenSave(cfg.TokenFileName)
-		app.Shutdown(ctx)
-	})
+	if cfg.App.TokenFileName != "" {
+		actions.TokenRecover(cfg.App.TokenFileName)
+		iris.RegisterOnInterrupt(func() {
+			timeout := 2 * time.Second
+			ctx, cancel := stdContext.WithTimeout(stdContext.Background(), timeout)
+			defer cancel()
+			actions.TokenSave(cfg.App.TokenFileName)
+			app.Shutdown(ctx)
+		})
+	}
 	// Use port 5000 as Elastic beanstalk use it by default
 	app.Run(iris.Addr(":5000"), iris.WithoutInterruptHandler)
 }

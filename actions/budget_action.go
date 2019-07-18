@@ -33,15 +33,28 @@ func GetProgramBudgetActions(ctx iris.Context) {
 
 // GetAllBudgetActions handles request get all budget actions.
 func GetAllBudgetActions(ctx iris.Context) {
-	var resp models.BudgetActions
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.GetAll(db.DB()); err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Liste des actions budgétaires, requête : " + err.Error()})
-		return
+	fullCode := ctx.URLParam("FullCodeAction")
+	if fullCode == "true" {
+		var resp models.FullCodeBudgetActions
+		db := ctx.Values().Get("db").(*gorm.DB)
+		if err := resp.GetAll(db.DB()); err != nil {
+			ctx.StatusCode(http.StatusInternalServerError)
+			ctx.JSON(jsonError{"Liste des actions budgétaires, requête : " + err.Error()})
+			return
+		}
+		ctx.StatusCode(http.StatusOK)
+		ctx.JSON(resp)
+	} else {
+		var resp models.BudgetActions
+		db := ctx.Values().Get("db").(*gorm.DB)
+		if err := resp.GetAll(db.DB()); err != nil {
+			ctx.StatusCode(http.StatusInternalServerError)
+			ctx.JSON(jsonError{"Liste des actions budgétaires, requête : " + err.Error()})
+			return
+		}
+		ctx.StatusCode(http.StatusOK)
+		ctx.JSON(resp)
 	}
-	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(resp)
 }
 
 // CreateBudgetAction handles request post request to create a new action.

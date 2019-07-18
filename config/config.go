@@ -13,9 +13,9 @@ import (
 
 // ProperaConf includes all configuration datas from config.yml for production, development and tests.
 type ProperaConf struct {
-	Databases     Databases
-	Users         Users
-	TokenFileName string
+	Databases Databases
+	Users     Users
+	App       App
 }
 
 // Users includes users credentials for test purposes.
@@ -29,6 +29,14 @@ type Databases struct {
 	Prod        DBConf
 	Development DBConf
 	Test        DBConf
+}
+
+// App defines global values for the application
+type App struct {
+	Prod          bool
+	LogFileName   string
+	LoggerLevel   string
+	TokenFileName string
 }
 
 // DBConf includes all informations for connecting to a database.
@@ -56,7 +64,6 @@ func (p *ProperaConf) Get() error {
 		port, okPort := os.LookupEnv("RDS_PORT")
 		username, okUserName := os.LookupEnv("RDS_USERNAME")
 		password, okPwd := os.LookupEnv("RDS_PASSWORD")
-		tokenFileName, _ := os.LookupEnv("TOKEN_FILE_NAME")
 
 		if okDbName && okHostName && okPort && okUserName && okPwd {
 			p = &ProperaConf{Databases: Databases{Prod: DBConf{
@@ -64,8 +71,11 @@ func (p *ProperaConf) Get() error {
 				Host:     host,
 				Port:     port,
 				UserName: username,
-				Password: password}},
-				TokenFileName: tokenFileName}
+				Password: password}}}
+			p.App.TokenFileName, _ = os.LookupEnv("TOKEN_FILE_NAME")
+			p.App.LogFileName, _ = os.LookupEnv("LOG_FILE_NAME")
+			p.App.Prod = true
+			p.App.LoggerLevel = "warn"
 			return nil
 		}
 		// Otherwise use database.yml
@@ -80,7 +90,6 @@ func (p *ProperaConf) Get() error {
 		if err = yaml.Unmarshal(cfgFile, p); err != nil {
 			return errors.New("Erreur lors du décodage de config.yml : " + err.Error())
 		}
-		p.TokenFileName = tokenFileName
 	} else {
 		p = config
 	}

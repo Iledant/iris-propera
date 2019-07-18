@@ -28,11 +28,19 @@ func getAllBudgetActions(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Token invalide"}, ArraySize: 0},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			BodyContains: []string{"BudgetAction"}, ArraySize: 117},
+		{Token: testCtx.Admin.Token, Status: http.StatusOK, Param: "FullCodeAction",
+			BodyContains: []string{"BudgetAction", "full_code"}, ArraySize: 117},
 	}
 
 	for i, tc := range testCases {
-		response := e.GET("/api/budget_actions").WithHeader("Authorization", "Bearer "+tc.Token).
-			Expect()
+		var response *httpexpect.Response
+		if tc.Param == "" {
+			response = e.GET("/api/budget_actions").
+				WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		} else {
+			response = e.GET("/api/budget_actions").WithQuery(tc.Param, "true").
+				WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		}
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {

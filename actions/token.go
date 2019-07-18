@@ -3,7 +3,6 @@ package actions
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -112,7 +111,6 @@ func bearerToUser(ctx iris.Context) (claims *customClaims, err error) {
 	token, err := parser.ParseWithClaims(tokenString, &customClaims{},
 		func(token *jwt.Token) (interface{}, error) { return []byte(signingKey), nil })
 	if err != nil || !token.Valid {
-		fmt.Println("Erreur de décodage")
 		return nil, ErrBadToken
 	}
 	claims = token.Claims.(*customClaims)
@@ -123,7 +121,6 @@ func bearerToUser(ctx iris.Context) (claims *customClaims, err error) {
 	_, ok := tokens[userID]
 	mutex.Unlock()
 	if !ok {
-		fmt.Println("Pas dans la base")
 		return nil, ErrBadToken
 	}
 	// Refresh if expired
@@ -132,7 +129,6 @@ func bearerToUser(ctx iris.Context) (claims *customClaims, err error) {
 		return claims, errors.New("Token expiré")
 	}
 	if t > claims.ExpiresAt {
-		fmt.Println("Refresh token")
 		err = refreshToken(ctx, claims)
 	}
 	ctx.Values().Set("uID", userID)

@@ -31,7 +31,7 @@ func getPhysicalOpsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Status: http.StatusOK,
 			BodyContains: []string{"PhysicalOp"}, ArraySize: 3},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			BodyContains: []string{"PhysicalOp"}, ArraySize: 619},
+			BodyContains: []string{"PhysicalOp", "PaymentType", "Step", "Category", "BudgetAction"}, ArraySize: 619},
 	}
 
 	for i, tc := range testCases {
@@ -47,7 +47,7 @@ func getPhysicalOpsTest(e *httpexpect.Expect, t *testing.T) {
 			t.Errorf("\nGetPhysicalOps[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
-			count := strings.Count(content, `"id"`)
+			count := strings.Count(content, `"isr"`)
 			if count != tc.ArraySize {
 				t.Errorf("\nGetPhysicalOps[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
 			}

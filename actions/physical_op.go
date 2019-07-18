@@ -14,8 +14,20 @@ type fullOpResp struct {
 	FullOp models.OpWithPlanAndAction `json:"PhysicalOp"`
 }
 
-// GetPhysicalOps handles physical operations get request.It returns all operations with plan name and action name
-// for admin and observer all operations are returned, for users only operations on which the user have rights
+// OpsResp is used to embed physical operation request
+type OpsResp struct {
+	models.OpWithPlanAndActions
+	models.PaymentTypes
+	models.Steps
+	models.Categories
+	models.FullCodeBudgetActions
+}
+
+// GetPhysicalOps handles physical operations get request.It returns all operations
+// with plan name and action name for admin and observer all operations are returned,
+// for users only operations on which the user have rights. It also returns payments
+// types, steps, categories et budget actions with full code to have all datas
+// in just one query for a better efficiency
 func GetPhysicalOps(ctx iris.Context) {
 	uID, err := getUserID(ctx)
 	if err != nil {
@@ -23,11 +35,31 @@ func GetPhysicalOps(ctx iris.Context) {
 		ctx.JSON(jsonError{"Opérations avec information, user : " + err.Error()})
 		return
 	}
-	var resp models.OpWithPlanAndActions
+	var resp OpsResp
 	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(uID, db.DB()); err != nil {
+	if err = resp.OpWithPlanAndActions.GetAll(uID, db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Opérations avec information, requête : " + err.Error()})
+		ctx.JSON(jsonError{"Liste des opérations, requête ops : " + err.Error()})
+		return
+	}
+	if err = resp.PaymentTypes.GetAll(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Liste des opérations, requête payment types : " + err.Error()})
+		return
+	}
+	if err = resp.Steps.GetAll(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Liste des opérations, requête steps : " + err.Error()})
+		return
+	}
+	if err = resp.Categories.GetAll(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Liste des opérations, requête categories : " + err.Error()})
+		return
+	}
+	if err = resp.FullCodeBudgetActions.GetAll(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Liste des opérations, requête budget actions : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
