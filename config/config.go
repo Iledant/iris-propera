@@ -91,16 +91,16 @@ func (p *ProperaConf) Get(app *iris.Application) (logFile *os.File, err error) {
 	password, okPwd := os.LookupEnv("RDS_PASSWORD")
 
 	if okDbName && okHostName && okPort && okUserName && okPwd {
-		p = &ProperaConf{Databases: Databases{Prod: DBConf{
-			Name:     name,
-			Host:     host,
-			Port:     port,
-			UserName: username,
-			Password: password}}}
+		app.Logger().Infof("Utilisation des variables d'environnement")
+		p.Databases.Prod.Name = name
+		p.Databases.Prod.Host = host
+		p.Databases.Prod.Port = port
+		p.Databases.Prod.UserName = username
+		p.Databases.Prod.Password = password
 		p.App.TokenFileName = os.Getenv("TOKEN_FILE_NAME")
 		p.App.Prod = true
 		p.App.LoggerLevel = "info"
-		return nil, nil
+		return logFile, nil
 	}
 	// Otherwise use database.yml
 	cfgFile, err := ioutil.ReadFile("../config.yml")
