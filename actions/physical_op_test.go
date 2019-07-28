@@ -19,6 +19,7 @@ func testPhysicalOps(t *testing.T) {
 		getOpAndFcsTest(testCtx.E, t)
 		batchPhysicalOpsTest(testCtx.E, t)
 		getPrevisionsTests(testCtx.E, t)
+		getOnlyPrevisionsTests(testCtx.E, t)
 		setOpPrevisionsTests(testCtx.E, t)
 	})
 }
@@ -217,6 +218,32 @@ func getPrevisionsTests(e *httpexpect.Expect, t *testing.T) {
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
 			t.Errorf("\nGetPrevisions[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+	}
+}
+
+// getOnlyPrevisionsTests check route is protected and datas sent are correct
+func getOnlyPrevisionsTests(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"}},
+		{Token: testCtx.User.Token, ID: "0", Status: http.StatusInternalServerError,
+			BodyContains: []string{"Prévision seule d'opération, check : Opération introuvable"}},
+		{Token: testCtx.User.Token, ID: "10", Status: http.StatusOK,
+			BodyContains: []string{"PrevCommitment", "PrevPayment"}},
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/physical_ops/"+tc.ID+"/only_previsions").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetOnlyPrevisions[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetOnlyPrevisions[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
 		}
 	}
 }

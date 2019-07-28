@@ -269,6 +269,47 @@ func GetOpPrevisions(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
+// getOnlyPrevisions embeddes the previsions part of the operation datas for
+// json export
+type getOnlyPrevisions struct {
+	models.PrevCommitments
+	models.PrevPayments
+}
+
+// GetOpOnlyPrevisions handle the get request to retrieve only commitments and
+// payments previsions of an operation after a cancal in the frontend page
+func GetOpOnlyPrevisions(ctx iris.Context) {
+	opID, err := ctx.Params().GetInt64("opID")
+	if err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision d'opération, paramètre : " + err.Error()})
+		return
+	}
+	year, err := ctx.URLParamInt64("year")
+	if err != nil {
+		year = int64(time.Now().Year())
+	}
+	op, db := models.PhysicalOp{ID: opID}, ctx.Values().Get("db").(*gorm.DB)
+	if err = op.Exists(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévision seule d'opération, check : " + err.Error()})
+		return
+	}
+	var resp getOnlyPrevisions
+	if err = op.GetYearPrevCommitments(&resp.PrevCommitments, year, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions seules d'opération, requête engagements : " + err.Error()})
+		return
+	}
+	if err = op.GetYearPrevPayments(&resp.PrevPayments, year, db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions seules d'opération, requête paiements : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
 // setOpPrevResp embeddes arrays of financial commitments and payments previsions
 type setOpPrevResp struct {
 	models.PrevCommitments
