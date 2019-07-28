@@ -61,7 +61,3 @@ Les requêtes et le décodage utilisent le système de test du framework IRIS. C
 Quelques routes ont été modifiées par rapport à la première version du back end et nécessiteront une correction dans le front end. Elles sont documentées par des commentaires dans le fichier `actions\routes.go`.
 
 Afin de réduire le temps nécessaire pour l'affichage des pages qui est surtout lié à la latence du réseau, des requêtes sont groupées afin qu'une page du front end ne fasse qu'une requête GET pour l'ensemble de son contenu à chaque fois que cela est possible.
-
-## TODO
-
-* Mettre en place une grace period pour les tokens pendant laquelle le refresh token est renvoyé systématiquement
