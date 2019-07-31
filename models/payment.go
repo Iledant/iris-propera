@@ -182,7 +182,9 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 			return err
 		}
 	}
-	if _, err = tx.Exec("UPDATE import_logs SET last_date=$1 WHERE category='Payments'",
+	if _, err = tx.Exec(`INSERT INTO import_logs (category,last_date)
+		VALUES ('Payments', $1)
+		ON CONFLICT (category) DO UPDATE SET last_date = EXCLUDED.last_date;`,
 		time.Now()); err != nil {
 		tx.Rollback()
 		return err

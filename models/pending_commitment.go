@@ -246,6 +246,13 @@ func (p *PendingsBatch) Save(db *sql.DB) (err error) {
 			return
 		}
 	}
+	if _, err := tx.Exec(`INSERT INTO import_logs (category,last_date) 
+		VALUES ('Pendings',$1)
+		ON CONFLICT (category) DO UPDATE SET last_date = EXCLUDED.last_date;`,
+		time.Now()); err != nil {
+		tx.Rollback()
+		return err
+	}
 	err = tx.Commit()
 	return err
 }

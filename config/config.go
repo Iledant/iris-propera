@@ -43,11 +43,12 @@ type App struct {
 
 // DBConf includes all informations for connecting to a database.
 type DBConf struct {
-	Name     string `yaml:"name"`
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	UserName string `yaml:"username"`
-	Password string `yaml:"password"`
+	Name       string `yaml:"name"`
+	Host       string `yaml:"host"`
+	Port       string `yaml:"port"`
+	UserName   string `yaml:"username"`
+	Password   string `yaml:"password"`
+	Repository string `yaml:"repository"`
 }
 
 // Credentials keep email ans password for a user.

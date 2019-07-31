@@ -419,7 +419,10 @@ FROM correspond WHERE financial_commitment.id = correspond.fc_id`}
 		tx.Rollback()
 		return err
 	}
-	if _, err := tx.Exec("UPDATE import_logs SET last_date = $1 WHERE category = 'FinancialCommitments'", time.Now()); err != nil {
+	if _, err := tx.Exec(`INSERT INTO import_logs (category,last_date) 
+		VALUES ('FinancialCommitments',$1)
+		ON CONFLICT (category) DO UPDATE SET last_date = EXCLUDED.last_date;`,
+		time.Now()); err != nil {
 		tx.Rollback()
 		return err
 	}
