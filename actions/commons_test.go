@@ -2,8 +2,8 @@ package actions
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -94,14 +94,14 @@ func testCommons(t *testing.T) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if testCtx == nil {
-		restoreTestDB(t)
-
 		app := iris.New().Configure(iris.WithConfiguration(iris.Configuration{DisablePathCorrection: true}))
 		var cfg config.ProperaConf
 		if _, err := cfg.Get(app); err != nil {
 			t.Error("Configuration : " + err.Error())
 			t.FailNow()
 		}
+
+		restoreTestDB(t, &cfg.Databases.Test)
 
 		db, err := config.LaunchDB(&cfg.Databases.Test)
 		if err != nil {
@@ -121,19 +121,16 @@ func testCommons(t *testing.T) {
 
 // restoreTestDB executes the pg_restore command to restore a new database test.
 // testing.FailNow is called if an error happens.
-func restoreTestDB(t *testing.T) {
-	properaRep, ok := os.LookupEnv("PROPERAREPO")
-	if !ok {
-		t.Error("Variable PROPERAREPO introuvable")
+func restoreTestDB(t *testing.T, dbCfg *config.DBConf) {
+	if dbCfg.UserName == "" || dbCfg.Password == "" || dbCfg.Host == "" ||
+		dbCfg.Port == "" || dbCfg.Repository == "" {
+		t.Errorf("Erreur de configuration de la base de test %v\n", *dbCfg)
 		t.FailNow()
 	}
 
-	if _, ok = os.LookupEnv("PGPASSWORD"); !ok {
-		t.Error("Variable PGPASSWORD introuvable")
-		t.FailNow()
-	}
-
-	cmd := exec.Command("pg_restore", "-cOU", "postgres", "-d", "propera3_test", properaRep)
+	dbString := fmt.Sprintf("postgres://%s:%s@%s:%s/propera_test", dbCfg.UserName,
+		dbCfg.Password, dbCfg.Host, dbCfg.Port)
+	cmd := exec.Command("pg_restore", "-cO", "-d", dbString, dbCfg.Repository)
 	s, err := cmd.CombinedOutput()
 	if err != nil && strings.Contains(string(s), "FATAL") {
 		t.Errorf("Impossible de restaurer la base de test:\n%s\n", string(s))

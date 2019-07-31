@@ -309,7 +309,9 @@ func statActionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Token invalide"}},
 		{Token: testCtx.User.Token, Status: http.StatusOK, ID: "5", Param: "2019",
 			BodyContains: []string{"PaymentPerBudgetAction",
-				`"chapter":908,"sector":"TC","subfunction":"811","program":"381006","action":"381006015","action_name":"Métro","y1":46221880.838196725,"y2":20857793.16879844,"y3":18905566.532886185`}, ArraySize: 58},
+				`"chapter":908,"sector":"TC","subfunction":"811","program":"381006",` +
+					`"action":"381006015","action_name":"Métro","y1":46221880.838196725,` +
+					`"y2":20857793.168798443,"y3":18905566.532886185`}, ArraySize: 58},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/statistical_payment_per_budget_action").
