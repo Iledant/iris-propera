@@ -1,7 +1,7 @@
 package config
 
 import (
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -109,11 +109,11 @@ func (p *ProperaConf) Get(app *iris.Application) (logFile *os.File, err error) {
 		// Try to read directly
 		cfgFile, err = ioutil.ReadFile("config.yml")
 		if err != nil {
-			return nil, errors.New("Erreur lors de la lecture de config.yml : " + err.Error())
+			return nil, fmt.Errorf("Erreur de lecture de config.yml : %v", err)
 		}
 	}
 	if err = yaml.Unmarshal(cfgFile, p); err != nil {
-		return nil, errors.New("Erreur lors du décodage de config.yml : " + err.Error())
+		return nil, fmt.Errorf("Erreur lors du décodage de config.yml : %v", err)
 	}
 	if p.App.LoggerLevel != "" {
 		app.Logger().SetLevel(p.App.LoggerLevel)

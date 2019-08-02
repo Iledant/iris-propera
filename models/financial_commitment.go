@@ -188,16 +188,16 @@ func getPageOffset(page int64, count int64) (offset int64, newPage int64, lastPa
 	if count == 0 {
 		return 0, 0, 1
 	}
-	offset = (page - 1) * 15
+	offset = (page - 1) * 10
 	newPage = 1
 	if offset < 0 {
 		offset = 0
 	}
 	if offset >= count {
-		offset = (count - 1) - ((count - 1) % 15)
-		newPage = offset/15 + 1
+		offset = (count - 1) - ((count - 1) % 10)
 	}
-	lastPage = (count-1)/15 + 1
+	newPage = offset/10 + 1
+	lastPage = (count-1)/10 + 1
 	return offset, newPage, lastPage
 }
 
@@ -220,12 +220,12 @@ func (p *PaginatedUnlinkedItems) GetUnlinked(pattern FCSearchPattern, db *sql.DB
 	offset, currentPage, lastPage := getPageOffset(pattern.Page, count)
 	p.CurrentPage = currentPage
 	p.LastPage = lastPage
-	rows, err := db.Query(`SELECT f.id as id, f.value as value, f.iris_code as iris_code, 
+	rows, err := db.Query(`SELECT DISTINCT f.id as id, f.value as value, f.iris_code as iris_code, 
 	f.name as name, f.date as date, b.name as beneficiary 
 	FROM financial_commitment f, beneficiary b
 	WHERE f.beneficiary_code = b.code AND f.date >= $1 AND `+idQryPart+` ISNULL
 	AND (f.name ILIKE $2 OR b.name ILIKE $2 OR f.iris_code ILIKE $2)
-	ORDER BY 1 LIMIT 15 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
+	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
 	if err != nil {
 		return err
 	}
@@ -263,13 +263,13 @@ func (p *PaginatedOpLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) 
 	offset, currentPage, lastPage := getPageOffset(pattern.Page, count)
 	p.CurrentPage = currentPage
 	p.LastPage = lastPage
-	rows, err := tx.Query(`SELECT f.id as fc_iD, f.value as fc_value, f.name as fc_name, 
+	rows, err := tx.Query(`SELECT DISTINCT f.id as fc_iD, f.value as fc_value, f.name as fc_name, 
 	f.iris_code, f.date as fc_date, b.Name fc_beneficiary, op.number op_number, op.name op_name
 	FROM financial_commitment f, beneficiary b, physical_op op
 	WHERE f.physical_op_id = op.id AND f.beneficiary_code = b.code AND f.physical_op_id NOTNULL
 	AND f.date > $1 AND (f.name ILIKE $2 OR b.name ILIKE $2 OR op.name ILIKE $2 
 	OR op.number ILIKE $2)
-	ORDER BY 1 LIMIT 15 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
+	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -313,12 +313,12 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 	offset, currentPage, lastPage := getPageOffset(pattern.Page, count)
 	p.CurrentPage = currentPage
 	p.LastPage = lastPage
-	rows, err := tx.Query(`SELECT f.id as fc_id, f.value as fc_value, f.name as fc_name, 
+	rows, err := tx.Query(`SELECT DISTINCT f.id as fc_id, f.value as fc_value, f.name as fc_name, 
 	f.iris_code, f.date as fc_date, b.Name fc_beneficiary, pl.name pl_name
 	FROM financial_commitment f, beneficiary b, plan_line pl
 	WHERE f.plan_line_id = pl.id AND f.beneficiary_code = b.code AND f.plan_line_id NOTNULL
 	AND f.date > $1 AND (f.name ILIKE $2 OR b.name ILIKE $2 OR pl.name ILIKE $2)
-	ORDER BY 1 LIMIT 15 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
+	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
 	if err != nil {
 		tx.Rollback()
 		return err
