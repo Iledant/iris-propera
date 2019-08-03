@@ -27,15 +27,9 @@ func (b *Beneficiary) Validate() error {
 
 // Update change the name of a beneficiary whose ID is given.
 func (b *Beneficiary) Update(db *sql.DB) (err error) {
-	res, err := db.Exec(`UPDATE beneficiary SET name=$1 WHERE id = $2`, b.Name, b.ID)
-	if err != nil {
-		return err
-	}
-	count, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if count != 1 {
+	err = db.QueryRow(`UPDATE beneficiary SET name=$1 
+		WHERE id = $2 RETURNING code`, b.Name, b.ID).Scan(&b.Code)
+	if err == sql.ErrNoRows {
 		return errors.New("Bénéficiaire introuvable")
 	}
 	return err
