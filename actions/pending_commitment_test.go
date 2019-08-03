@@ -85,7 +85,7 @@ func getLinkedPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			BodyContains: []string{"PendingCommitments"}, ArraySize: 35},
+			BodyContains: []string{"PendingCommitments", `"op_name"`, `"op_number"`}, ArraySize: 35},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/pending_commitments/linked").

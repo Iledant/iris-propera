@@ -37,8 +37,8 @@ func GetUnlinkedPendings(ctx iris.Context) {
 // GetLinkedPendings handles the get request to fetch all pending commitments.
 func GetLinkedPendings(ctx iris.Context) {
 	db := ctx.Values().Get("db").(*gorm.DB)
-	var resp models.PendingCommitments
-	if err := resp.GetAllLinked(db.DB()); err != nil {
+	var resp models.LinkedPendingCommitments
+	if err := resp.GetAll(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des engagements en cours non liés : " + err.Error()})
 		return

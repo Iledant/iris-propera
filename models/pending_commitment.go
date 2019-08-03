@@ -71,6 +71,28 @@ type PendingIDs struct {
 	IDs []int64 `json:"peIdList"`
 }
 
+// LinkedPendingCommitment is used to have a full list of linked pendings
+// commitments with physical op name and number
+type LinkedPendingCommitment struct {
+	ID             int       `json:"id"`
+	PhysicalOpID   int64     `json:"physical_op_id"`
+	IrisCode       string    `json:"iris_code"`
+	Name           string    `json:"name"`
+	Chapter        string    `json:"chapter"`
+	ProposedValue  int64     `json:"proposed_value"`
+	Action         string    `json:"action"`
+	CommissionDate time.Time `json:"commission_date"`
+	Beneficiary    string    `json:"beneficiary"`
+	OpName         string    `json:"op_name"`
+	OpNumber       string    `json:"op_number"`
+}
+
+// LinkedPendingCommitments embeddes an array of LinkedPendingCommitment for
+// json export
+type LinkedPendingCommitments struct {
+	LinkedPendingCommitments []LinkedPendingCommitment `json:"PendingCommitments"`
+}
+
 // GetAll fetches all pending commitments from database.
 func (p *PendingCommitments) GetAll(db *sql.DB) (err error) {
 	rows, err := db.Query(`SELECT id, physical_op_id, iris_code, name, chapter,
@@ -118,26 +140,30 @@ func (p *UnlinkedPendingCommitments) GetAll(db *sql.DB) (err error) {
 	return err
 }
 
-// GetAllLinked fetches all pending commitments not linked to a physical operation from database.
-func (p *PendingCommitments) GetAllLinked(db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT id, physical_op_id, iris_code, name, chapter,
-	 proposed_value, action, commission_date, beneficiary FROM pending_commitments
-	 WHERE physical_op_id NOTNULL`)
+// GetAll fetches all pending commitments linked to a physical operation from database.
+func (p *LinkedPendingCommitments) GetAll(db *sql.DB) (err error) {
+	rows, err := db.Query(`SELECT pe.id, pe.physical_op_id, pe.iris_code, pe.name,
+		pe.chapter,pe.proposed_value, pe.action, pe.commission_date, pe.beneficiary,
+		op.name,op.number
+		FROM pending_commitments pe
+	 	JOIN physical_op op ON pe.physical_op_id=op.id
+	 	WHERE pe.physical_op_id NOTNULL`)
 	if err != nil {
 		return err
 	}
-	var r PendingCommitment
+	var r LinkedPendingCommitment
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&r.ID, &r.PhysicalOpID, &r.IrisCode, &r.Name, &r.Chapter,
-			&r.ProposedValue, &r.Action, &r.CommissionDate, &r.Beneficiary); err != nil {
+			&r.ProposedValue, &r.Action, &r.CommissionDate, &r.Beneficiary, &r.OpName,
+			&r.OpNumber); err != nil {
 			return err
 		}
-		p.PendingCommitments = append(p.PendingCommitments, r)
+		p.LinkedPendingCommitments = append(p.LinkedPendingCommitments, r)
 	}
 	err = rows.Err()
-	if len(p.PendingCommitments) == 0 {
-		p.PendingCommitments = []PendingCommitment{}
+	if len(p.LinkedPendingCommitments) == 0 {
+		p.LinkedPendingCommitments = []LinkedPendingCommitment{}
 	}
 	return err
 }
