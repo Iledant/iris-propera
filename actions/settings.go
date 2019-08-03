@@ -103,3 +103,39 @@ func getSettings(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(resp)
 }
+
+// budgetTables embeddes all budget tables for the dedicated frontend page
+type budgetTablesResp struct {
+	models.BudgetChapters
+	models.BudgetSectors
+	models.BudgetPrograms
+	models.BudgetActions
+}
+
+// getBudgetTables handles the get request to fetch all budget tables
+func getBudgetTables(ctx iris.Context) {
+	var resp budgetTablesResp
+	db := ctx.Values().Get("db").(*gorm.DB)
+	if err := resp.BudgetChapters.GetAll(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"BudgetTables chapter : " + err.Error()})
+		return
+	}
+	if err := resp.BudgetSectors.GetAll(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"BudgetTables sector : " + err.Error()})
+		return
+	}
+	if err := resp.BudgetPrograms.GetAll(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"BudgetTables program : " + err.Error()})
+		return
+	}
+	if err := resp.BudgetActions.GetAll(db.DB()); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"BudgetTables action : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}

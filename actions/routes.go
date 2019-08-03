@@ -118,6 +118,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 	adminParty.Delete("/steps/{stID:int}", DeleteStep)
 
 	adminParty.Get("/settings", getSettings)
+	adminParty.Get("/budget_tables", getBudgetTables)
 
 	adminParty.Post("/today_message", SetTodayMessage)
 
