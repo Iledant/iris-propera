@@ -94,7 +94,7 @@ func createBudgetCreditTest(e *httpexpect.Expect, t *testing.T) (brID int) {
 			Sent: []byte(`{"commission_date": "2018-04-01T00:00:00.000Z", "chapter": 907,
 			"primary_commitment":123456,"reserved_commitment":123,"frozen_commitment":456}`),
 			BodyContains: []string{"BudgetCredits", `"primary_commitment":123456`,
-				`"reserved_commitment":123`, `"frozen_commitment":456`, `"chapter_id":3`}},
+				`"reserved_commitment":123`, `"frozen_commitment":456`, `"chapter":907`}},
 	}
 
 	for i, tc := range testCases {
@@ -127,7 +127,7 @@ func modifyBudgetCreditTest(e *httpexpect.Expect, t *testing.T, brID int) {
 			BodyContains: []string{"Modification de crédits Erreur de chapitre ou de date de commission"}},
 		{Token: testCtx.Admin.Token, ID: strconv.Itoa(brID), Status: http.StatusOK,
 			Sent:         []byte(`{"commission_date":"2018-08-13T09:21:56.132Z","chapter":908,"primary_commitment":999,"frozen_commitment":888,"reserved_commitment":777}`),
-			BodyContains: []string{"BudgetCredits", `"commission_date":"2018-08-13T00:00:00Z"`, `"primary_commitment":999`, `"frozen_commitment":888`, `"reserved_commitment":777`, `"chapter_id":2`}},
+			BodyContains: []string{"BudgetCredits", `"commission_date":"2018-08-13`, `"primary_commitment":999`, `"frozen_commitment":888`, `"reserved_commitment":777`, `"chapter":908`}},
 	}
 
 	for i, tc := range testCases {

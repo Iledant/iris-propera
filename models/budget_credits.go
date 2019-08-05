@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -131,30 +132,34 @@ func (c *CompleteBudgetCredits) GetAll(db *sql.DB) (err error) {
 }
 
 // Create insert a new line of budget credits with datas stored in CompleteBudgetCredit.
-func (b *BudgetCredit) Create(c *CompleteBudgetCredit, db *sql.DB) (err error) {
+func (c *CompleteBudgetCredit) Create(db *sql.DB) (err error) {
 	err = db.QueryRow(`INSERT INTO budget_credits (commission_date, chapter_id,
 		primary_commitment, frozen_commitment, reserved_commitment) 
-		SELECT $1,id,$2,$3,$4 FROM budget_chapter WHERE code = $5 RETURNING id,commission_date,
-		chapter_id, primary_commitment, frozen_commitment, reserved_commitment`,
+		SELECT $1,id,$2,$3,$4 FROM budget_chapter WHERE code = $5 RETURNING id`,
 		c.CommissionDate, c.PrimaryCommitment, c.FrozenCommitment, c.ReservedCommitment,
-		c.Chapter).Scan(&b.ID, &b.CommissionDate, &b.ChapterID, &b.PrimaryCommitment,
-		&b.FrozenCommitment, &b.ReservedCommitment)
+		c.Chapter).Scan(&c.ID)
 	return err
 }
 
 // Update modifies a budget credits line using datas stores in a CompleteBudgetCredit.
-func (b *BudgetCredit) Update(c *CompleteBudgetCredit, db *sql.DB) (err error) {
-	err = db.QueryRow(`UPDATE budget_credits SET (commission_date, chapter_id,
+func (c *CompleteBudgetCredit) Update(db *sql.DB) (err error) {
+	res, err := db.Exec(`UPDATE budget_credits SET (commission_date, chapter_id,
 		primary_commitment, frozen_commitment, reserved_commitment) = 
-		(SELECT $1::date,id,$2::bigint,$3::bigint,$4::bigint FROM budget_chapter WHERE code = $5) WHERE id = $6
-		RETURNING id,commission_date, chapter_id, primary_commitment, 
-		frozen_commitment, reserved_commitment`, c.CommissionDate, c.PrimaryCommitment,
-		c.FrozenCommitment, c.ReservedCommitment, c.Chapter, b.ID).Scan(&b.ID, &b.CommissionDate,
-		&b.ChapterID, &b.PrimaryCommitment, &b.FrozenCommitment, &b.ReservedCommitment)
+		(SELECT $1::date,id,$2::bigint,$3::bigint,$4::bigint 
+			FROM budget_chapter WHERE code = $5) WHERE id = $6`,
+		c.CommissionDate, c.PrimaryCommitment, c.FrozenCommitment,
+		c.ReservedCommitment, c.Chapter, c.ID)
 	if err != nil {
 		return err
 	}
-	return err
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count != 1 {
+		return fmt.Errorf("budget_credits introuvable")
+	}
+	return nil
 }
 
 // Delete remove the budget credits line whose ID is given from database.

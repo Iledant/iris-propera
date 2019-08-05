@@ -20,13 +20,13 @@ type brReq struct {
 
 // brResp embeddes response for a single budget credits.
 type brResp struct {
-	BudgetCredit models.BudgetCredit `json:"BudgetCredits"`
+	BudgetCredit models.CompleteBudgetCredit `json:"BudgetCredits"`
 }
 
 // GetBudgetCredits handles request get all budget credits.
 func GetBudgetCredits(ctx iris.Context) {
 	db := ctx.Values().Get("db").(*gorm.DB)
-	var resp models.BudgetCredits
+	var resp models.CompleteBudgetCredits
 	if err := resp.GetAll(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des crédits budgétaire, requête : " + err.Error()})
@@ -64,14 +64,13 @@ func CreateBudgetCredit(ctx iris.Context) {
 		return
 	}
 	db := ctx.Values().Get("db").(*gorm.DB)
-	var resp models.BudgetCredit
-	if err := resp.Create(&req, db.DB()); err != nil {
+	if err := req.Create(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création de crédits, requête : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brResp{resp})
+	ctx.JSON(brResp{req})
 }
 
 // ModifyBudgetCredit handles put request for modifying budget credits.
@@ -93,15 +92,15 @@ func ModifyBudgetCredit(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification de crédits " + err.Error()})
 		return
 	}
+	req.ID = brID
 	db := ctx.Values().Get("db").(*gorm.DB)
-	resp := models.BudgetCredit{ID: brID}
-	if err = resp.Update(&req, db.DB()); err != nil {
+	if err = req.Update(db.DB()); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification de crédits, requête : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(brResp{resp})
+	ctx.JSON(brResp{req})
 }
 
 // DeleteBudgetCredit handles delete request for budget credits.
