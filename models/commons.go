@@ -25,7 +25,7 @@ type NullExcelDate struct {
 	Date  int64
 }
 
-// NullTime is used for gorm null time commands
+// NullTime is used for null time commands
 type NullTime struct {
 	Time  time.Time
 	Valid bool // Valid is true if Time is not NULL

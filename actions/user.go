@@ -1,11 +1,11 @@
 package actions
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -46,8 +46,8 @@ func Login(ctx iris.Context) {
 		ctx.JSON(jsonError{"Champ manquant ou incorrect"})
 		return
 	}
-	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{}
-	if err := user.GetByEmail(*c.Email, db.DB()); err != nil {
+	db, user := ctx.Values().Get("db").(*sql.DB), models.User{}
+	if err := user.GetByEmail(*c.Email, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{err.Error()})
 		return
@@ -78,8 +78,8 @@ func Logout(ctx iris.Context) {
 // GetUsers handles the GET request for all users and send back only secure fields.
 func GetUsers(ctx iris.Context) {
 	var users models.Users
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := users.GetAll(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := users.GetAll(db); err != nil {
 		ctx.JSON(jsonMessage{"Liste des utilisateurs : " + err.Error()})
 		ctx.StatusCode(http.StatusInternalServerError)
 		return
@@ -102,9 +102,9 @@ func CreateUser(ctx iris.Context) {
 		ctx.JSON(jsonMessage{"Création d'utilisateur : Champ manquant ou incorrect"})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	user := models.User{Name: req.Name, Email: req.Email, Active: req.Active, Role: req.Role, Password: req.Password}
-	if err := user.Exists(db.DB()); err != nil {
+	if err := user.Exists(db); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Création d'utilisateur : " + err.Error()})
 		return
@@ -114,7 +114,7 @@ func CreateUser(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'utilisateur, cryptage : " + err.Error()})
 		return
 	}
-	if err := user.Create(db.DB()); err != nil {
+	if err := user.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'utilisateur, requête : " + err.Error()})
 		return
@@ -131,8 +131,8 @@ func UpdateUser(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification d'utilisateur, paramètre : " + err.Error()})
 		return
 	}
-	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{ID: userID}
-	if err = user.GetByID(db.DB()); err != nil {
+	db, user := ctx.Values().Get("db").(*sql.DB), models.User{ID: userID}
+	if err = user.GetByID(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'utilisateur, requête get : " + err.Error()})
 		return
@@ -166,7 +166,7 @@ func UpdateUser(ctx iris.Context) {
 			return
 		}
 	}
-	if err = user.Update(db.DB()); err != nil {
+	if err = user.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'utilisateur, requête : " + err.Error()})
 		return
@@ -183,9 +183,9 @@ func DeleteUser(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'utilisateur, paramètre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	user := models.User{ID: userID}
-	if err = user.Delete(db.DB()); err != nil {
+	if err = user.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'utilisateur, requête : " + err.Error()})
 		return
@@ -202,9 +202,9 @@ func SignUp(ctx iris.Context) {
 		ctx.JSON(jsonError{"Inscription d'utilisateur : Champ manquant ou incorrect"})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	user := models.User{Name: name, Email: email, Role: models.UserRole, Active: false, Password: password}
-	if err := user.Exists(db.DB()); err != nil {
+	if err := user.Exists(db); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Inscription d'utilisateur, exists : " + err.Error()})
 		return
@@ -214,7 +214,7 @@ func SignUp(ctx iris.Context) {
 		ctx.JSON(jsonError{"Inscription d'utilisateur, password : " + err.Error()})
 		return
 	}
-	if err := user.Create(db.DB()); err != nil {
+	if err := user.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Inscription d'utilisateur, requête : " + err.Error()})
 		return
@@ -232,8 +232,8 @@ func ChangeUserPwd(ctx iris.Context) {
 		return
 	}
 	userID := ctx.Values().Get("uID").(int)
-	db, user := ctx.Values().Get("db").(*gorm.DB), models.User{ID: userID}
-	if err := user.GetByID(db.DB()); err != nil {
+	db, user := ctx.Values().Get("db").(*sql.DB), models.User{ID: userID}
+	if err := user.GetByID(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Changement de mot de passe, get : " + err.Error()})
 		return
@@ -249,7 +249,7 @@ func ChangeUserPwd(ctx iris.Context) {
 		ctx.JSON(jsonError{"Changement de mot de passe, password : " + err.Error()})
 		return
 	}
-	if err := user.Update(db.DB()); err != nil {
+	if err := user.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Changement de mot de passe, requête : " + err.Error()})
 		return

@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -32,8 +32,8 @@ func (req caReq) Populate(ID int64, c *models.Category) {
 // GetCategories handles request get all categories.
 func GetCategories(ctx iris.Context) {
 	var resp models.Categories
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.GetAll(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des catégories, requête : " + err.Error()})
 		return
@@ -55,8 +55,8 @@ func CreateCategory(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'une catégorie : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Create(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'une catégorie, requête : " + err.Error()})
 		return
@@ -85,8 +85,8 @@ func ModifyCategory(ctx iris.Context) {
 		return
 	}
 	req.ID = caID
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = req.Update(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'une catégorie, requête : " + err.Error()})
 		return
@@ -103,8 +103,8 @@ func DeleteCategory(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'une catégorie, paramètre : " + err.Error()})
 		return
 	}
-	ca, db := models.Category{ID: caID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = ca.Delete(db.DB()); err != nil {
+	ca, db := models.Category{ID: caID}, ctx.Values().Get("db").(*sql.DB)
+	if err = ca.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'une catégorie, requête : " + err.Error()})
 		return

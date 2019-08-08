@@ -8,6 +8,8 @@ import (
 // OpWithPlanAndAction is used for the decoding the dedicated query.
 type OpWithPlanAndAction struct {
 	PhysicalOp
+	PlanID             NullInt64  `json:"plan_id"`
+	PlanName           NullString `json:"plan_name"`
 	PlanLineName       NullString `json:"plan_line_name"`
 	PlanLineValue      NullInt64  `json:"plan_line_value"`
 	PlanLineTotalValue NullInt64  `json:"plan_line_total_value"`
@@ -32,7 +34,8 @@ func (o *OpWithPlanAndActions) GetAll(uID int64, db *sql.DB) (err error) {
 		op.valuedate, op.length, op.tri, op.van, op.budget_action_id, op.payment_types_id, 
 		op.plan_line_id, op.step_id, op.category_id, pl.name as plan_line_name, 
 		pl.value as plan_line_value, pl.total_value as plan_line_total_value, 
-		ba.name as budget_action_name, s.name AS step_name, c.name AS category_name 
+		ba.name as budget_action_name, s.name AS step_name, c.name AS category_name,
+		p.id as plan_id, p.name as plan_name 
 		FROM ` + from + ` 
 		LEFT OUTER JOIN budget_action ba ON op.budget_action_id = ba.id
 		LEFT OUTER JOIN (SELECT pl.*, p.name AS plan_name FROM plan_line pl, plan p WHERE pl.plan_id = p.id) pl ON op.plan_line_id = pl.id
@@ -48,7 +51,8 @@ func (o *OpWithPlanAndActions) GetAll(uID int64, db *sql.DB) (err error) {
 		if err = rows.Scan(&r.ID, &r.Number, &r.Name, &r.Descript, &r.Isr, &r.Value,
 			&r.ValueDate, &r.Length, &r.TRI, &r.VAN, &r.BudgetActionID, &r.PaymentTypeID,
 			&r.PlanLineID, &r.StepID, &r.CategoryID, &r.PlanLineName, &r.PlanLineValue,
-			&r.PlanLineTotalValue, &r.BudgetActionName, &r.StepName, &r.CategoryName); err != nil {
+			&r.PlanLineTotalValue, &r.BudgetActionName, &r.StepName, &r.CategoryName,
+			&r.PlanID, &r.PlanName); err != nil {
 			return err
 		}
 		o.OpWithPlanAndActions = append(o.OpWithPlanAndActions, r)
@@ -66,7 +70,8 @@ func (op *OpWithPlanAndAction) Get(db *sql.DB) (err error) {
 	op.valuedate, op.length, op.tri, op.van, op.budget_action_id, op.payment_types_id, 
 	op.plan_line_id, op.step_id, op.category_id, pl.name as plan_line_name, 
 	pl.value as plan_line_value, pl.total_value as plan_line_total_value, 
-	ba.name as budget_action_name, s.name AS step_name, c.name AS category_name 
+	ba.name as budget_action_name, s.name AS step_name, c.name AS category_name,
+	p.id as plan_id, P.name as plan_name
 	FROM physical_op op 
 	LEFT OUTER JOIN budget_action ba ON op.budget_action_id = ba.id
 	LEFT OUTER JOIN (SELECT pl.*, p.name AS plan_name FROM plan_line pl, plan p WHERE pl.plan_id = p.id) pl ON op.plan_line_id = pl.id
@@ -76,6 +81,7 @@ func (op *OpWithPlanAndAction) Get(db *sql.DB) (err error) {
 		Scan(&op.ID, &op.Number, &op.Name, &op.Descript, &op.Isr, &op.Value,
 			&op.ValueDate, &op.Length, &op.TRI, &op.VAN, &op.BudgetActionID, &op.PaymentTypeID,
 			&op.PlanLineID, &op.StepID, &op.CategoryID, &op.PlanLineName, &op.PlanLineValue,
-			&op.PlanLineTotalValue, &op.BudgetActionName, &op.StepName, &op.CategoryName)
+			&op.PlanLineTotalValue, &op.BudgetActionName, &op.StepName, &op.CategoryName,
+			&op.PlanID, &op.PlanName)
 	return err
 }

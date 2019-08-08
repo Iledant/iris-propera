@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -23,13 +23,13 @@ func GetOpWithDptRatios(ctx iris.Context) {
 		return
 	}
 	var resp opsWithDptRatiosResp
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.OpWithDptRatios.GetAll(uID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.OpWithDptRatios.GetAll(uID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des opérations avec ratio, requête ratios :" + err.Error()})
 		return
 	}
-	if err = resp.ProgrammingsYears.GetAll(db.DB()); err != nil {
+	if err = resp.ProgrammingsYears.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des opérations avec ratio, requête years :" + err.Error()})
 		return
@@ -52,8 +52,8 @@ func BatchOpDptRatios(ctx iris.Context) {
 		ctx.JSON(jsonError{"Batch ratios départements, décodage : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = req.Save(uID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = req.Save(uID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch ratios départements, requête :" + err.Error()})
 		return
@@ -81,8 +81,8 @@ func GetFCPerDpt(ctx iris.Context) {
 		return
 	}
 	var resp models.FCPerDepartments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y0, y1, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y0, y1, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Engagements par départements, requête : " + err.Error()})
 	}
@@ -111,8 +111,8 @@ func GetDetailedFCPerDpt(ctx iris.Context) {
 		return
 	}
 	var resp models.DetailedFCPerDepartments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y0, y1, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y0, y1, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Engagements détaillés par départements, requête : " + err.Error()})
 		return
@@ -130,8 +130,8 @@ func GetDetailedPrgPerDpt(ctx iris.Context) {
 		return
 	}
 	var resp models.DetailedPrgPerDepartments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y, db); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Programmation par départements, select : " + err.Error()})
 		return

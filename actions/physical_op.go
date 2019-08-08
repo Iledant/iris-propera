@@ -1,11 +1,11 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -36,28 +36,28 @@ func GetPhysicalOps(ctx iris.Context) {
 		return
 	}
 	var resp OpsResp
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.OpWithPlanAndActions.GetAll(uID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.OpWithPlanAndActions.GetAll(uID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des opérations, requête ops : " + err.Error()})
 		return
 	}
-	if err = resp.PaymentTypes.GetAll(db.DB()); err != nil {
+	if err = resp.PaymentTypes.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des opérations, requête payment types : " + err.Error()})
 		return
 	}
-	if err = resp.Steps.GetAll(db.DB()); err != nil {
+	if err = resp.Steps.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des opérations, requête steps : " + err.Error()})
 		return
 	}
-	if err = resp.Categories.GetAll(db.DB()); err != nil {
+	if err = resp.Categories.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des opérations, requête categories : " + err.Error()})
 		return
 	}
-	if err = resp.FullCodeBudgetActions.GetAll(db.DB()); err != nil {
+	if err = resp.FullCodeBudgetActions.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des opérations, requête budget actions : " + err.Error()})
 		return
@@ -79,15 +79,15 @@ func CreatePhysicalOp(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'opération : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := op.Create(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := op.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'opération, requête : " + err.Error()})
 		return
 	}
 	var resp fullOpResp
 	resp.FullOp.ID = op.ID
-	if err := resp.FullOp.Get(db.DB()); err != nil {
+	if err := resp.FullOp.Get(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'opération, requête get : " + err.Error()})
 		return
@@ -104,9 +104,9 @@ func DeletePhysicalOp(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'opération, décodage : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	op := models.PhysicalOp{ID: opID}
-	if err = op.Delete(db.DB()); err != nil {
+	if err = op.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'opération, requête : " + err.Error()})
 		return
@@ -123,7 +123,7 @@ func UpdatePhysicalOp(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification d'opération, paramètre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var op models.PhysicalOp
 	if err := ctx.ReadJSON(&op); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -142,14 +142,14 @@ func UpdatePhysicalOp(ctx iris.Context) {
 		return
 	}
 	op.ID = opID
-	if err = op.Update(uID, db.DB()); err != nil {
+	if err = op.Update(uID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'opération, requête : " + err.Error()})
 		return
 	}
 	var resp fullOpResp
 	resp.FullOp.ID = op.ID
-	if err = resp.FullOp.Get(db.DB()); err != nil {
+	if err = resp.FullOp.Get(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'opération, requête get : " + err.Error()})
 		return
@@ -166,8 +166,8 @@ func BatchPhysicalOps(ctx iris.Context) {
 		ctx.JSON(jsonError{"Batch opération, décodage : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Save(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Save(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch opération, requête : " + err.Error()})
 		return
@@ -203,64 +203,64 @@ func GetOpPrevisions(ctx iris.Context) {
 	if err != nil {
 		year = int64(time.Now().Year())
 	}
-	op, db := models.PhysicalOp{ID: opID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = op.Exists(db.DB()); err != nil {
+	op, db := models.PhysicalOp{ID: opID}, ctx.Values().Get("db").(*sql.DB)
+	if err = op.Exists(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, check : " + err.Error()})
 		return
 	}
 	var resp getPrevisionsResp
-	if err = op.GetYearPrevCommitments(&resp.PrevCommitments, year, db.DB()); err != nil {
+	if err = op.GetYearPrevCommitments(&resp.PrevCommitments, year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête prévision engagements : " + err.Error()})
 		return
 	}
-	if err = op.GetYearPrevPayments(&resp.PrevPayments, year, db.DB()); err != nil {
+	if err = op.GetYearPrevPayments(&resp.PrevPayments, year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête prévision paiements : " + err.Error()})
 		return
 	}
-	if err = resp.OpCommitments.GetOpAll(opID, db.DB()); err != nil {
+	if err = resp.OpCommitments.GetOpAll(opID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête engagements : " + err.Error()})
 		return
 	}
-	if resp.OpPendings, err = op.GetOpPendings(year, db.DB()); err != nil {
+	if resp.OpPendings, err = op.GetOpPendings(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête pending : " + err.Error()})
 		return
 	}
-	if err = resp.OpPayments.GetOpAll(op.ID, db.DB()); err != nil {
+	if err = resp.OpPayments.GetOpAll(op.ID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête payment : " + err.Error()})
 		return
 	}
-	if resp.PaymentsPerBeneficiary.GetOpAll(opID, db.DB()); err != nil {
+	if resp.PaymentsPerBeneficiary.GetOpAll(opID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête payment par bénéficiaire : " + err.Error()})
 		return
 	}
-	if resp.FCsPerBeneficiary.GetOpAll(opID, db.DB()); err != nil {
+	if resp.FCsPerBeneficiary.GetOpAll(opID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête engagement par bénéficiaire : " + err.Error()})
 		return
 	}
-	if err = resp.ImportLogs.GetAll(db.DB()); err != nil {
+	if err = resp.ImportLogs.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête import logs : " + err.Error()})
 		return
 	}
-	if err = resp.Events.GetOpAll(opID, db.DB()); err != nil {
+	if err = resp.Events.GetOpAll(opID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête get événements : " + err.Error()})
 		return
 	}
-	if err = resp.Documents.GetOpAll(opID, db.DB()); err != nil {
+	if err = resp.Documents.GetOpAll(opID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête get documents : " + err.Error()})
 		return
 	}
-	if err = resp.PaymentTypes.GetAll(db.DB()); err != nil {
+	if err = resp.PaymentTypes.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision d'opération, requête get payment types : " + err.Error()})
 		return
@@ -289,19 +289,19 @@ func GetOpOnlyPrevisions(ctx iris.Context) {
 	if err != nil {
 		year = int64(time.Now().Year())
 	}
-	op, db := models.PhysicalOp{ID: opID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = op.Exists(db.DB()); err != nil {
+	op, db := models.PhysicalOp{ID: opID}, ctx.Values().Get("db").(*sql.DB)
+	if err = op.Exists(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision seule d'opération, check : " + err.Error()})
 		return
 	}
 	var resp getOnlyPrevisions
-	if err = op.GetYearPrevCommitments(&resp.PrevCommitments, year, db.DB()); err != nil {
+	if err = op.GetYearPrevCommitments(&resp.PrevCommitments, year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions seules d'opération, requête engagements : " + err.Error()})
 		return
 	}
-	if err = op.GetYearPrevPayments(&resp.PrevPayments, year, db.DB()); err != nil {
+	if err = op.GetYearPrevPayments(&resp.PrevPayments, year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions seules d'opération, requête paiements : " + err.Error()})
 		return
@@ -331,24 +331,24 @@ func SetOpPrevisions(ctx iris.Context) {
 		return
 	}
 	op := models.PhysicalOp{ID: opID}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = op.Exists(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = op.Exists(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation prévision d'opération, opération : " + err.Error()})
 		return
 	}
-	if err = op.SetPrevisions(&req, db.DB()); err != nil {
+	if err = op.SetPrevisions(&req, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation prévision d'opération, requête : " + err.Error()})
 		return
 	}
 	var resp setOpPrevResp
-	if err = op.GetPrevCommitments(&resp.PrevCommitments, db.DB()); err != nil {
+	if err = op.GetPrevCommitments(&resp.PrevCommitments, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation prévision d'opération, requête get prévision engagements : " + err.Error()})
 		return
 	}
-	if err = op.GetPrevPayments(&resp.PrevPayments, db.DB()); err != nil {
+	if err = op.GetPrevPayments(&resp.PrevPayments, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation prévision d'opération, requête get prévision paiements : " + err.Error()})
 		return
@@ -360,8 +360,8 @@ func SetOpPrevisions(ctx iris.Context) {
 // GetOpsAndFCs handle the get request to get all linked and unlinked operations and financial commitments
 func GetOpsAndFCs(ctx iris.Context) {
 	var resp models.OpAndCommitments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.GetAll(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liens opérations engagement, requête : " + err.Error()})
 		return

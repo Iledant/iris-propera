@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -21,9 +21,9 @@ func GetEvents(ctx iris.Context) {
 		ctx.JSON(jsonError{"Liste des événements, paramètre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.Events
-	if err = resp.GetOpAll(opID, db.DB()); err != nil {
+	if err = resp.GetOpAll(opID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des événements, requête : " + err.Error()})
 		return
@@ -52,8 +52,8 @@ func CreateEvent(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'un événement : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Create(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'un événement, requête : " + err.Error()})
 		return
@@ -89,8 +89,8 @@ func ModifyEvent(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification d'un événement : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = req.Update(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'un événement, requête : " + err.Error()})
 		return
@@ -107,8 +107,8 @@ func DeleteEvent(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'un événement, décodage : " + err.Error()})
 		return
 	}
-	ev, db := models.Event{ID: evID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = ev.Delete(db.DB()); err != nil {
+	ev, db := models.Event{ID: evID}, ctx.Values().Get("db").(*sql.DB)
+	if err = ev.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'un événement, requête : " + err.Error()})
 		return
@@ -125,9 +125,9 @@ func GetNextMonthEvent(ctx iris.Context) {
 		ctx.JSON(jsonError{"Événements du prochain mois, user : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.NextMonthEvents
-	if err = resp.Get(uID, db.DB()); err != nil {
+	if err = resp.Get(uID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Événements du prochain mois, requête : "})
 		return

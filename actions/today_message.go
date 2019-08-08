@@ -1,11 +1,11 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -18,8 +18,8 @@ type todayMsgResp struct {
 func GetTodayMessage(ctx iris.Context) {
 	var resp todayMsgResp
 	var err error
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.TodayMessage.Get(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.TodayMessage.Get(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Today message requête : " + err.Error()})
 		return
@@ -36,8 +36,8 @@ func SetTodayMessage(ctx iris.Context) {
 		ctx.JSON(jsonError{"Fixation today message, décodage : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Update(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation today message, update : " + err.Error()})
 		return
@@ -59,8 +59,8 @@ type homeResp struct {
 func GetHomeDatas(ctx iris.Context) {
 	var resp homeResp
 	var err error
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.TodayMessage.Get(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.TodayMessage.Get(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, today messages requête : " + err.Error()})
 		return
@@ -71,7 +71,7 @@ func GetHomeDatas(ctx iris.Context) {
 		ctx.JSON(jsonError{"Homedatas, user : " + err.Error()})
 		return
 	}
-	if err = resp.NextMonthEvents.Get(uID, db.DB()); err != nil {
+	if err = resp.NextMonthEvents.Get(uID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Homedatas, next month events : " + err.Error()})
 		return
@@ -80,23 +80,23 @@ func GetHomeDatas(ctx iris.Context) {
 	if err != nil || year == 0 {
 		year = time.Now().Year()
 	}
-	if err = resp.MonthCommitments.GetAll(year, db.DB()); err != nil {
+	if err = resp.MonthCommitments.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, MonthCommitments : " + err.Error()})
 		return
 	}
-	if err = resp.YearBudgetCredits.GetAll(year, db.DB()); err != nil {
+	if err = resp.YearBudgetCredits.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, YearBudgetCredits : " + err.Error()})
 		return
 	}
-	err = resp.ProgrammingsPerMonthes.GetAll(year, db.DB())
+	err = resp.ProgrammingsPerMonthes.GetAll(year, db)
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, ProgrammingsPerMonth : " + err.Error()})
 		return
 	}
-	err = resp.PaymentPerMonths.GetAll(year, db.DB())
+	err = resp.PaymentPerMonths.GetAll(year, db)
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, PaymentPerMonths : " + err.Error()})

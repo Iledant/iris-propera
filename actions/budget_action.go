@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -21,8 +21,8 @@ func GetProgramBudgetActions(ctx iris.Context) {
 		return
 	}
 	var resp models.BudgetActions
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAllPrgID(prgID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAllPrgID(prgID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Actions budgétaires d'un programme, requête : " + err.Error()})
 		return
@@ -36,8 +36,8 @@ func GetAllBudgetActions(ctx iris.Context) {
 	fullCode := ctx.URLParam("FullCodeAction")
 	if fullCode == "true" {
 		var resp models.FullCodeBudgetActions
-		db := ctx.Values().Get("db").(*gorm.DB)
-		if err := resp.GetAll(db.DB()); err != nil {
+		db := ctx.Values().Get("db").(*sql.DB)
+		if err := resp.GetAll(db); err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.JSON(jsonError{"Liste des actions budgétaires, requête : " + err.Error()})
 			return
@@ -46,8 +46,8 @@ func GetAllBudgetActions(ctx iris.Context) {
 		ctx.JSON(resp)
 	} else {
 		var resp models.BudgetActions
-		db := ctx.Values().Get("db").(*gorm.DB)
-		if err := resp.GetAll(db.DB()); err != nil {
+		db := ctx.Values().Get("db").(*sql.DB)
+		if err := resp.GetAll(db); err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.JSON(jsonError{"Liste des actions budgétaires, requête : " + err.Error()})
 			return
@@ -76,9 +76,9 @@ func CreateBudgetAction(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'action budgétaire : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	req.ProgramID = prgID
-	if err = req.Create(db.DB()); err != nil {
+	if err = req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'action budgétaire, requête : " + err.Error()})
 		return
@@ -95,8 +95,8 @@ func BatchBudgetActions(ctx iris.Context) {
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := baa.Save(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := baa.Save(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch budget action, requête : " + err.Error()})
 		return
@@ -119,7 +119,7 @@ func ModifyBudgetAction(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification d'action budgétaire, paramètre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var req models.BudgetAction
 	if err = ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -133,7 +133,7 @@ func ModifyBudgetAction(ctx iris.Context) {
 	}
 	req.ID = baID
 	req.ProgramID = prgID
-	if err = req.Update(db.DB()); err != nil {
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'action budgétaire, update : " + err.Error()})
 		return
@@ -150,8 +150,8 @@ func DeleteBudgetAction(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'action budgétaire, paramètre : " + err.Error()})
 		return
 	}
-	ba, db := models.BudgetAction{ID: baID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = ba.Delete(db.DB()); err != nil {
+	ba, db := models.BudgetAction{ID: baID}, ctx.Values().Get("db").(*sql.DB)
+	if err = ba.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'action budgétaire, delete : " + err.Error()})
 		return

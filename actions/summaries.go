@@ -1,11 +1,11 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -16,8 +16,8 @@ func GetMultiannualProg(ctx iris.Context) {
 	if err != nil {
 		y1 = int64(time.Now().Year())
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y1, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y1, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Programmation pluriannuelle, requête : " + err.Error()})
 	}
@@ -39,13 +39,13 @@ func GetAnnualProgrammation(ctx iris.Context) {
 		year = time.Now().Year()
 	}
 	var resp annualProgResp
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.AnnualProgrammation.GetAll(year, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.AnnualProgrammation.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Programmation annuelle, requête : " + err.Error()})
 		return
 	}
-	if err = resp.ImportLogs.GetAll(db.DB()); err != nil {
+	if err = resp.ImportLogs.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Programmation annuelle, import logs : " + err.Error()})
 		return
@@ -61,9 +61,9 @@ func GetProgrammingAndPrevisions(ctx iris.Context) {
 	if err != nil {
 		year = int64(time.Now().Year())
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.ProgrammingAndPrevisions
-	if err = resp.GetAll(year, db.DB()); err != nil {
+	if err = resp.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions et programmation, requête : " + err.Error()})
 		return
@@ -78,9 +78,9 @@ func GetActionProgrammation(ctx iris.Context) {
 	if err != nil {
 		year = int64(time.Now().Year())
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.ActionProgrammations
-	if err = resp.GetAll(year, db.DB()); err != nil {
+	if err = resp.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Programmation par action, requête : " + err.Error()})
 		return
@@ -96,8 +96,8 @@ func GetActionCommitment(ctx iris.Context) {
 		y1 = int64(time.Now().Year()) + 1
 	}
 	var resp models.ActionCommitments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y1, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y1, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions AP par actions budgétaires, requête : " + err.Error()})
 	}
@@ -113,8 +113,8 @@ func GetDetailedActionCommitment(ctx iris.Context) {
 		y1 = int64(time.Now().Year()) + 1
 	}
 	var resp models.DetailedActionCommitments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y1, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y1, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions AP détaillées par actions budgétaires, requête : " + err.Error()})
 		return
@@ -138,8 +138,8 @@ func GetDetailedActionPayment(ctx iris.Context) {
 		return
 	}
 	var resp models.DetailedActionPayments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y1, dID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y1, dID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Paiement détaillé par action, requête : " + err.Error()})
 		return
@@ -162,8 +162,8 @@ func GetStatDetailedActionPayment(ctx iris.Context) {
 		return
 	}
 	var resp models.StatDetailedActionPayments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y1, dID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y1, dID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Paiement détaillé par action, requête : " + err.Error()})
 		return
@@ -185,8 +185,8 @@ func GetActionPayment(ctx iris.Context) {
 		return
 	}
 	var resp models.ActionPayments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y1, dID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y1, dID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Paiement par action, requête : " + err.Error()})
 		return
@@ -208,8 +208,8 @@ func GetStatActionPayment(ctx iris.Context) {
 		return
 	}
 	var resp models.ActionPayments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetStatAll(y1, dID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetStatAll(y1, dID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Paiement statistique par action, requête : " + err.Error()})
 		return
@@ -231,8 +231,8 @@ func GetStatCurrentYearPayment(ctx iris.Context) {
 		return
 	}
 	var resp models.CurrentYearPrevPayments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(y, dID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(y, dID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévision annuelle statistique, requête : " + err.Error()})
 		return

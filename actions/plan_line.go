@@ -1,12 +1,12 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/kataras/iris"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 )
 
 // TODO : refactor model
@@ -24,7 +24,7 @@ type PlanLinesResp struct {
 
 // GetPlanLines handles the get request to have all plan lines of a plan.
 func GetPlanLines(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	planID, err := ctx.Params().GetInt64("pID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -32,18 +32,18 @@ func GetPlanLines(ctx iris.Context) {
 		return
 	}
 	plan := models.Plan{ID: planID}
-	if err = plan.GetByID(db.DB()); err != nil {
+	if err = plan.GetByID(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Listes des lignes de plan, requête plan : " + err.Error()})
 		return
 	}
 	var resp PlanLinesResp
-	if err = resp.PlanLineAndPrevisions.GetAll(&plan, 0, db.DB()); err != nil {
+	if err = resp.PlanLineAndPrevisions.GetAll(&plan, 0, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des lignes de plan, requête de calcul : " + err.Error()})
 		return
 	}
-	if err = resp.Beneficiaries.GetPlanAll(planID, db.DB()); err != nil {
+	if err = resp.Beneficiaries.GetPlanAll(planID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des lignes de plan, récupération des bénéficiaires : " + err.Error()})
 		return
@@ -54,7 +54,7 @@ func GetPlanLines(ctx iris.Context) {
 
 // GetDetailedPlanLines handles the get request to have all operation prevision by lines.
 func GetDetailedPlanLines(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	planID, err := ctx.Params().GetInt64("pID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -62,13 +62,13 @@ func GetDetailedPlanLines(ctx iris.Context) {
 		return
 	}
 	plan := models.Plan{ID: planID}
-	if err = plan.GetByID(db.DB()); err != nil {
+	if err = plan.GetByID(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste détaillée des lignes de plan, requête plan : " + err.Error()})
 		return
 	}
 	var resp models.DetailedPlanLineAndPrevisions
-	if err = resp.GetAll(&plan, db.DB()); err != nil {
+	if err = resp.GetAll(&plan, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste détaillée des lignes de plan, requête : " + err.Error()})
 		return
@@ -88,7 +88,7 @@ type planLineReq struct {
 
 // CreatePlanLine handles the post request to create a plan line
 func CreatePlanLine(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	planID, err := ctx.Params().GetInt64("pID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -96,7 +96,7 @@ func CreatePlanLine(ctx iris.Context) {
 		return
 	}
 	plan := models.Plan{ID: planID}
-	if err = plan.GetByID(db.DB()); err != nil {
+	if err = plan.GetByID(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création de ligne de plan, requête plan : " + err.Error()})
 		return
@@ -130,13 +130,13 @@ func CreatePlanLine(ctx iris.Context) {
 	} else {
 		planLine.Descript.Valid = false
 	}
-	if err = planLine.Create(&req.PlanLineRatios, db.DB()); err != nil {
+	if err = planLine.Create(&req.PlanLineRatios, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création de ligne de plan, requête : " + err.Error()})
 		return
 	}
 	var pl models.PlanLineAndPrevisions
-	if err = pl.GetAll(&plan, planLine.ID, db.DB()); err != nil {
+	if err = pl.GetAll(&plan, planLine.ID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création de ligne de plan, requête get : " + err.Error()})
 		return
@@ -147,7 +147,7 @@ func CreatePlanLine(ctx iris.Context) {
 
 // ModifyPlanLine handle the put request to modify a plan line.
 func ModifyPlanLine(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	planID, err := ctx.Params().GetInt64("pID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -155,7 +155,7 @@ func ModifyPlanLine(ctx iris.Context) {
 		return
 	}
 	plan := models.Plan{ID: planID}
-	if err = plan.GetByID(db.DB()); err != nil {
+	if err = plan.GetByID(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification de ligne de plan, requête plan : " + err.Error()})
 		return
@@ -167,7 +167,7 @@ func ModifyPlanLine(ctx iris.Context) {
 		return
 	}
 	planLine := models.PlanLine{ID: plID}
-	if err = planLine.GetByID(db.DB()); err != nil {
+	if err = planLine.GetByID(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification de ligne de plan, requête getByID : " + err.Error()})
 		return
@@ -192,13 +192,13 @@ func ModifyPlanLine(ctx iris.Context) {
 		planLine.Descript.String = *req.Descript
 		planLine.TotalValue.Valid = true
 	}
-	if err = planLine.Update(&req.PlanLineRatios, db.DB()); err != nil {
+	if err = planLine.Update(&req.PlanLineRatios, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification de ligne de plan, requête : " + err.Error()})
 		return
 	}
 	var pl models.PlanLineAndPrevisions
-	if err = pl.GetAll(&plan, planLine.ID, db.DB()); err != nil {
+	if err = pl.GetAll(&plan, planLine.ID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création de ligne de plan, requête get : " + err.Error()})
 		return
@@ -209,7 +209,7 @@ func ModifyPlanLine(ctx iris.Context) {
 
 // DeletePlanLine handle the delete request to remove a plan line.
 func DeletePlanLine(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	plID, err := ctx.Params().GetInt64("plID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -217,7 +217,7 @@ func DeletePlanLine(ctx iris.Context) {
 		return
 	}
 	planLine := models.PlanLine{ID: plID}
-	if err = planLine.Delete(db.DB()); err != nil {
+	if err = planLine.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression de ligne de plan, requête : " + err.Error()})
 		return
@@ -241,8 +241,8 @@ func BatchPlanLines(ctx iris.Context) {
 		ctx.JSON(jsonError{"Batch lignes de plan, décodage : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = req.Save(pID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = req.Save(pID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch lignes de plan, requête : " + err.Error()})
 		return

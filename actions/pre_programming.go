@@ -1,9 +1,8 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
-
-	"github.com/jinzhu/gorm"
 
 	"github.com/Iledant/iris_propera/models"
 	"github.com/kataras/iris"
@@ -25,8 +24,8 @@ func GetPreProgrammings(ctx iris.Context) {
 		return
 	}
 	var resp models.FullPreProgrammings
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetAll(uID, year, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(uID, year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste de la préprogrammation, requête : " + err.Error()})
 		return
@@ -50,14 +49,14 @@ func BatchPreProgrammings(ctx iris.Context) {
 		ctx.JSON(jsonError{"Batch préprogrammation, user : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = req.Save(userID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = req.Save(userID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch préprogrammation, requête : " + err.Error()})
 		return
 	}
 	var resp models.FullPreProgrammings
-	if err = resp.GetAll(userID, req.Year, db.DB()); err != nil {
+	if err = resp.GetAll(userID, req.Year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch préprogrammation, requête get : " + err.Error()})
 		return

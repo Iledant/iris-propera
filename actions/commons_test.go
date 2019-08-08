@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"github.com/Iledant/iris_propera/config"
 	"github.com/Iledant/iris_propera/models"
 	"github.com/iris-contrib/httpexpect"
-	"github.com/jinzhu/gorm"
 
 	"github.com/kataras/iris"
 	"github.com/kataras/iris/httptest"
@@ -31,7 +31,7 @@ type testCase struct {
 
 // TestContext contains all items for units tests in API.
 type TestContext struct {
-	DB     *gorm.DB
+	DB     *sql.DB
 	App    *iris.Application
 	E      *httpexpect.Expect
 	Admin  *LoginResponse
@@ -97,7 +97,7 @@ func testCommons(t *testing.T) {
 		app := iris.New().Configure(iris.WithConfiguration(iris.Configuration{DisablePathCorrection: true}))
 		var cfg config.ProperaConf
 		if _, err := cfg.Get(app); err != nil {
-			t.Error("Configuration : " + err.Error())
+			t.Errorf("Configuration : %v\n", err)
 			t.FailNow()
 		}
 
@@ -105,7 +105,7 @@ func testCommons(t *testing.T) {
 
 		db, err := config.LaunchDB(&cfg.Databases.Test)
 		if err != nil {
-			t.Errorf("Erreur de connexion à postgres : %v\n", err.Error())
+			t.Errorf("Erreur de connexion à postgres : %v\n", err)
 			t.FailNow()
 		}
 

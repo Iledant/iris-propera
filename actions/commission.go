@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -16,8 +16,8 @@ type coResp struct {
 // GetCommissions handles request get all commissions.
 func GetCommissions(ctx iris.Context) {
 	var resp models.Commissions
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.GetAll(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des commissions, requête : " + err.Error()})
 		return
@@ -39,8 +39,8 @@ func CreateCommission(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'une commission : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Create(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'une commission, requête : " + err.Error()})
 		return
@@ -68,9 +68,9 @@ func ModifyCommission(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification d'une commission : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	req.ID = coID
-	if err = req.Update(db.DB()); err != nil {
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'une commission, requête : " + err.Error()})
 		return
@@ -87,8 +87,8 @@ func DeleteCommission(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'une commission, paramètre : " + err.Error()})
 		return
 	}
-	co, db := models.Commission{ID: coID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = co.Delete(db.DB()); err != nil {
+	co, db := models.Commission{ID: coID}, ctx.Values().Get("db").(*sql.DB)
+	if err = co.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'une commission, requête : " + err.Error()})
 		return

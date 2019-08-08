@@ -1,18 +1,18 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
 // GetPaymentTypes handles request get all payments types (chronicles names).
 func GetPaymentTypes(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.PaymentTypes
-	if err := resp.GetAll(db.DB()); err != nil {
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des chroniques de paiement, requête : " + err.Error()})
 		return
@@ -39,8 +39,8 @@ func CreatePaymentType(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'une chronique de paiement : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Create(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'une chronique de paiement : " + err.Error()})
 		return
@@ -68,9 +68,9 @@ func ModifyPaymentType(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification d'une chronique de paiement : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	req.ID = ptID
-	if err = req.Update(db.DB()); err != nil {
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'une chronique de paiement, requête : " + err.Error()})
 		return
@@ -87,8 +87,8 @@ func DeletePaymentType(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'une chronique de paiement, paramètre : " + err.Error()})
 		return
 	}
-	pt, db := models.PaymentType{ID: ptID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = pt.Delete(db.DB()); err != nil {
+	pt, db := models.PaymentType{ID: ptID}, ctx.Values().Get("db").(*sql.DB)
+	if err = pt.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'une chronique de paiement, requête : " + err.Error()})
 		return

@@ -1,18 +1,18 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
 // GetBudgetChapters handles request get all budget chapters.
 func GetBudgetChapters(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.BudgetChapters
-	if err := resp.GetAll(db.DB()); err != nil {
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des chapitres budgétaires, requête: " + err.Error()})
 		return
@@ -43,8 +43,8 @@ func CreateBudgetChapter(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création de chapitre budgétaire : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Create(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création de chapitre budgétaire, requête : " + err.Error()})
 		return
@@ -72,9 +72,9 @@ func ModifyBudgetChapter(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification d'un chapitre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	req.ID = bcID
-	if err = req.Update(db.DB()); err != nil {
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'un chapitre, requête : " + err.Error()})
 		return
@@ -91,9 +91,9 @@ func DeleteBudgetChapter(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'un chapitre, paramètre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	b := models.BudgetChapter{ID: bcID}
-	if err = b.Delete(db.DB()); err != nil {
+	if err = b.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'un chapitre, requête : " + err.Error()})
 		return

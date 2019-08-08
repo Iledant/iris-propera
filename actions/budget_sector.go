@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -16,8 +16,8 @@ type bsResp struct {
 // GetBudgetSectors handles request get all budget sectors.
 func GetBudgetSectors(ctx iris.Context) {
 	var resp models.BudgetSectors
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.GetAll(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des secteurs budgétaire, requête : " + err.Error()})
 		return
@@ -39,8 +39,8 @@ func CreateBudgetSector(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'un secteur budgétaire : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Create(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'un secteur budgétaire, requête : " + err.Error()})
 		return
@@ -68,9 +68,9 @@ func ModifyBudgetSector(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification d'un secteur budgétaire " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	req.ID = bsID
-	if err = req.Update(db.DB()); err != nil {
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'un secteur budgétaire, requête : " + err.Error()})
 		return
@@ -87,8 +87,8 @@ func DeleteBudgetSector(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression d'un secteur budgétaire, paramètre : " + err.Error()})
 		return
 	}
-	bs, db := models.BudgetSector{ID: bsID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = bs.Delete(db.DB()); err != nil {
+	bs, db := models.BudgetSector{ID: bsID}, ctx.Values().Get("db").(*sql.DB)
+	if err = bs.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusNotFound)
 		ctx.JSON(jsonError{"Suppression d'un secteur budgétaire, requête : " + err.Error()})
 		return

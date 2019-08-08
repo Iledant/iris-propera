@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -29,73 +29,73 @@ type settingsResp struct {
 // GetSettings handle the get settings request that embeddes many arrays in juste one call
 // to reduce the load time of the settings frontend page.
 func getSettings(ctx iris.Context) {
-	resp, db := settingsResp{}, ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.Beneficiaries.GetAll(db.DB()); err != nil {
+	resp, db := settingsResp{}, ctx.Values().Get("db").(*sql.DB)
+	if err := resp.Beneficiaries.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings beneficiary : " + err.Error()})
 		return
 	}
-	if err := resp.BudgetChapters.GetAll(db.DB()); err != nil {
+	if err := resp.BudgetChapters.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings chapter : " + err.Error()})
 		return
 	}
-	if err := resp.BudgetSectors.GetAll(db.DB()); err != nil {
+	if err := resp.BudgetSectors.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings sector : " + err.Error()})
 		return
 	}
-	if err := resp.BudgetPrograms.GetAll(db.DB()); err != nil {
+	if err := resp.BudgetPrograms.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings program : " + err.Error()})
 		return
 	}
-	if err := resp.BudgetActions.GetAll(db.DB()); err != nil {
+	if err := resp.BudgetActions.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings action : " + err.Error()})
 		return
 	}
-	if err := resp.Commissions.GetAll(db.DB()); err != nil {
+	if err := resp.Commissions.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings commission : " + err.Error()})
 		return
 	}
-	if err := resp.PhysicalOps.GetAll(db.DB()); err != nil {
+	if err := resp.PhysicalOps.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings physical operation : " + err.Error()})
 		return
 	}
-	if err := resp.PaymentTypes.GetAll(db.DB()); err != nil {
+	if err := resp.PaymentTypes.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings payment type : " + err.Error()})
 		return
 	}
-	if err := resp.Plans.GetAll(db.DB()); err != nil {
+	if err := resp.Plans.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings plan : " + err.Error()})
 		return
 	}
-	if err := resp.CompleteBudgetCredits.GetAll(db.DB()); err != nil {
+	if err := resp.CompleteBudgetCredits.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings budget credit : " + err.Error()})
 		return
 	}
-	if err := resp.UnlinkedPendingCommitments.GetAll(db.DB()); err != nil {
+	if err := resp.UnlinkedPendingCommitments.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings unlinked pendings : " + err.Error()})
 		return
 	}
-	if err := resp.CompletePendingCommitments.GetAll(db.DB()); err != nil {
+	if err := resp.CompletePendingCommitments.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings linked pendings : " + err.Error()})
 		return
 	}
-	if err := resp.Steps.GetAll(db.DB()); err != nil {
+	if err := resp.Steps.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings step : " + err.Error()})
 		return
 	}
-	if err := resp.Categories.GetAll(db.DB()); err != nil {
+	if err := resp.Categories.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Settings category : " + err.Error()})
 		return
@@ -115,23 +115,23 @@ type budgetTablesResp struct {
 // getBudgetTables handles the get request to fetch all budget tables
 func getBudgetTables(ctx iris.Context) {
 	var resp budgetTablesResp
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.BudgetChapters.GetAll(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.BudgetChapters.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"BudgetTables chapter : " + err.Error()})
 		return
 	}
-	if err := resp.BudgetSectors.GetAll(db.DB()); err != nil {
+	if err := resp.BudgetSectors.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"BudgetTables sector : " + err.Error()})
 		return
 	}
-	if err := resp.BudgetPrograms.GetAll(db.DB()); err != nil {
+	if err := resp.BudgetPrograms.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"BudgetTables program : " + err.Error()})
 		return
 	}
-	if err := resp.BudgetActions.GetAll(db.DB()); err != nil {
+	if err := resp.BudgetActions.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"BudgetTables action : " + err.Error()})
 		return

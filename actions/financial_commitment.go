@@ -1,12 +1,12 @@
 package actions
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 	"time"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -45,8 +45,8 @@ func GetUnlinkedFcs(ctx iris.Context) {
 		return
 	}
 	var resp models.PaginatedUnlinkedItems
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetUnlinked(pattern, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetUnlinked(pattern, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Engagements non liés, requête : " + err.Error()})
 		return
@@ -61,9 +61,9 @@ func GetMonthFC(ctx iris.Context) {
 	if err != nil || year == 0 {
 		year = time.Now().Year()
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.MonthCommitments
-	if err = resp.GetAll(year, db.DB()); err != nil {
+	if err = resp.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Engagements par mois, requête : " + err.Error()})
 		return
@@ -86,15 +86,15 @@ func LinkFcToOp(ctx iris.Context) {
 		ctx.JSON(jsonError{"Rattachement engagements / opération, décodage : " + err.Error()})
 		return
 	}
-	op, db := models.PhysicalOp{ID: opID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = op.LinkFinancialCommitments(fcIDs.IDs, db.DB()); err != nil {
+	op, db := models.PhysicalOp{ID: opID}, ctx.Values().Get("db").(*sql.DB)
+	if err = op.LinkFinancialCommitments(fcIDs.IDs, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Rattachement engagements / opération, requête : " + err.Error()})
 		return
 	}
 	pattern := models.FCSearchPattern{LinkType: "PhysicalOp", SearchText: "%", Page: 1}
 	var resp models.PaginatedUnlinkedItems
-	if err = resp.GetUnlinked(pattern, db.DB()); err != nil {
+	if err = resp.GetUnlinked(pattern, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Rattachement engagements / opération, requête get : " + err.Error()})
 		return
@@ -117,15 +117,15 @@ func LinkFcToPl(ctx iris.Context) {
 		ctx.JSON(jsonError{"Rattachement engagements / ligne de plan, décodage : " + err.Error()})
 		return
 	}
-	pl, db := models.PlanLine{ID: plID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = pl.LinkFCs(fcIDs.IDs, db.DB()); err != nil {
+	pl, db := models.PlanLine{ID: plID}, ctx.Values().Get("db").(*sql.DB)
+	if err = pl.LinkFCs(fcIDs.IDs, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Rattachement engagements / ligne de plan, requête : " + err.Error()})
 		return
 	}
 	pattern := models.FCSearchPattern{LinkType: "PlanLine", SearchText: "%", Page: 1}
 	var resp models.PaginatedUnlinkedItems
-	if err = resp.GetUnlinked(pattern, db.DB()); err != nil {
+	if err = resp.GetUnlinked(pattern, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Rattachement engagements / ligne de plan, requête get : " + err.Error()})
 		return
@@ -142,10 +142,10 @@ func GetLinkedFcs(ctx iris.Context) {
 		ctx.JSON(jsonError{"Engagements non liés : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	if pattern.LinkType == "PhysicalOp" {
 		var resp models.PaginatedOpLinkedItems
-		if err = resp.GetLinked(pattern, db.DB()); err != nil {
+		if err = resp.GetLinked(pattern, db); err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.JSON(jsonError{"Engagement non liés à opération, requête : " + err.Error()})
 			return
@@ -154,7 +154,7 @@ func GetLinkedFcs(ctx iris.Context) {
 		ctx.JSON(resp)
 	} else {
 		var resp models.PaginatedPlanLineLinkedItems
-		if err = resp.GetLinked(pattern, db.DB()); err != nil {
+		if err = resp.GetLinked(pattern, db); err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.JSON(jsonError{"Engagement non liés à opération, requête : " + err.Error()})
 			return
@@ -173,8 +173,8 @@ func GetOpFcs(ctx iris.Context) {
 		return
 	}
 	var resp models.FinancialCommitments
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = resp.GetOpAll(opID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetOpAll(opID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Engagement d'une opération, requête : " + err.Error()})
 		return
@@ -192,14 +192,14 @@ type unlinkFcsReq struct {
 
 // UnlinkFcs handles the requests to unset link between a financial commitment and a physical operation or plan line.
 func UnlinkFcs(ctx iris.Context) {
-	req, db := unlinkFcsReq{}, ctx.Values().Get("db").(*gorm.DB)
+	req, db := unlinkFcsReq{}, ctx.Values().Get("db").(*sql.DB)
 	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Détachement d'engagements, décodage : " + err.Error()})
 		return
 	}
 	var f models.FinancialCommitment
-	if err := f.Unlink(req.LinkType, req.reqFcIDs.IDs, db.DB()); err != nil {
+	if err := f.Unlink(req.LinkType, req.reqFcIDs.IDs, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Détachement d'engagements, requête : " + err.Error()})
 		return
@@ -211,7 +211,7 @@ func UnlinkFcs(ctx iris.Context) {
 		Page:       1}
 	if pattern.LinkType == "PhysicalOp" {
 		var resp models.PaginatedOpLinkedItems
-		if err := resp.GetLinked(pattern, db.DB()); err != nil {
+		if err := resp.GetLinked(pattern, db); err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.JSON(jsonError{"Détachement d'engagements, requête get : " + err.Error()})
 			return
@@ -220,7 +220,7 @@ func UnlinkFcs(ctx iris.Context) {
 		ctx.JSON(resp)
 	} else {
 		var resp models.PaginatedPlanLineLinkedItems
-		if err := resp.GetLinked(pattern, db.DB()); err != nil {
+		if err := resp.GetLinked(pattern, db); err != nil {
 			ctx.StatusCode(http.StatusInternalServerError)
 			ctx.JSON(jsonError{"Détachement d'engagements, requête get : " + err.Error()})
 			return
@@ -232,13 +232,13 @@ func UnlinkFcs(ctx iris.Context) {
 
 // BatchFcs handles the post request with an array of financial commitments (IRIS import).
 func BatchFcs(ctx iris.Context) {
-	db, req := ctx.Values().Get("db").(*gorm.DB), models.FinancialCommitmentsBatch{}
+	db, req := ctx.Values().Get("db").(*sql.DB), models.FinancialCommitmentsBatch{}
 	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch engagements, décodage : " + err.Error()})
 		return
 	}
-	if err := req.Save(db.DB()); err != nil {
+	if err := req.Save(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch engagements, requête : " + err.Error()})
 		return
@@ -249,13 +249,13 @@ func BatchFcs(ctx iris.Context) {
 
 // BatchOpFcs handle the post request to link of an array of physical operations with financial commitments.
 func BatchOpFcs(ctx iris.Context) {
-	db, opFcs := ctx.Values().Get("db").(*gorm.DB), models.OpFCsBatch{}
+	db, opFcs := ctx.Values().Get("db").(*sql.DB), models.OpFCsBatch{}
 	if err := ctx.ReadJSON(&opFcs); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch opérations / engagements, décodage : " + err.Error()})
 		return
 	}
-	if err := opFcs.Save(db.DB()); err != nil {
+	if err := opFcs.Save(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch opérations / engagements, requête : " + err.Error()})
 		return

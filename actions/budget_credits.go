@@ -1,11 +1,11 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 	"time"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -25,9 +25,9 @@ type brResp struct {
 
 // GetBudgetCredits handles request get all budget credits.
 func GetBudgetCredits(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.CompleteBudgetCredits
-	if err := resp.GetAll(db.DB()); err != nil {
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des crédits budgétaire, requête : " + err.Error()})
 		return
@@ -38,10 +38,10 @@ func GetBudgetCredits(ctx iris.Context) {
 
 // GetLastBudgetCredits handles request for getting the most recent budget credits of current year.
 func GetLastBudgetCredits(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	year := int64(time.Now().Year())
 	var resp models.BudgetCredits
-	if err := resp.GetLatest(year, db.DB()); err != nil {
+	if err := resp.GetLatest(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Crédits budgétaires les plus récents, requête : " + err.Error()})
 		return
@@ -63,8 +63,8 @@ func CreateBudgetCredit(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création de crédits : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Create(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création de crédits, requête : " + err.Error()})
 		return
@@ -93,8 +93,8 @@ func ModifyBudgetCredit(ctx iris.Context) {
 		return
 	}
 	req.ID = brID
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = req.Update(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification de crédits, requête : " + err.Error()})
 		return
@@ -112,8 +112,8 @@ func DeleteBudgetCredit(ctx iris.Context) {
 		return
 	}
 	req := models.BudgetCredit{ID: brID}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Delete(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression de crédits, requête : " + err.Error()})
 		return
@@ -135,8 +135,8 @@ func BatchBudgetCredits(ctx iris.Context) {
 		ctx.JSON(jsonError{"Erreur de lecture du batch crédits : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Save(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Save(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch crédits, requête : " + err.Error()})
 		return

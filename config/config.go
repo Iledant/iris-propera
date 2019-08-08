@@ -1,15 +1,16 @@
 package config
 
 import (
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/kataras/iris"
 
-	"github.com/jinzhu/gorm"
-	// Only place where the postgres is initialize to avoid duplication in tests
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	// Imported in config to avoid double import
+	_ "github.com/lib/pq"
+
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -126,7 +127,8 @@ func (p *ProperaConf) Get(app *iris.Application) (logFile *os.File, err error) {
 }
 
 // LaunchDB launch the DB with DBConf parameters
-func LaunchDB(cfg *DBConf) (*gorm.DB, error) {
-	return gorm.Open("postgres", "sslmode=disable host="+cfg.Host+" port="+cfg.Port+
-		" user="+cfg.UserName+" dbname="+cfg.Name+" password= "+cfg.Password)
+func LaunchDB(cfg *DBConf) (*sql.DB, error) {
+	cfgStr := fmt.Sprintf("sslmode=disable host=%s port=%s user=%s dbname=%s password=%s",
+		cfg.Host, cfg.Port, cfg.UserName, cfg.Name, cfg.Password)
+	return sql.Open("postgres", cfgStr)
 }

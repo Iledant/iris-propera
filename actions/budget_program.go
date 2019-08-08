@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -21,9 +21,9 @@ func GetChapterBudgetPrograms(ctx iris.Context) {
 		ctx.JSON(jsonError{"Programmes d'un chapitre, paramètre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.BudgetPrograms
-	if err = resp.GetAllChapterLinked(chpID, db.DB()); err != nil {
+	if err = resp.GetAllChapterLinked(chpID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Programmes d'un chapitre, requête : " + err.Error()})
 		return
@@ -35,8 +35,8 @@ func GetChapterBudgetPrograms(ctx iris.Context) {
 // GetAllBudgetPrograms handles request get all budget programs.
 func GetAllBudgetPrograms(ctx iris.Context) {
 	var resp models.BudgetPrograms
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.GetAll(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des programmes budgétaires, requête : " + err.Error()})
 		return
@@ -64,9 +64,9 @@ func CreateBudgetProgram(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'un programme : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	req.ChapterID = chpID
-	if err = req.Create(db.DB()); err != nil {
+	if err = req.Create(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Création d'un programme, requête : " + err.Error()})
 		return
@@ -89,7 +89,7 @@ func ModifyBudgetProgram(ctx iris.Context) {
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var req models.BudgetProgram
 	if err = ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -103,7 +103,7 @@ func ModifyBudgetProgram(ctx iris.Context) {
 	}
 	req.ID = bpID
 	req.ChapterID = chpID
-	if err = req.Update(db.DB()); err != nil {
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification d'un programme, requête : " + err.Error()})
 		return
@@ -120,8 +120,8 @@ func DeleteBudgetProgram(ctx iris.Context) {
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
-	bp, db := models.BudgetProgram{ID: bpID}, ctx.Values().Get("db").(*gorm.DB)
-	if err = bp.Delete(db.DB()); err != nil {
+	bp, db := models.BudgetProgram{ID: bpID}, ctx.Values().Get("db").(*sql.DB)
+	if err = bp.Delete(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression d'un programme, requête : " + err.Error()})
 		return
@@ -138,8 +138,8 @@ func BatchBudgetProgram(ctx iris.Context) {
 		ctx.JSON(jsonError{"Batch de programmes budgétaires, décodage : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := req.Save(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := req.Save(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch de programmes budgétaires, requête : " + err.Error()})
 		return

@@ -1,10 +1,10 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
@@ -29,14 +29,14 @@ func SetRight(ctx iris.Context) {
 		ctx.JSON(jsonError{"Fixation des droits, décodage : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = rights.UserSet(userID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = rights.UserSet(userID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation des droits, requête : " + err.Error()})
 		return
 	}
 	var updatedRights models.OpRights
-	if err = updatedRights.UserGet(userID, db.DB()); err != nil {
+	if err = updatedRights.UserGet(userID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Fixation des droits, requête get : " + err.Error()})
 		return
@@ -53,19 +53,19 @@ func GetRight(ctx iris.Context) {
 		ctx.JSON(jsonError{"Droits d'un utilisateur, paramètre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp getRightResp
-	if err = resp.OpRights.UserGet(userID, db.DB()); err != nil {
+	if err = resp.OpRights.UserGet(userID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Droits d'un utilisateur, requête rights : " + err.Error()})
 		return
 	}
-	if err = resp.Users.GetRole(models.UserRole, db.DB()); err != nil {
+	if err = resp.Users.GetRole(models.UserRole, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Droits d'un utilisateur, requête users : " + err.Error()})
 		return
 	}
-	if err = resp.PhysicalOps.GetAll(db.DB()); err != nil {
+	if err = resp.PhysicalOps.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Droits d'un utilisateur, requête opérations : " + err.Error()})
 		return
@@ -88,14 +88,14 @@ func InheritRight(ctx iris.Context) {
 		ctx.JSON(jsonError{"Héritage de droit, décodage : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err = req.Inherit(userID, db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = req.Inherit(userID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Héritage de droit, requête : " + err.Error()})
 		return
 	}
 	var updatedRights models.OpRights
-	if err = updatedRights.UserGet(userID, db.DB()); err != nil {
+	if err = updatedRights.UserGet(userID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Héritage de droit, requête get : " + err.Error()})
 		return

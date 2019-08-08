@@ -1,19 +1,19 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 	"strconv"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
 // GetRatios handles the get request to fetch all payment ratios.
 func GetRatios(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.PaymentRatios
-	if err := resp.GetAll(db.DB()); err != nil {
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des ratios de paiement, requête : " + err.Error()})
 		return
@@ -24,7 +24,7 @@ func GetRatios(ctx iris.Context) {
 
 // GetPtRatios handles the get request to fetch ratios linked to a payment type.
 func GetPtRatios(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.PaymentRatios
 	ptID, err := ctx.Params().GetInt64("ptID")
 	if err != nil {
@@ -32,7 +32,7 @@ func GetPtRatios(ctx iris.Context) {
 		ctx.JSON(jsonError{"Liste des ratios d'une chronique, paramètre : " + err.Error()})
 		return
 	}
-	if err = resp.GetPaymentTypeAll(ptID, db.DB()); err != nil {
+	if err = resp.GetPaymentTypeAll(ptID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des ratios d'une chronique, requête : " + err.Error()})
 		return
@@ -49,9 +49,9 @@ func DeleteRatios(ctx iris.Context) {
 		ctx.JSON(jsonError{"Suppression des ratios d'une chronique, paramètre : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	pt := models.PaymentType{ID: ptID}
-	if err = pt.DeleteRatios(db.DB()); err != nil {
+	if err = pt.DeleteRatios(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Suppression des ratios d'une chronique, requête : " + err.Error()})
 		return
@@ -62,7 +62,7 @@ func DeleteRatios(ctx iris.Context) {
 
 // SetPtRatios handle the post request for setting all ratios of an payment type.
 func SetPtRatios(ctx iris.Context) {
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	ptID, err := ctx.Params().GetInt64("ptID")
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
@@ -75,13 +75,13 @@ func SetPtRatios(ctx iris.Context) {
 		ctx.JSON(jsonError{"Ratios d'une chronique, décodage : " + err.Error()})
 		return
 	}
-	if err = req.Save(ptID, db.DB()); err != nil {
+	if err = req.Save(ptID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Ratios d'une chronique, requête : " + err.Error()})
 		return
 	}
 	var resp models.PaymentRatios
-	if err = resp.GetPaymentTypeAll(ptID, db.DB()); err != nil {
+	if err = resp.GetPaymentTypeAll(ptID, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Ratios d'une chronique, requête get : " + err.Error()})
 		return
@@ -98,7 +98,7 @@ func GetYearRatios(ctx iris.Context) {
 		ctx.JSON(jsonError{"Ratios annuels : année manquante"})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	y, err := strconv.Atoi(year)
 	if err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
@@ -106,7 +106,7 @@ func GetYearRatios(ctx iris.Context) {
 		return
 	}
 	var resp models.YearRatios
-	if err = resp.GetAll(int64(y), db.DB()); err != nil {
+	if err = resp.GetAll(int64(y), db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Ratios annuels, requête : " + err.Error()})
 		return

@@ -1,13 +1,14 @@
 package actions
 
 import (
+	"database/sql"
+
 	"github.com/iris-contrib/middleware/cors"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
 // SetRoutes initialize all routes for the application
-func SetRoutes(app *iris.Application, db *gorm.DB) {
+func SetRoutes(app *iris.Application, db *sql.DB) {
 	crs := cors.New(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -225,7 +226,7 @@ func SetRoutes(app *iris.Application, db *gorm.DB) {
 }
 
 // setDBMiddleware return a middleware to add db to context values
-func setDBMiddleware(db *gorm.DB) func(iris.Context) {
+func setDBMiddleware(db *sql.DB) func(iris.Context) {
 	return func(ctx iris.Context) {
 		ctx.Values().Set("db", db)
 		ctx.Next()

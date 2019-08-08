@@ -1,18 +1,18 @@
 package actions
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Iledant/iris_propera/models"
-	"github.com/jinzhu/gorm"
 	"github.com/kataras/iris"
 )
 
 // GetBeneficiaries handles the get all beneficiaries request
 func GetBeneficiaries(ctx iris.Context) {
 	var resp models.Beneficiaries
-	db := ctx.Values().Get("db").(*gorm.DB)
-	if err := resp.GetAll(db.DB()); err != nil {
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Liste des bénéficiaires, requête : " + err.Error()})
 		return
@@ -45,9 +45,9 @@ func UpdateBeneficiary(ctx iris.Context) {
 		ctx.JSON(jsonError{"Modification de bénéficiaire : " + err.Error()})
 		return
 	}
-	db := ctx.Values().Get("db").(*gorm.DB)
+	db := ctx.Values().Get("db").(*sql.DB)
 	req.ID = bID
-	if err = req.Update(db.DB()); err != nil {
+	if err = req.Update(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Modification de bénéficiaire, requête : " + err.Error()})
 		return
