@@ -38,7 +38,7 @@ func getUnlinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Token:        testCtx.User.Token,
 			Status:       http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"},
-		},
+		}, // 0 bad token
 		{
 			Token:        testCtx.Admin.Token,
 			Status:       http.StatusOK,
@@ -46,8 +46,8 @@ func getUnlinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			LinkType:     "PhysicalOp",
 			Search:       "",
 			MinYear:      0,
-			BodyContains: []string{`"data":[],"current_page":0,"last_page":1`},
-		},
+			BodyContains: []string{`"FinancialCommitment":[],"current_page":1,"items_count":0`},
+		}, // 1 empty field
 		{
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
@@ -55,10 +55,10 @@ func getUnlinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			LinkType: "PlanLine",
 			Search:   "",
 			MinYear:  0,
-			BodyContains: []string{`"data":[{"id":1,"value":6000000,"iris_code":` +
+			BodyContains: []string{`"FinancialCommitment":[{"id":1,"value":6000000,"iris_code":` +
 				`"R-2007-UAD-217075-1","name":"SEINE AVAL","date":"2007-10-11T00:00:00Z",` +
-				`"beneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`, `"last_page":402`},
-		},
+				`"beneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`, `"items_count":4011`},
+		}, // 2
 		{
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
@@ -67,14 +67,14 @@ func getUnlinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Search:   "",
 			MinYear:  2018,
 			// cSpell:disable
-			BodyContains: []string{`"data":[{"id":4264,"value":56000000,"iris_code":` +
+			BodyContains: []string{`"FinancialCommitment":[{"id":4264,"value":56000000,"iris_code":` +
 				`"18002216","name":"LIGNE RER D - REHAUSSEMENT DES QUAIS EN GARE DE ` +
 				`VILLENEUVE SAINT-GEORGES EN LIEN AVEC LE DEPLOIEMENT DU RER NG - ` +
 				`CONVENTION ETUDES EP/APO","date":"2018-03-16T00:00:00Z",` +
 				`"beneficiary":"RFF SNCF RESEAU"}`,
 				// cSpell:enable
-				`"last_page":6`},
-		},
+				`"items_count":55`},
+		}, // 3
 		{
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
@@ -83,12 +83,12 @@ func getUnlinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Search:   "RATP",
 			MinYear:  2010,
 			// cSpell:disable
-			BodyContains: []string{`"data":[{"id":4016,"value":372155000,"iris_code":` +
+			BodyContains: []string{`"FinancialCommitment":[{"id":4016,"value":372155000,"iris_code":` +
 				`"11013298","name":"PROLONGEMENT DE LA LIGNE 4 PHASE 2 A LA MAIRIE DE BAGNEUX",` +
 				`"date":"2011-07-07T00:00:00Z","beneficiary":` +
 				`"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS"}`,
 				// cSpell:enable
-				`"last_page":12`, `"current_page":10`}},
+				`"items_count":115`, `"current_page":10`}}, // 4
 	}
 
 	for i, tc := range testCases {
@@ -154,19 +154,19 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Status:       http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"},
 		},
-		{
+		{ // 0  bad token
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
 			Page:     1,
 			LinkType: "PhysicalOp",
 			Search:   "",
 			MinYear:  0,
-			BodyContains: []string{`{"data":[{"fcId":1,"fcValue":6000000,"fcName":` +
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":1,"fcValue":6000000,"fcName":` +
 				`"SEINE AVAL","iris_code":"R-2007-UAD-217075-1","fcDate":` +
 				`"2007-10-11T00:00:00Z","opNumber":"18VN040","opName":"Hors fret - Aval ` +
 				`- Autres ouvrages - Seine (78) (92)","fcBeneficiary":` +
-				`"VNF VOIES NAVIGABLES DE FRANCE"}`, `"last_page":427`},
-		},
+				`"VNF VOIES NAVIGABLES DE FRANCE"}`, `"items_count":4264`},
+		}, // 1
 		{
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
@@ -175,15 +175,15 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Search:   "",
 			MinYear:  2016,
 			// cSpell:disable
-			BodyContains: []string{`{"data":[{"fcId":123,"fcValue":1136100000,` +
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":123,"fcValue":1136100000,` +
 				`"fcName":"SCHEMA DIRECTEUR DU RER B SUD - AMENAGEMENT DES GARES - ` +
 				`PRO/REA DE LA  GARE DE LA CROIX DE BERNY","iris_code":"16007501",` +
 				`"fcDate":"2016-10-12T00:00:00Z","opNumber":"15RE001","opName":"RER B ` +
 				`- sud - Modernisation des gares","fcBeneficiary":"RATP REGIE AUTONOME ` +
 				`DES TRANSPORTS PARISIENS"},`,
 				// cSpell:enable
-				`"last_page":42`},
-		},
+				`"items_count":420`},
+		}, // 2
 		{
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
@@ -192,14 +192,14 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Search:   "SNCF",
 			MinYear:  0,
 			// cSpell:disable
-			BodyContains: []string{`"data":[{"fcId":3868,"fcValue":476210000,` +
+			BodyContains: []string{`"FinancialCommitment":[{"fcId":3868,"fcValue":476210000,` +
 				`"fcName":"ETUDES DU SCHEMA DIRECTEUR DU RER B SUD (SOUS MOA RFF)",` +
 				`"iris_code":"13017161","fcDate":"2013-11-20T00:00:00Z","opNumber":` +
 				`"12RE001","opName":"RER B - sud - Schéma directeur",` +
 				`"fcBeneficiary":"RFF SNCF RESEAU"}`,
 				// cSpell:enable
-				`"last_page":58`, `"current_page":50`},
-		},
+				`"items_count":580`, `"current_page":50`},
+		}, // 3
 		{
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
@@ -208,10 +208,10 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Search:   "",
 			MinYear:  0,
 			// cSpell:disable
-			BodyContains: []string{`{"data":[{"fcId":98,"fcValue":78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":98,"fcValue":78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
 				// cSpell:enable
-				`"last_page":26`},
-		},
+				`"items_count":253`},
+		}, // 4
 		{
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
@@ -220,10 +220,10 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Search:   "",
 			MinYear:  2016,
 			// cSpell:disable
-			BodyContains: []string{`{"data":[{"fcId":123,"fcValue":1136100000,"fcName":"SCHEMA DIRECTEUR DU RER B SUD - AMENAGEMENT DES GARES - PRO/REA DE LA  GARE DE LA CROIX DE BERNY","iris_code":"16007501","fcDate":"2016-10-12T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":123,"fcValue":1136100000,"fcName":"SCHEMA DIRECTEUR DU RER B SUD - AMENAGEMENT DES GARES - PRO/REA DE LA  GARE DE LA CROIX DE BERNY","iris_code":"16007501","fcDate":"2016-10-12T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
 				// cSpell:enable
-				`"last_page":22`},
-		},
+				`"items_count":213`},
+		}, // 5
 		{
 			Token:    testCtx.Admin.Token,
 			Status:   http.StatusOK,
@@ -231,15 +231,15 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			LinkType: "PlanLine",
 			Search:   "SNCF",
 			MinYear:  0,
-			BodyContains: []string{`{"data":[{"fcId":4237,"fcValue":114500000,"fcName"` +
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":4237,"fcValue":114500000,"fcName"` +
 				// cSpell:disable
 				`:"DEVELOPPEMENT NOUVEAU SYSTEME DE SIGNALISATION NEXTEO SUR RER B ET ` +
 				`RER D - CONVENTION ETUDES D'AVP","iris_code":"17013814",` +
 				`"fcDate":"2017-10-18T00:00:00Z","plName":"SNCF MOBILITES",` +
 				// cSpell:enable
 				`"fcBeneficiary":"CPER01 - Amélioration et modernisation des RER ` +
-				`(schémas directeurs et gares)"}`, `"last_page":9`, `"current_page":9`},
-		},
+				`(schémas directeurs et gares)"}`, `"items_count":84`, `"current_page":9`},
+		}, // 6
 	}
 
 	for i, tc := range testCases {
@@ -309,17 +309,17 @@ func unlinkFcsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			Sent: []byte(`{"linkType":"PhysicalOp","fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
-			BodyContains: []string{`{"data":[{"fcId":1,"fcValue":6000000,"fcName":"SEINE AVAL","iris_code":"R-2007-UAD-217075-1","fcDate":"2007-10-11T00:00:00Z","opNumber":"18VN040","opName":"Hors fret - Aval - Autres ouvrages - Seine (78) (92)","fcBeneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
-				`"last_page":426`}, OpID: "12", FcsCount: 3},
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":1,"fcValue":6000000,"fcName":"SEINE AVAL","iris_code":"R-2007-UAD-217075-1","fcDate":"2007-10-11T00:00:00Z","opNumber":"18VN040","opName":"Hors fret - Aval - Autres ouvrages - Seine (78) (92)","fcBeneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
+				`"items_count":4259`}, OpID: "12", FcsCount: 3},
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
 			Sent:         []byte(`{"linkType":"PhysicalOp","fcIdList":[0]}`),
 			BodyContains: []string{"Détachement d'engagements, requête : Engagements incorrects"}},
 		{Token: testCtx.Admin.Token, Status: http.StatusOK,
 			Sent: []byte(`{"linkType":"PlanLine","fcIdList":[138,147,190,136,192]}`),
 			// cSpell:disable
-			BodyContains: []string{`{"data":[{"fcId":98,"fcValue":78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":98,"fcValue":78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
 				// cSpell:enable
-				`"last_page":25`}},
+				`"items_count":248`}},
 		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
 			Sent:         []byte(`{"linkType":"PlanLine","fcIdList":[0]}`),
 			BodyContains: []string{"Détachement d'engagements, requête : Engagements incorrects"}},
@@ -367,7 +367,7 @@ func linkFcToOpTest(e *httpexpect.Expect, t *testing.T) {
 		},
 		{Token: testCtx.Admin.Token, OpID: "12", Status: http.StatusOK,
 			Sent:         []byte(`{"fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
-			BodyContains: []string{`{"data":[],"current_page":0,"last_page":1}`}, FcsCount: 8},
+			BodyContains: []string{`{"FinancialCommitment":[],"current_page":1,"items_count":0}`}, FcsCount: 8},
 	}
 
 	for i, tc := range testCases {
@@ -411,8 +411,8 @@ func linkFcToPlTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Rattachement engagements / ligne de plan, requête : pq"}},
 		{Token: testCtx.Admin.Token, PlID: "23", Status: http.StatusOK,
 			Sent: []byte(`{"fcIdList":[138,147,190,136,192]}`),
-			BodyContains: []string{`{"data":[{"id":1,"value":6000000,"iris_code":"R-2007-UAD-217075-1","name":"SEINE AVAL","date":"2007-10-11T00:00:00Z","beneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
-				`"last_page":402`}, FcsCount: 8},
+			BodyContains: []string{`{"FinancialCommitment":[{"id":1,"value":6000000,"iris_code":"R-2007-UAD-217075-1","name":"SEINE AVAL","date":"2007-10-11T00:00:00Z","beneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
+				`"items_count":4011`}, FcsCount: 8},
 	}
 
 	for i, tc := range testCases {

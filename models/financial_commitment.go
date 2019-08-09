@@ -49,6 +49,13 @@ type UnlinkedFinancialCommitments struct {
 	Commitments []UnlinkedFinancialCommitment `json:"FinancialCommitment"`
 }
 
+// Pagination is the embeddes the common fields for paginated commitments.
+type Pagination struct {
+	CurrentPage int64 `json:"current_page"`
+	ItemsCount  int64 `json:"items_count"`
+	Offset      int64 `json:"-"`
+}
+
 // FCSearchPattern embeddes parameters to query unlinked financial commitments.
 type FCSearchPattern struct {
 	LinkType   string
@@ -59,9 +66,8 @@ type FCSearchPattern struct {
 
 // PaginatedUnlinkedItems embeddes all datas for unlinked financial commitments query.
 type PaginatedUnlinkedItems struct {
-	Data        []UnlinkedFinancialCommitment `json:"data"`
-	CurrentPage int64                         `json:"current_page"`
-	LastPage    int64                         `json:"last_page"`
+	UnlinkedFinancialCommitments
+	Pagination
 }
 
 // OpLinkedFinancialCommitment embeddes a row for the query.
@@ -78,14 +84,14 @@ type OpLinkedFinancialCommitment struct {
 
 // OpLinkedFinancialCommitments embeddes an array of OpLinkedFinancialCommitment for json export.
 type OpLinkedFinancialCommitments struct {
-	FinancialCommitments []OpLinkedFinancialCommitment `json:"FinancialCommitment"`
+	Commitments []OpLinkedFinancialCommitment `json:"FinancialCommitment"`
 }
 
-// PaginatedOpLinkedItems embeddes all datas for financial commitments linked to a physical operation query.
+// PaginatedOpLinkedItems embeddes all datas for financial commitments linked to
+//  a physical operation query.
 type PaginatedOpLinkedItems struct {
-	Data        []OpLinkedFinancialCommitment `json:"data"`
-	CurrentPage int64                         `json:"current_page"`
-	LastPage    int64                         `json:"last_page"`
+	OpLinkedFinancialCommitments
+	Pagination
 }
 
 // PlanLineLinkedFinancialCommitment is used to query financial commitment linked to a plan line.
@@ -101,14 +107,13 @@ type PlanLineLinkedFinancialCommitment struct {
 
 // PlanLineLinkedFinancialCommitments embeddes an array of PlanLineLinkedFinancialCommitment.
 type PlanLineLinkedFinancialCommitments struct {
-	FinancialCommitments []PlanLineLinkedFinancialCommitment `json:"FinancialCommitment"`
+	Commitments []PlanLineLinkedFinancialCommitment `json:"FinancialCommitment"`
 }
 
 // PaginatedPlanLineLinkedItems embeddes all datas for financial commitments linked to a plan line query.
 type PaginatedPlanLineLinkedItems struct {
-	Data        []PlanLineLinkedFinancialCommitment `json:"data"`
-	CurrentPage int64                               `json:"current_page"`
-	LastPage    int64                               `json:"last_page"`
+	PlanLineLinkedFinancialCommitments
+	Pagination
 }
 
 // FinancialCommitmentLine embeddes a line of financial commitment batch request.
@@ -184,28 +189,26 @@ func (f *FinancialCommitments) GetOpAll(opID int64, db *sql.DB) (err error) {
 }
 
 // getPageOffset returns the correct offset and page according to total number of rows.
-func getPageOffset(page int64, count int64) (offset int64, newPage int64, lastPage int64) {
-	if count == 0 {
-		return 0, 0, 1
+func (p *Pagination) getPageOffset() {
+	if p.ItemsCount == 0 {
+		p.Offset = 0
+		p.CurrentPage = 1
+		return
 	}
-	offset = (page - 1) * 10
-	newPage = 1
-	if offset < 0 {
-		offset = 0
+	p.Offset = (p.CurrentPage - 1) * 10
+	if p.Offset < 0 {
+		p.Offset = 0
 	}
-	if offset >= count {
-		offset = (count - 1) - ((count - 1) % 10)
+	if p.Offset >= p.ItemsCount {
+		p.Offset = (p.ItemsCount - 1) - ((p.ItemsCount - 1) % 10)
 	}
-	newPage = offset/10 + 1
-	lastPage = (count-1)/10 + 1
-	return offset, newPage, lastPage
+	p.CurrentPage = p.Offset/10 + 1
 }
 
 // GetUnlinked fetches all financial commitments not linked to a physical operation or a plan line
 // according to linkType parameter and matching search pattern.
 func (p *PaginatedUnlinkedItems) GetUnlinked(pattern FCSearchPattern, db *sql.DB) (err error) {
 	var idQryPart string
-	var count int64
 	if pattern.LinkType == "PhysicalOp" {
 		idQryPart = "physical_op_id"
 	} else {
@@ -214,18 +217,17 @@ func (p *PaginatedUnlinkedItems) GetUnlinked(pattern FCSearchPattern, db *sql.DB
 	if err = db.QueryRow(`SELECT count(f.id) count FROM financial_commitment f, beneficiary b 
 	WHERE f.beneficiary_code = b.code AND f.date >= $1 AND `+idQryPart+` ISNULL AND
 	(f.name ILIKE $2 OR b.name ILIKE $2 OR f.iris_code ILIKE $2)`,
-		pattern.MinDate, pattern.SearchText).Scan(&count); err != nil {
+		pattern.MinDate, pattern.SearchText).Scan(&p.ItemsCount); err != nil {
 		return err
 	}
-	offset, currentPage, lastPage := getPageOffset(pattern.Page, count)
-	p.CurrentPage = currentPage
-	p.LastPage = lastPage
+	p.CurrentPage = pattern.Page
+	p.getPageOffset()
 	rows, err := db.Query(`SELECT DISTINCT f.id as id, f.value as value, f.iris_code as iris_code, 
 	f.name as name, f.date as date, b.name as beneficiary 
 	FROM financial_commitment f, beneficiary b
 	WHERE f.beneficiary_code = b.code AND f.date >= $1 AND `+idQryPart+` ISNULL
 	AND (f.name ILIKE $2 OR b.name ILIKE $2 OR f.iris_code ILIKE $2)
-	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
+	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, p.Offset)
 	if err != nil {
 		return err
 	}
@@ -236,40 +238,39 @@ func (p *PaginatedUnlinkedItems) GetUnlinked(pattern FCSearchPattern, db *sql.DB
 			&r.Beneficiary); err != nil {
 			return err
 		}
-		p.Data = append(p.Data, r)
+		p.Commitments = append(p.Commitments, r)
 	}
 	err = rows.Err()
-	if len(p.Data) == 0 {
-		p.Data = []UnlinkedFinancialCommitment{}
+	if len(p.Commitments) == 0 {
+		p.Commitments = []UnlinkedFinancialCommitment{}
 	}
 	return err
 }
 
-// GetLinked fetches all financial commitments linked to a physical operation and matching search pattern.
+// GetLinked fetches all financial commitments linked to a physical operation
+// and that matches the search pattern.
 func (p *PaginatedOpLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) (err error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
-	var count int64
 	if err = tx.QueryRow(`SELECT count(f.id) 
 	FROM financial_commitment f, beneficiary b, physical_op op
 	WHERE f.physical_op_id = op.id AND f.beneficiary_code = b.code AND f.physical_op_id NOTNULL
 	AND f.date > $1 AND (f.name ILIKE $2 OR b.name ILIKE $2 OR op.name ILIKE $2
-	OR op.number ILIKE $2)`, pattern.MinDate, pattern.SearchText).Scan(&count); err != nil {
+	OR op.number ILIKE $2)`, pattern.MinDate, pattern.SearchText).Scan(&p.ItemsCount); err != nil {
 		tx.Rollback()
 		return err
 	}
-	offset, currentPage, lastPage := getPageOffset(pattern.Page, count)
-	p.CurrentPage = currentPage
-	p.LastPage = lastPage
+	p.CurrentPage = pattern.Page
+	p.getPageOffset()
 	rows, err := tx.Query(`SELECT DISTINCT f.id as fc_iD, f.value as fc_value, f.name as fc_name, 
 	f.iris_code, f.date as fc_date, b.Name fc_beneficiary, op.number op_number, op.name op_name
 	FROM financial_commitment f, beneficiary b, physical_op op
 	WHERE f.physical_op_id = op.id AND f.beneficiary_code = b.code AND f.physical_op_id NOTNULL
 	AND f.date > $1 AND (f.name ILIKE $2 OR b.name ILIKE $2 OR op.name ILIKE $2 
 	OR op.number ILIKE $2)
-	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
+	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, p.Offset)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -281,7 +282,7 @@ func (p *PaginatedOpLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) 
 			&r.FcBeneficiary, &r.OpNumber, &r.OpName); err != nil {
 			return err
 		}
-		p.Data = append(p.Data, r)
+		p.Commitments = append(p.Commitments, r)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -289,8 +290,8 @@ func (p *PaginatedOpLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) 
 		return err
 	}
 	err = tx.Commit()
-	if len(p.Data) == 0 {
-		p.Data = []OpLinkedFinancialCommitment{}
+	if len(p.Commitments) == 0 {
+		p.Commitments = []OpLinkedFinancialCommitment{}
 	}
 	return err
 }
@@ -298,7 +299,6 @@ func (p *PaginatedOpLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) 
 // GetLinked fetches all financial commitments linked to a physical operation and matching search pattern.
 func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sql.DB) (err error) {
 	tx, err := db.Begin()
-	var count int64
 	if err != nil {
 		return err
 	}
@@ -306,19 +306,18 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 	FROM financial_commitment f, beneficiary b, plan_line pl
 	WHERE f.plan_line_id = pl.id AND f.beneficiary_code = b.code AND f.plan_line_id NOTNULL
 	AND f.date > $1 AND (f.name ILIKE $2 OR b.name ILIKE $2 OR pl.name ILIKE $2)`,
-		pattern.MinDate, pattern.SearchText).Scan(&count); err != nil {
+		pattern.MinDate, pattern.SearchText).Scan(&p.ItemsCount); err != nil {
 		tx.Rollback()
 		return err
 	}
-	offset, currentPage, lastPage := getPageOffset(pattern.Page, count)
-	p.CurrentPage = currentPage
-	p.LastPage = lastPage
+	p.CurrentPage = pattern.Page
+	p.getPageOffset()
 	rows, err := tx.Query(`SELECT DISTINCT f.id as fc_id, f.value as fc_value, f.name as fc_name, 
 	f.iris_code, f.date as fc_date, b.Name fc_beneficiary, pl.name pl_name
 	FROM financial_commitment f, beneficiary b, plan_line pl
 	WHERE f.plan_line_id = pl.id AND f.beneficiary_code = b.code AND f.plan_line_id NOTNULL
 	AND f.date > $1 AND (f.name ILIKE $2 OR b.name ILIKE $2 OR pl.name ILIKE $2)
-	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, offset)
+	ORDER BY 1 LIMIT 10 OFFSET $3`, pattern.MinDate, pattern.SearchText, p.Offset)
 	if err != nil {
 		tx.Rollback()
 		return err
@@ -330,7 +329,7 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 			&r.PlName, &r.FcBeneficiary); err != nil {
 			return err
 		}
-		p.Data = append(p.Data, r)
+		p.Commitments = append(p.Commitments, r)
 	}
 	err = rows.Err()
 	if err != nil {
@@ -338,8 +337,8 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 		return err
 	}
 	err = tx.Commit()
-	if len(p.Data) == 0 {
-		p.Data = []PlanLineLinkedFinancialCommitment{}
+	if len(p.Commitments) == 0 {
+		p.Commitments = []PlanLineLinkedFinancialCommitment{}
 	}
 	return err
 }
