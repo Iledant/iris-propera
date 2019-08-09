@@ -92,18 +92,21 @@ func getUnlinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		response := e.GET("/api/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).
-			WithQuery("page", tc.Page).WithQuery("LinkType", tc.LinkType).WithQuery("search", tc.Search).
+		response := e.GET("/api/financial_commitments").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithQuery("page", tc.Page).
+			WithQuery("LinkType", tc.LinkType).WithQuery("search", tc.Search).
 			WithQuery("MinYear", tc.MinYear).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nGetUnlinkedFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nGetUnlinkedFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nGetUnlinkedFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nGetUnlinkedFcs[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 	}
 }
@@ -116,24 +119,41 @@ func getMonthFCTest(e *httpexpect.Expect, t *testing.T) {
 		Status       int
 		BodyContains []string
 	}{
-		{Token: "", Status: http.StatusInternalServerError, BodyContains: []string{"Token absent"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK, Year: 2017,
-			BodyContains: []string{"FinancialCommitmentsPerMonth", `"month":3`, `"value":9681497875`}},
-		{Token: testCtx.User.Token, Status: http.StatusOK, Year: 2018,
-			BodyContains: []string{"FinancialCommitmentsPerMonth", `"month":3`, `"value":10778560491`}},
+		{
+			Token:        "",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token absent"},
+		},
+		{
+			Token:  testCtx.User.Token,
+			Status: http.StatusOK,
+			Year:   2017,
+			BodyContains: []string{"FinancialCommitmentsPerMonth",
+				`"month":3`, `"value":9681497875`},
+		},
+		{
+			Token:  testCtx.User.Token,
+			Status: http.StatusOK,
+			Year:   2018,
+			BodyContains: []string{"FinancialCommitmentsPerMonth",
+				`"month":3`, `"value":10778560491`},
+		},
 	}
 	for i, tc := range testCases {
-		response := e.GET("/api/financial_commitments/month").WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.GET("/api/financial_commitments/month").
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("year", tc.Year).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nGetMonthFCTest[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nGetMonthFCTest[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nGetMonthFCTest[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nGetMonthFCTest[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 	}
 }
@@ -208,7 +228,12 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Search:   "",
 			MinYear:  0,
 			// cSpell:disable
-			BodyContains: []string{`{"FinancialCommitment":[{"fcId":98,"fcValue":78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":98,"fcValue":` +
+				`78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU ` +
+				`PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":` +
+				`"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS ` +
+				`PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des ` +
+				`RER (schémas directeurs et gares)"},`,
 				// cSpell:enable
 				`"items_count":253`},
 		}, // 4
@@ -220,7 +245,12 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Search:   "",
 			MinYear:  2016,
 			// cSpell:disable
-			BodyContains: []string{`{"FinancialCommitment":[{"fcId":123,"fcValue":1136100000,"fcName":"SCHEMA DIRECTEUR DU RER B SUD - AMENAGEMENT DES GARES - PRO/REA DE LA  GARE DE LA CROIX DE BERNY","iris_code":"16007501","fcDate":"2016-10-12T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":123,"fcValue":` +
+				`1136100000,"fcName":"SCHEMA DIRECTEUR DU RER B SUD - AMENAGEMENT DES ` +
+				`GARES - PRO/REA DE LA  GARE DE LA CROIX DE BERNY","iris_code":"16007501",` +
+				`"fcDate":"2016-10-12T00:00:00Z","plName":"RATP REGIE AUTONOME DES ` +
+				`TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et ` +
+				`modernisation des RER (schémas directeurs et gares)"},`,
 				// cSpell:enable
 				`"items_count":213`},
 		}, // 5
@@ -243,18 +273,21 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		response := e.GET("/api/financial_commitments/linked").WithHeader("Authorization", "Bearer "+tc.Token).
-			WithQuery("page", tc.Page).WithQuery("LinkType", tc.LinkType).WithQuery("search", tc.Search).
-			WithQuery("MinYear", tc.MinYear).Expect()
+		response := e.GET("/api/financial_commitments/linked").
+			WithHeader("Authorization", "Bearer "+tc.Token).
+			WithQuery("page", tc.Page).WithQuery("LinkType", tc.LinkType).
+			WithQuery("search", tc.Search).WithQuery("MinYear", tc.MinYear).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nGetLinkedFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nGetLinkedFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nGetLinkedFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nGetLinkedFcs[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 	}
 }
@@ -268,11 +301,24 @@ func getOpFcsTest(e *httpexpect.Expect, t *testing.T) {
 		BodyContains []string
 		FcsCount     int
 	}{
-		{Token: "fake", OpID: "0", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
-			OpID: "0", BodyContains: []string{`"FinancialCommitment":[]`}},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
-			OpID: "12", BodyContains: []string{"FinancialCommitment"}, FcsCount: 8},
+		{
+			Token: "fake", OpID: "0",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		},
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusOK,
+			OpID:         "0",
+			BodyContains: []string{`"FinancialCommitment":[]`},
+		},
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusOK,
+			OpID:         "12",
+			BodyContains: []string{"FinancialCommitment"},
+			FcsCount:     8,
+		},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/physical_ops/"+tc.OpID+"/financial_commitments").
@@ -280,17 +326,20 @@ func getOpFcsTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nGetOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nGetOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nGetOpFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nGetOpFcs[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 		if tc.FcsCount > 0 {
 			count := strings.Count(content, `"coriolis_year"`)
 			if count != tc.FcsCount {
-				t.Errorf("\nGetOpFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.FcsCount, count)
+				t.Errorf("\nGetOpFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d",
+					i, tc.FcsCount, count)
 			}
 		}
 	}
@@ -306,44 +355,72 @@ func unlinkFcsTest(e *httpexpect.Expect, t *testing.T) {
 		OpID         string
 		FcsCount     int
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			Sent: []byte(`{"linkType":"PhysicalOp","fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
-			BodyContains: []string{`{"FinancialCommitment":[{"fcId":1,"fcValue":6000000,"fcName":"SEINE AVAL","iris_code":"R-2007-UAD-217075-1","fcDate":"2007-10-11T00:00:00Z","opNumber":"18VN040","opName":"Hors fret - Aval - Autres ouvrages - Seine (78) (92)","fcBeneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
-				`"items_count":4259`}, OpID: "12", FcsCount: 3},
-		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"},
+		},
+		{
+			Token:  testCtx.Admin.Token,
+			Status: http.StatusOK,
+			Sent:   []byte(`{"linkType":"PhysicalOp","fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":1,"fcValue":6000000,` +
+				`"fcName":"SEINE AVAL","iris_code":"R-2007-UAD-217075-1","fcDate":` +
+				`"2007-10-11T00:00:00Z","opNumber":"18VN040","opName":"Hors fret - Aval - ` +
+				`Autres ouvrages - Seine (78) (92)","fcBeneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
+				`"items_count":4259`},
+			OpID:     "12",
+			FcsCount: 3,
+		},
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusInternalServerError,
 			Sent:         []byte(`{"linkType":"PhysicalOp","fcIdList":[0]}`),
 			BodyContains: []string{"Détachement d'engagements, requête : Engagements incorrects"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			Sent: []byte(`{"linkType":"PlanLine","fcIdList":[138,147,190,136,192]}`),
+		{
+			Token:  testCtx.Admin.Token,
+			Status: http.StatusOK,
+			Sent:   []byte(`{"linkType":"PlanLine","fcIdList":[138,147,190,136,192]}`),
 			// cSpell:disable
-			BodyContains: []string{`{"FinancialCommitment":[{"fcId":98,"fcValue":78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des RER (schémas directeurs et gares)"},`,
+			BodyContains: []string{`{"FinancialCommitment":[{"fcId":98,"fcValue":` +
+				`78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU ` +
+				`PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":` +
+				`"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS ` +
+				`PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des ` +
+				`RER (schémas directeurs et gares)"},`,
 				// cSpell:enable
 				`"items_count":248`}},
-		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusInternalServerError,
 			Sent:         []byte(`{"linkType":"PlanLine","fcIdList":[0]}`),
 			BodyContains: []string{"Détachement d'engagements, requête : Engagements incorrects"}},
 	}
 
 	for i, tc := range testCases {
-		response := e.POST("/api/financial_commitments/unlink").WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.POST("/api/financial_commitments/unlink").
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
 
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nUnlinkFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nUnlinkFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nUnlinkFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nUnlinkFcs[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 		if tc.OpID != "" {
-			response := e.GET("/api/physical_ops/"+tc.OpID+"/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+			response := e.GET("/api/physical_ops/"+tc.OpID+"/financial_commitments").
+				WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 			count := strings.Count(string(response.Content), `"id"`)
 			if count != tc.FcsCount {
-				t.Errorf("\nUnlinkFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.FcsCount, count)
+				t.Errorf("\nUnlinkFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d",
+					i, tc.FcsCount, count)
 			}
 		}
 		// TODO implement plan line get test
@@ -360,35 +437,48 @@ func linkFcToOpTest(e *httpexpect.Expect, t *testing.T) {
 		OpID         string
 		FcsCount     int
 	}{
-		{Token: testCtx.User.Token, OpID: "0", Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, OpID: "0", Status: http.StatusInternalServerError,
+		{
+			Token: testCtx.User.Token, OpID: "0",
+			Status:       http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{
+			Token: testCtx.Admin.Token, OpID: "0",
+			Status:       http.StatusInternalServerError,
 			BodyContains: []string{"Rattachement engagements / opération, requête : pq"},
 			Sent:         []byte(`{"fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
 		},
-		{Token: testCtx.Admin.Token, OpID: "12", Status: http.StatusOK,
+		{Token: testCtx.Admin.Token, OpID: "12",
+			Status:       http.StatusOK,
 			Sent:         []byte(`{"fcIdList":[2036, 2052, 2053, 3618, 2082]}`),
-			BodyContains: []string{`{"FinancialCommitment":[],"current_page":1,"items_count":0}`}, FcsCount: 8},
+			BodyContains: []string{`{"FinancialCommitment":[],"current_page":1,"items_count":0}`},
+			FcsCount:     8,
+		},
 	}
 
 	for i, tc := range testCases {
-		response := e.POST("/api/financial_commitments/physical_ops/"+tc.OpID).WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.POST("/api/financial_commitments/physical_ops/"+tc.OpID).
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
 
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nLinkFcToOp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nLinkFcToOp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nLinkFcToOp[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nLinkFcToOp[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 		if tc.OpID != "0" {
-			response := e.GET("/api/physical_ops/"+tc.OpID+"/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+			response := e.GET("/api/physical_ops/"+tc.OpID+"/financial_commitments").
+				WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 			count := strings.Count(string(response.Content), `"id"`)
 			if count != tc.FcsCount {
-				t.Errorf("\nUnlinkFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.FcsCount, count)
+				t.Errorf("\nUnlinkFcs[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d",
+					i, tc.FcsCount, count)
 			}
 		}
 	}
@@ -411,22 +501,27 @@ func linkFcToPlTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Rattachement engagements / ligne de plan, requête : pq"}},
 		{Token: testCtx.Admin.Token, PlID: "23", Status: http.StatusOK,
 			Sent: []byte(`{"fcIdList":[138,147,190,136,192]}`),
-			BodyContains: []string{`{"FinancialCommitment":[{"id":1,"value":6000000,"iris_code":"R-2007-UAD-217075-1","name":"SEINE AVAL","date":"2007-10-11T00:00:00Z","beneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
+			BodyContains: []string{`{"FinancialCommitment":[{"id":1,"value":6000000,` +
+				`"iris_code":"R-2007-UAD-217075-1","name":"SEINE AVAL","date":` +
+				`"2007-10-11T00:00:00Z","beneficiary":"VNF VOIES NAVIGABLES DE FRANCE"},`,
 				`"items_count":4011`}, FcsCount: 8},
 	}
 
 	for i, tc := range testCases {
-		response := e.POST("/api/financial_commitments/plan_lines/"+tc.PlID).WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.POST("/api/financial_commitments/plan_lines/"+tc.PlID).
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nLinkFcToPl[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nLinkFcToPl[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nLinkFcToPl[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nLinkFcToPl[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 		// TODO implement get plan line FCs test
 		// if tc.PlID != "0" {
@@ -444,28 +539,53 @@ func batchFcsTest(e *httpexpect.Expect, t *testing.T) {
 		Status       int
 		BodyContains []string
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError, BodyContains: []string{"JSON"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: []string{"Engagements importés et mis à jour"},
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"},
+		},
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"JSON"}},
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusOK,
+			BodyContains: []string{"Engagements importés et mis à jour"},
 			//cSpell:disable
 			Sent: []byte(`{"FinancialCommitment":[
-				{"chapter":"907","action":"17700301 - Intégration environnementale des infrastructures de transport","iris_code":"18002439","coriolis_year":"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"553827","coriolis_egt_line":"1","name":"ROUTE - INNOVATION INFRASTRUCTURE ROUTIERE - VAL D'OISE","beneficiary":"DEPARTEMENT DU VAL D'OISE","beneficiary_code":2306,"date":43175,"value":3000000,"lapse_date":44271},
-				{"chapter":"907","action":"17700301 - Intégration environnementale des infrastructures de transport","iris_code":"18003295","coriolis_year":"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"557246","coriolis_egt_line":"1","name":"RESORPTION DES POINTS NOIRS BRUIT DU FERROVIAIRE - PONT METALLIQUE DES CHANTIERS A VERSAILLES - AVENANT N°1 A LA CONVENTION DE FINANCEMENT ETUDES DE PROJET ET TRAVAUX","beneficiary":"RFF SNCF RESEAU","beneficiary_code":14154,"date":43250,"value":198688,"lapse_date":44346}]}`)},
+				{"chapter":"907","action":"17700301 - Intégration environnementale des ` +
+				`infrastructures de transport","iris_code":"18002439","coriolis_year":` +
+				`"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"553827",` +
+				`"coriolis_egt_line":"1","name":"ROUTE - INNOVATION INFRASTRUCTURE ` +
+				`ROUTIERE - VAL D'OISE","beneficiary":"DEPARTEMENT DU VAL D'OISE",` +
+				`"beneficiary_code":2306,"date":43175,"value":3000000,"lapse_date":44271},
+				{"chapter":"907","action":"17700301 - Intégration environnementale des ` +
+				`infrastructures de transport","iris_code":"18003295","coriolis_year":` +
+				`"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"557246",` +
+				`"coriolis_egt_line":"1","name":"RESORPTION DES POINTS NOIRS BRUIT DU ` +
+				`FERROVIAIRE - PONT METALLIQUE DES CHANTIERS A VERSAILLES - AVENANT N°1 ` +
+				`A LA CONVENTION DE FINANCEMENT ETUDES DE PROJET ET TRAVAUX",` +
+				`"beneficiary":"RFF SNCF RESEAU","beneficiary_code":14154,"date":43250,` +
+				`"value":198688,"lapse_date":44346}]}`)},
 		//cSpell:enable
 	}
 
 	for i, tc := range testCases {
-		response := e.POST("/api/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.POST("/api/financial_commitments").
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nBatchFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nBatchFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nBatchFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nBatchFcs[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 	}
 }
@@ -478,34 +598,52 @@ func batchOpFcsTest(e *httpexpect.Expect, t *testing.T) {
 		Status       int
 		BodyContains []string
 	}{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized, BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusInternalServerError, BodyContains: []string{"JSON"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK, BodyContains: []string{"Rattachements importés et réalisés"},
-			Sent: []byte(`{"Attachment":[{"op_number":"18FF005","coriolis_year":"2007","coriolis_egt_code":"UAD","coriolis_egt_num":"217075","coriolis_egt_line":"1"},
-				{"op_number":"18FF005","coriolis_year":"2007","coriolis_egt_code":"UAD","coriolis_egt_num":"217078","coriolis_egt_line":"1"},
-				{"op_number":"18FF005","coriolis_year":"2008","coriolis_egt_code":"P1215","coriolis_egt_num":"241790","coriolis_egt_line":"1"},
-				{"op_number":"18FF005","coriolis_year":"2008","coriolis_egt_code":"P1215","coriolis_egt_num":"241792","coriolis_egt_line":"1"}]}`)},
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}},
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"JSON"}},
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusOK,
+			BodyContains: []string{"Rattachements importés et réalisés"},
+			Sent: []byte(`{"Attachment":[{"op_number":"18FF005","coriolis_year":"2007"` +
+				`,"coriolis_egt_code":"UAD","coriolis_egt_num":"217075","coriolis_egt_line":"1"},
+				{"op_number":"18FF005","coriolis_year":"2007","coriolis_egt_code":"UAD",` +
+				`"coriolis_egt_num":"217078","coriolis_egt_line":"1"},
+				{"op_number":"18FF005","coriolis_year":"2008","coriolis_egt_code":"P1215"` +
+				`,"coriolis_egt_num":"241790","coriolis_egt_line":"1"},
+				{"op_number":"18FF005","coriolis_year":"2008","coriolis_egt_code":"P1215"` +
+				`,"coriolis_egt_num":"241792","coriolis_egt_line":"1"}]}`)},
 	}
 	for i, tc := range testCases {
-		response := e.POST("/api/financial_commitments/attachments").WithHeader("Authorization", "Bearer "+tc.Token).
+		response := e.POST("/api/financial_commitments/attachments").
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			WithBytes(tc.Sent).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nBatchOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nBatchOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nBatchOpFcs[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nBatchOpFcs[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 		if tc.Status == http.StatusOK {
-			body := e.GET("/api/physical_ops/17/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+			body := e.GET("/api/physical_ops/17/financial_commitments").
+				WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 			content = string(body.Content)
 			for _, s := range []string{"R-2007-UAD-217075-1", "R-2007-UAD-217078-1",
 				"R-2008-P1215-241790-1", "R-2008-P1215-241792-1"} {
 				if !strings.Contains(content, s) {
-					t.Errorf("\nBatchOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+					t.Errorf("\nBatchOpFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+						i, s, content)
 				}
 			}
 		}
