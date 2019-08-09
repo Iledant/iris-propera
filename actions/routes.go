@@ -69,7 +69,6 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 	adminParty.Delete("/budget_chapters/{chpID:int}/programs/{prgID:int}/actions/{baID:int}",
 		DeleteBudgetAction)
 
-	adminParty.Get("/categories", GetCategories)
 	adminParty.Post("/categories", CreateCategory)
 	adminParty.Put("/categories/{caID:int}", ModifyCategory)
 	adminParty.Delete("/categories/{caID:int}", DeleteCategory)
@@ -95,6 +94,7 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	adminParty.Get("/pending_commitments/unlinked", GetUnlinkedPendings)
 	adminParty.Get("/pending_commitments/linked", GetLinkedPendings)
+	adminParty.Get("/pending_commitments/ops", GetOpPendings)
 	adminParty.Post("/pending_commitments/physical_ops/{opID:int}", LinkPcToOp)
 	adminParty.Post("/pending_commitments/unlink", UnlinkPCs)
 	adminParty.Post("/pending_commitments", BatchPendings)
@@ -199,6 +199,7 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	userParty.Get("/summaries/multiannual_programmation", GetMultiannualProg)
 	userParty.Get("/summaries/annual_programmation", GetAnnualProgrammation)
+	userParty.Get("/summaries/annual_programmation/init", GetInitAnnualProgrammation)
 	userParty.Get("/summaries/programmation_prevision", GetProgrammingAndPrevisions)
 	userParty.Get("/summaries/budget_action_programmation", GetActionProgrammation)
 	userParty.Get("/summaries/budget_action_programmation_years",
@@ -224,7 +225,9 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	userParty.Get("/home", GetHomeDatas)
 
+	userParty.Get("/categories", GetCategories)
 	userParty.Get("/steps", GetSteps)
+	userParty.Get("/steps_categories", GetStepsAndCategories)
 }
 
 // setDBMiddleware return a middleware to add db to context values

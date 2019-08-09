@@ -21,7 +21,8 @@ func GetPendings(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
-// GetUnlinkedPendings handles the get request to fetch all pending commitments.
+// GetUnlinkedPendings handles the get request to fetch all pending commitments
+// with no link to an operation.
 func GetUnlinkedPendings(ctx iris.Context) {
 	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.UnlinkedPendingCommitments
@@ -34,7 +35,8 @@ func GetUnlinkedPendings(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
-// GetLinkedPendings handles the get request to fetch all pending commitments.
+// GetLinkedPendings handles the get request to fetch all pending commitments
+// linked to an operation.
 func GetLinkedPendings(ctx iris.Context) {
 	db := ctx.Values().Get("db").(*sql.DB)
 	var resp models.LinkedPendingCommitments
@@ -45,6 +47,40 @@ func GetLinkedPendings(ctx iris.Context) {
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(resp)
+}
+
+// opPendingsResp embeddes all data for the frontend page dedicated to the links
+// between operations and pendings commitments.
+type opPendingsResp struct {
+	models.UnlinkedPendingCommitments
+	models.LinkedPendingCommitments
+	models.OpWithPlanAndActions
+}
+
+// GetOpPendings handles the get request to fetch all datas needed by the frontend
+// page dedicated to links between operations and pendings commitments in a single
+// query.
+func GetOpPendings(ctx iris.Context) {
+	db := ctx.Values().Get("db").(*sql.DB)
+	var resp opPendingsResp
+	if err := resp.UnlinkedPendingCommitments.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Lien engagements en cours opérations, requête non liés : " + err.Error()})
+		return
+	}
+	if err := resp.LinkedPendingCommitments.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Lien engagements en cours opérations, requête liés : " + err.Error()})
+		return
+	}
+	if err := resp.OpWithPlanAndActions.GetAll(0, db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Lien engagements en cours opérations, opérations : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+
 }
 
 // LinkPcToOp handles the post request to link an array of pending commitments to a physical operation.

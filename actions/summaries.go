@@ -54,6 +54,49 @@ func GetAnnualProgrammation(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
+// initAnnualProgResp embeddes the datas for the annual programmation frontend
+// page within an unique query.
+type initAnnualProgResp struct {
+	models.AnnualProgrammation
+	models.ImportLogs
+	models.ProgrammingsYears
+	models.BudgetCredits
+}
+
+// GetInitAnnualProgrammation handles the get request to fetch datas comparing
+// programmation, commitments and pending commitments and all related datas for
+// the frontend page.
+func GetInitAnnualProgrammation(ctx iris.Context) {
+	year, err := ctx.URLParamInt("year")
+	if err != nil {
+		year = time.Now().Year()
+	}
+	var resp initAnnualProgResp
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.AnnualProgrammation.GetAll(year, db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Programmation annuelle, requête : " + err.Error()})
+		return
+	}
+	if err = resp.ImportLogs.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Programmation annuelle, import logs : " + err.Error()})
+		return
+	}
+	if err = resp.ProgrammingsYears.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Programmation annuelle, programmings years : " + err.Error()})
+		return
+	}
+	if err = resp.BudgetCredits.GetLatest(int64(year), db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Programmation annuelle, budget credits : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
 // GetProgrammingAndPrevisions handles the get request to compare precisely
 // programmation and previsions.
 func GetProgrammingAndPrevisions(ctx iris.Context) {

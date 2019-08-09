@@ -24,10 +24,18 @@ func testBudgetCredit(t *testing.T) {
 // getBudgetCredits tests route is protected and all credits are sent back.
 func getBudgetCredits(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: "", Status: http.StatusInternalServerError,
-			BodyContains: []string{"Token absent"}, ArraySize: 0},
-		{Token: testCtx.User.Token, Status: http.StatusOK,
-			BodyContains: []string{"BudgetCredits"}, ArraySize: 75},
+		{
+			Token:        "",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token absent"},
+			ArraySize:    0,
+		}, // 0 : missing token
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusOK,
+			BodyContains: []string{"BudgetCredits", "BudgetChapter"},
+			ArraySize:    78,
+		}, // 1 : ok
 	}
 
 	for i, tc := range testCases {
@@ -212,7 +220,7 @@ func batchBudgetCreditTest(e *httpexpect.Expect, t *testing.T) {
 
 	content := string(response.Content)
 	count := strings.Count(content, `"id"`)
-	if count != 76 {
+	if count != 79 {
 		t.Errorf("\nBatchBudgetCredits :\n  nombre attendu -> %d\n  nombre reçu <-%d", 76, count)
 	}
 }

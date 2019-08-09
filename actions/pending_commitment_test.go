@@ -13,6 +13,7 @@ func testPendingCommitment(t *testing.T) {
 		getPendingCommitmentsTest(testCtx.E, t)
 		getUnlinkedPendingCommitmentsTest(testCtx.E, t)
 		getLinkedPendingCommitmentsTest(testCtx.E, t)
+		getOpPendingsTest(testCtx.E, t)
 		linkPcToOpTest(testCtx.E, t)
 		unlinkPCsTest(testCtx.E, t)
 		batchPendingsTest(testCtx.E, t)
@@ -104,6 +105,44 @@ func getLinkedPendingCommitmentsTest(e *httpexpect.Expect, t *testing.T) {
 			count := strings.Count(content, `"id"`)
 			if count != tc.ArraySize {
 				t.Errorf("\nGetLinkedPendings[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
+}
+
+// getOpPendingsTest check route is protected and pending commitments correctly sent.
+func getOpPendingsTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"},
+		}, // 0 : bad token
+		{
+			Token:  testCtx.Admin.Token,
+			Status: http.StatusOK,
+			BodyContains: []string{"PendingCommitments", `"op_name"`, `"op_number"`,
+				"UnlinkedPendingCommitments", "PhysicalOp"},
+			ArraySize: 670,
+		}, // 1 : ok
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/pending_commitments/ops").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetOpPendings[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetOpPendings[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetOpPendings[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
 			}
 		}
 	}

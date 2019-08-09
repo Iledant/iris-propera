@@ -112,3 +112,29 @@ func DeleteCategory(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Catégorie supprimée"})
 }
+
+// stepsCategoriesResp embeddes the data for the frontend page dedicated to steps
+// and categories.
+type stepsCategoriesResp struct {
+	models.Steps
+	models.Categories
+}
+
+// GetStepsAndCategories handles the get request of the frontend page dedicated
+// to steps and categories.
+func GetStepsAndCategories(ctx iris.Context) {
+	var resp stepsCategoriesResp
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.Categories.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Liste des catégories et étapes, requête catégories : " + err.Error()})
+		return
+	}
+	if err := resp.Steps.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Liste des catégories et étapes, requête étapes : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}

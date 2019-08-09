@@ -13,6 +13,7 @@ import (
 func testCategory(t *testing.T) {
 	t.Run("Category", func(t *testing.T) {
 		getCategoriesTest(testCtx.E, t)
+		getStepsAndCategoriesTest(testCtx.E, t)
 		caID := createCategoryTest(testCtx.E, t)
 		modifyCategoryTest(testCtx.E, t, caID)
 		deleteCategoryTest(testCtx.E, t, caID)
@@ -22,10 +23,17 @@ func testCategory(t *testing.T) {
 // getCategoriesTest tests route is protected and all categories are sent back.
 func getCategoriesTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"}, ArraySize: 0},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			BodyContains: []string{"Category"}, ArraySize: 22},
+		{
+			Token:        "fake",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		}, // 0 : bad token
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusOK,
+			BodyContains: []string{"Category"},
+			ArraySize:    22,
+		}, // 1 : ok
 	}
 
 	for i, tc := range testCases {
@@ -34,17 +42,61 @@ func getCategoriesTest(e *httpexpect.Expect, t *testing.T) {
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nGetCategories[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+				t.Errorf("\nGetCategories[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nGetCategories[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+			t.Errorf("\nGetCategories[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
 			count := strings.Count(content, `"id"`)
 			if count != tc.ArraySize {
-				t.Errorf("\nGetCategories[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+				t.Errorf("\nGetCategories[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d",
+					i, tc.ArraySize, count)
+			}
+		}
+	}
+}
+
+// getStepsAndCategoriesTest tests route is protected and all categories are sent back.
+func getStepsAndCategoriesTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{
+			Token:        "fake",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		}, // 0 : bad token
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusOK,
+			BodyContains: []string{"Category", "Step"},
+			ArraySize:    26,
+		}, // 1 : ok
+	}
+
+	for i, tc := range testCases {
+		response := e.GET("/api/steps_categories").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetStepsAndCategories[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetStepsAndCategories[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetStepsAndCategories[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d",
+					i, tc.ArraySize, count)
 			}
 		}
 	}

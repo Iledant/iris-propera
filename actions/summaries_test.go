@@ -12,6 +12,7 @@ func testSummaries(t *testing.T) {
 	t.Run("Summaries", func(t *testing.T) {
 		multiannualProgrammationTest(testCtx.E, t)
 		annualProgrammationTest(testCtx.E, t)
+		initAnnualProgrammationTest(testCtx.E, t)
 		programmingPrevisionTest(testCtx.E, t)
 		actionProgrammationTest(testCtx.E, t)
 		actionProgrammationAndYearsTest(testCtx.E, t)
@@ -66,6 +67,47 @@ func annualProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/summaries/annual_programmation").WithQuery("year", tc.Param).
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nAnnualProgrammation[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nAnnualProgrammation[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"name"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nAnnualProgrammation[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
+}
+
+// initAnnualProgrammationTest check route is protected and datas sent has got items and number of lines.
+func initAnnualProgrammationTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{
+			Token:        "fake",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		}, // O : bad token
+		{
+			Token:  testCtx.User.Token,
+			Status: http.StatusOK,
+			Param:  "2018",
+			BodyContains: []string{"AnnualProgrammation", "ImportLog",
+				"operation_number", "name", "step_name", "category_name", "date",
+				"programmings", "total_programmings", "state_ratio", "commitment",
+				"pendings", "BudgetCredits", "ProgrammingsYears"},
+			ArraySize: 117,
+		}, // 1 : tets with 2018 year
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/summaries/annual_programmation/init").WithQuery("year", tc.Param).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {

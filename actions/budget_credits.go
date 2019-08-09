@@ -23,13 +23,24 @@ type brResp struct {
 	BudgetCredit models.CompleteBudgetCredit `json:"BudgetCredits"`
 }
 
+// budgetCreditsResp embeddes all datas for the frontend page.
+type budgetCreditsResp struct {
+	models.CompleteBudgetCredits
+	models.BudgetChapters
+}
+
 // GetBudgetCredits handles request get all budget credits.
 func GetBudgetCredits(ctx iris.Context) {
 	db := ctx.Values().Get("db").(*sql.DB)
-	var resp models.CompleteBudgetCredits
-	if err := resp.GetAll(db); err != nil {
+	var resp budgetCreditsResp
+	if err := resp.CompleteBudgetCredits.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Liste des crédits budgétaire, requête : " + err.Error()})
+		ctx.JSON(jsonError{"Liste des crédits budgétaire, requête crédits : " + err.Error()})
+		return
+	}
+	if err := resp.BudgetChapters.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Liste des crédits budgétaire, requête chapitres : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
