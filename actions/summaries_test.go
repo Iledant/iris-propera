@@ -14,6 +14,7 @@ func testSummaries(t *testing.T) {
 		annualProgrammationTest(testCtx.E, t)
 		programmingPrevisionTest(testCtx.E, t)
 		actionProgrammationTest(testCtx.E, t)
+		actionProgrammationAndYearsTest(testCtx.E, t)
 		actionCommitmentTest(testCtx.E, t)
 		detailedActionCommitmentTest(testCtx.E, t)
 		detailedActionPaymentTest(testCtx.E, t)
@@ -140,6 +141,47 @@ func actionProgrammationTest(e *httpexpect.Expect, t *testing.T) {
 			count := strings.Count(content, `"action_code"`)
 			if count != tc.ArraySize {
 				t.Errorf("\nActionProgrammation[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
+}
+
+// actionProgrammationAndYearsTest check route is protected and datas sent has
+// got items and number of lines.
+func actionProgrammationAndYearsTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{
+			Token:        "fake",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		}, // 0 : bad token
+		{
+			Token:  testCtx.User.Token,
+			Status: http.StatusOK,
+			Param:  "2018",
+			BodyContains: []string{"BudgetProgrammation", "action_code", "action_name",
+				"value", "ProgrammingsYears"},
+			ArraySize: 26,
+		}, // 1 : test with 2018 year
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/summaries/budget_action_programmation_years").
+			WithQuery("year", tc.Param).WithHeader("Authorization", "Bearer "+tc.Token).
+			Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nActionProgrammationAndYears[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nActionProgrammationAndYears[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"action_code"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nActionProgrammationAndYears[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
 			}
 		}
 	}

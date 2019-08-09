@@ -201,6 +201,8 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 	userParty.Get("/summaries/annual_programmation", GetAnnualProgrammation)
 	userParty.Get("/summaries/programmation_prevision", GetProgrammingAndPrevisions)
 	userParty.Get("/summaries/budget_action_programmation", GetActionProgrammation)
+	userParty.Get("/summaries/budget_action_programmation_years",
+		GetActionProgrammationAndYears)
 	userParty.Get("/summaries/commitment_per_budget_action", GetActionCommitment)
 	userParty.Get("/summaries/detailed_commitment_per_budget_action",
 		GetDetailedActionCommitment)

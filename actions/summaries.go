@@ -72,7 +72,8 @@ func GetProgrammingAndPrevisions(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
-// GetActionProgrammation handles the get request to fetch the programmation by budget actions.
+// GetActionProgrammation handles the get request to fetch the programmation
+// by budget actions.
 func GetActionProgrammation(ctx iris.Context) {
 	year, err := ctx.URLParamInt64("year")
 	if err != nil {
@@ -83,6 +84,37 @@ func GetActionProgrammation(ctx iris.Context) {
 	if err = resp.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Programmation par action, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
+// ActionPrgAndYearsResp is used to encapsulate the annual programmation and
+// programmings years for the frontend page query
+type ActionPrgAndYearsResp struct {
+	models.ActionProgrammations
+	models.ProgrammingsYears
+}
+
+// GetActionProgrammationAndYears handles the get request to fetch the
+// programmation by budget actions and the available programmation years for the
+// frontend page.
+func GetActionProgrammationAndYears(ctx iris.Context) {
+	year, err := ctx.URLParamInt64("year")
+	if err != nil {
+		year = int64(time.Now().Year())
+	}
+	db := ctx.Values().Get("db").(*sql.DB)
+	var resp ActionPrgAndYearsResp
+	if err = resp.ActionProgrammations.GetAll(year, db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Programmation par action, requête : " + err.Error()})
+		return
+	}
+	if err := resp.ProgrammingsYears.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Années de programmation, select : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
