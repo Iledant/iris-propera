@@ -247,17 +247,30 @@ func (op *PhysicalOp) LinkFinancialCommitments(fcIDs []int64, db *sql.DB) (err e
 
 // Delete removes a physical operation from database.
 func (op *PhysicalOp) Delete(db *sql.DB) (err error) {
-	res, err := db.Exec("DELETE FROM physical_op WHERE id = $1", op.ID)
+	tx, err := db.Begin()
 	if err != nil {
+		return err
+	}
+	_, err = tx.Exec("DELETE FROM op_dpt_ratios WHERE physical_op_id=$1", op.ID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	res, err := tx.Exec("DELETE FROM physical_op WHERE id = $1", op.ID)
+	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	count, err := res.RowsAffected()
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 	if count != 1 {
+		tx.Rollback()
 		return errors.New("Opération introuvable")
 	}
+	tx.Commit()
 	return nil
 }
 
