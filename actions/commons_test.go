@@ -127,9 +127,8 @@ func restoreTestDB(t *testing.T, dbCfg *config.DBConf) {
 		t.Errorf("Erreur de configuration de la base de test %v\n", *dbCfg)
 		t.FailNow()
 	}
-
-	dbString := fmt.Sprintf("postgres://%s:%s@%s:%s/propera_test", dbCfg.UserName,
-		dbCfg.Password, dbCfg.Host, dbCfg.Port)
+	dbString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", dbCfg.UserName,
+		dbCfg.Password, dbCfg.Host, dbCfg.Port, dbCfg.Name)
 	cmd := exec.Command("pg_restore", "-cO", "-d", dbString, dbCfg.Repository)
 	s, err := cmd.CombinedOutput()
 	if err != nil && strings.Contains(string(s), "FATAL") {
