@@ -194,16 +194,32 @@ func DeleteUser(ctx iris.Context) {
 	ctx.JSON(jsonMessage{"Utilisateur supprimé"})
 }
 
+type signUpReq struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 // SignUp handles the request of a new user and creates an inactive account.
 func SignUp(ctx iris.Context) {
-	name, email, password := ctx.URLParam("name"), ctx.URLParam("email"), ctx.URLParam("password")
-	if name == "" || email == "" || password == "" {
+	var req signUpReq
+	if err := ctx.ReadJSON(&req); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
-		ctx.JSON(jsonError{"Inscription d'utilisateur : Champ manquant ou incorrect"})
+		ctx.JSON(jsonError{"Inscription d'utilisateur, décodage : " + err.Error()})
 		return
 	}
+	if req.Name == "" || req.Email == "" || req.Password == "" {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Inscription d'utilisateur : nom, email ou mot de passe manquant"})
+		return
+	}
+	var user models.User
+	user.Name = req.Name
+	user.Email = req.Email
+	user.Password = req.Password
+	user.Role = models.UserRole
+	user.Active = false
 	db := ctx.Values().Get("db").(*sql.DB)
-	user := models.User{Name: name, Email: email, Role: models.UserRole, Active: false, Password: password}
 	if err := user.Exists(db); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Inscription d'utilisateur, exists : " + err.Error()})

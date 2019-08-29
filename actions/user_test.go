@@ -170,18 +170,30 @@ func deleteUser(e *httpexpect.Expect, t *testing.T, createdUID string) {
 // signupTest check functionality for a user signing up
 func signupTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []struct {
-		Name, Email, Password string
-		Status                int
-		BodyContains          string
+		Payload      string
+		Status       int
+		BodyContains string
 	}{
-		{Name: "Nouveau", Email: "", Password: "", Status: http.StatusBadRequest, BodyContains: "Champ manquant ou incorrect"},
-		{Name: "Nouveau", Email: "nouveau@iledefrance.fr", Password: "", Status: http.StatusBadRequest, BodyContains: "Champ manquant ou incorrect"},
-		{Name: "Nouveau", Email: "essai5@iledefrance.fr", Password: "nouveau", Status: http.StatusBadRequest, BodyContains: "Utilisateur existant"},
-		{Name: "Nouveau", Email: "nouveau@iledefrance.fr", Password: "nouveau", Status: http.StatusCreated, BodyContains: "Utilisateur créé"},
+		{
+			Payload:      `{"Name": "Nouveau", "Email": "", "Password": ""}`,
+			Status:       http.StatusBadRequest,
+			BodyContains: "Champ manquant ou incorrect"},
+		{
+			Payload:      `{"Name": "Nouveau", "Email": "nouveau@iledefrance.fr", "Password": ""}`,
+			Status:       http.StatusBadRequest,
+			BodyContains: "Champ manquant ou incorrect"},
+		{
+			Payload:      `{"Name": "Nouveau", "Email": "essai5@iledefrance.fr", "Password": "nouveau"}`,
+			Status:       http.StatusBadRequest,
+			BodyContains: "Utilisateur existant"},
+		{
+			Payload:      `{"Name": "Nouveau", "Email": "nouveau@iledefrance.fr", "Password": "nouveau"}`,
+			Status:       http.StatusCreated,
+			BodyContains: "Utilisateur créé"},
 	}
 
 	for i, tc := range testCases {
-		response := e.POST("/api/user/signup").WithQuery("name", tc.Name).WithQuery("email", tc.Email).WithQuery("password", tc.Password).Expect()
+		response := e.POST("/api/user/signup").WithBytes([]byte(tc.Payload)).Expect()
 		content := string(response.Content)
 		if !strings.Contains(content, tc.BodyContains) {
 			t.Errorf("\nSignUp[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, tc.BodyContains, content)
