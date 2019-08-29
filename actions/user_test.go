@@ -177,11 +177,11 @@ func signupTest(e *httpexpect.Expect, t *testing.T) {
 		{
 			Payload:      `{"Name": "Nouveau", "Email": "", "Password": ""}`,
 			Status:       http.StatusBadRequest,
-			BodyContains: "Champ manquant ou incorrect"},
+			BodyContains: "Inscription d'utilisateur : nom, email ou mot de passe manquant"},
 		{
 			Payload:      `{"Name": "Nouveau", "Email": "nouveau@iledefrance.fr", "Password": ""}`,
 			Status:       http.StatusBadRequest,
-			BodyContains: "Champ manquant ou incorrect"},
+			BodyContains: "Inscription d'utilisateur : nom, email ou mot de passe manquant"},
 		{
 			Payload:      `{"Name": "Nouveau", "Email": "essai5@iledefrance.fr", "Password": "nouveau"}`,
 			Status:       http.StatusBadRequest,
