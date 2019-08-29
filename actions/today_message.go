@@ -53,6 +53,7 @@ type homeResp struct {
 	models.YearBudgetCredits
 	models.ProgrammingsPerMonthes
 	models.PaymentPerMonths
+	models.ImportLogs
 }
 
 // GetHomeDatas handles the get request for the home page.
@@ -100,6 +101,11 @@ func GetHomeDatas(ctx iris.Context) {
 	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, PaymentPerMonths : " + err.Error()})
+		return
+	}
+	if err = resp.ImportLogs.GetAll(db) ; err!=nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"HomeDatas, ImportLogs : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
