@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Iledant/iris_propera/models"
+	"github.com/Iledant/iris-propera/models"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/kataras/iris"
 )

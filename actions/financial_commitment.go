@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Iledant/iris_propera/models"
+	"github.com/Iledant/iris-propera/models"
 	"github.com/kataras/iris"
 )
 

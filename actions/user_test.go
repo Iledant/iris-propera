@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Iledant/iris_propera/config"
+	"github.com/Iledant/iris-propera/config"
 	"github.com/iris-contrib/httpexpect"
 )
 

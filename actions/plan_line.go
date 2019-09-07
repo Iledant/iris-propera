@@ -6,7 +6,7 @@ import (
 
 	"github.com/kataras/iris"
 
-	"github.com/Iledant/iris_propera/models"
+	"github.com/Iledant/iris-propera/models"
 )
 
 // TODO : refactor model

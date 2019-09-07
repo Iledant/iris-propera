@@ -10,8 +10,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Iledant/iris_propera/config"
-	"github.com/Iledant/iris_propera/models"
+	"github.com/Iledant/iris-propera/config"
+	"github.com/Iledant/iris-propera/models"
 	"github.com/iris-contrib/httpexpect"
 
 	"github.com/kataras/iris"

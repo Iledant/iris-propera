@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Iledant/iris_propera/actions"
-	"github.com/Iledant/iris_propera/config"
+	"github.com/Iledant/iris-propera/actions"
+	"github.com/Iledant/iris-propera/config"
 
 	"github.com/kataras/iris"
 )
