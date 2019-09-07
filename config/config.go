@@ -50,6 +50,7 @@ type DBConf struct {
 	UserName   string `yaml:"username"`
 	Password   string `yaml:"password"`
 	Repository string `yaml:"repository"`
+	RestoreCmd string `yaml:"restoreCmd"`
 }
 
 // Credentials keep email ans password for a user.

@@ -105,7 +105,7 @@ func testCommons(t *testing.T) {
 
 		db, err := config.LaunchDB(&cfg.Databases.Test)
 		if err != nil {
-			t.Errorf("Erreur de connexion à postgres : %v\n", err)
+			t.Errorf("Erreur de connexion à PostgreSQL : %v\n", err)
 			t.FailNow()
 		}
 
@@ -129,7 +129,7 @@ func restoreTestDB(t *testing.T, dbCfg *config.DBConf) {
 	}
 	dbString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", dbCfg.UserName,
 		dbCfg.Password, dbCfg.Host, dbCfg.Port, dbCfg.Name)
-	cmd := exec.Command("pg_restore", "-cO", "-d", dbString, dbCfg.Repository)
+	cmd := exec.Command(dbCfg.RestoreCmd, "-cO", "-d", dbString, dbCfg.Repository)
 	s, err := cmd.CombinedOutput()
 	if err != nil && strings.Contains(string(s), "FATAL") {
 		t.Errorf("Impossible de restaurer la base de test:\n%s\n", string(s))
