@@ -84,6 +84,7 @@ func TestAll(t *testing.T) {
 		testSettings(t)
 		testStep(t)
 		testTodayMessage(t)
+		testPaymentCredits(t)
 		testUser(t, &testCtx.Config.Users.User)
 	})
 }
