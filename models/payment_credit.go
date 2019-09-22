@@ -1,6 +1,9 @@
 package models
 
-import "database/sql"
+import (
+	"database/sql"
+	"fmt"
+)
 
 // PaymentCredit model
 type PaymentCredit struct {
@@ -38,10 +41,10 @@ type PaymentCreditBatch struct {
 
 // GetAll fetches all PaymentCredits of a year from database
 func (p *PaymentCredits) GetAll(year int64, db *sql.DB) error {
-	rows, err := db.Query(`SELECT pc.year,bc.id,bc.code,pc.sub_function,
+	rows, err := db.Query(`SELECT pc.year,bc.id,bc.code,pc.sub_function_code,
 	pc.primitive_budget,pc.reported,pc.added_budget,pc.modify_decision,pc.movement
 	 FROM payment_credit pc
-	JOIN budget_chapter bc ON bc.id=pc.budget_id WHERE pc.year=$1`, year)
+	JOIN budget_chapter bc ON bc.id=pc.chapter_id WHERE pc.year=$1`, year)
 	if err != nil {
 		return err
 	}
@@ -71,40 +74,38 @@ func (p *PaymentCreditBatch) Save(year int64, db *sql.DB) error {
 		return err
 	}
 	for _, l := range p.Lines {
-		if _, err = tx.Exec(`INSERT INTO temp_payment_credit (budget_code,
-			sub_function,primitive_budget,reported,added_budget,modify_decision,
+		if _, err = tx.Exec(`INSERT INTO temp_payment_credit (chapter_code,
+			sub_function_code,primitive_budget,reported,added_budget,modify_decision,
 			movement) VALUES($1,$2,$3,$4,$5,$6,$7)`, l.ChapterCode, l.SubFunctionCode,
 			l.PrimitiveBudget, l.Reported, l.AddedBudget, l.ModifyDecision,
 			l.Movement); err != nil {
 			tx.Rollback()
-			return err
+			return fmt.Errorf("temp insert %v", err)
 		}
 	}
-	if _, err = tx.Exec(`UPDATE INTO payment_credit SET year=$1,
-		budget_code=t.budget_code,budget_id=t.budget_id,sub_function=t.sub_function,
+	if _, err = tx.Exec(`UPDATE payment_credit SET year=$1,
+		chapter_id=t.chapter_id,sub_function_code=t.sub_function_code,
 		primitive_budget=t.primitive_budget,reported=t.reported,
 		added_budget=t.added_budget,modify_decision=t.modify_decision,
 		movement=t.movement
-		FROM (SELECT tpc.*,bc.id as budget_id FROM temp_payment_credit tpc
-			JOIN budget_chapter bc ON bc.code=tpc.budget_code) t 
-			WHERE (t.budget_code,t.sub_function) IN (SELECT budget_code,sub_function 
+		FROM (SELECT tpc.*,bc.id as chapter_id FROM temp_payment_credit tpc
+			JOIN budget_chapter bc ON bc.code=tpc.chapter_code) t 
+			WHERE (t.chapter_code,t.sub_function_code) IN (SELECT chapter_code,sub_function_code 
 				FROM payment_credit)`, year); err != nil {
 		tx.Rollback()
 		return err
 	}
-	if _, err = tx.Exec(`INSERT INTO payment_credit SET year=$1,
-		budget_code=t.budget_code,budget_id=t.budget_id,sub_function=t.sub_function,
-		primitive_budget=t.primitive_budget,reported=t.reported,
-		added_budget=t.added_budget,modify_decision=t.modify_decision,
-		movement=t.movement
-		FROM (SELECT tpc.*,bc.id as budget_id FROM temp_payment_credit tpc
-			JOIN budget_chapter bc ON bc.code=tpc.budget_code) t 
-			WHERE (t.budget_code,t.sub_function) NOT IN
-			(SELECT budget_code,sub_function FROM payment_credit)`, year); err != nil {
+	if _, err = tx.Exec(`INSERT INTO payment_credit 
+		(SELECT $1, bc.id, tpc.sub_function_code,tpc.primitive_budget,tpc.reported,
+			tpc.added_budget,tpc.modify_decision,tpc.movement
+			FROM temp_payment_credit tpc
+			JOIN budget_chapter bc ON bc.code=tpc.chapter_code
+			WHERE (tpc.chapter_code,tpc.sub_function_code) NOT IN
+			(SELECT chapter_code,sub_function_code FROM payment_credit))`, year); err != nil {
 		tx.Rollback()
 		return err
 	}
-	if _, err = tx.Exec(`DELETE FROM temp_payment_credit`, year); err != nil {
+	if _, err = tx.Exec(`DELETE FROM temp_payment_credit`); err != nil {
 		tx.Rollback()
 		return err
 	}

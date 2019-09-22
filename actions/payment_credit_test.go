@@ -21,7 +21,7 @@ func batchPaymentCreditsTest(e *httpexpect.Expect, t *testing.T) {
 		{
 			Token:        testCtx.User.Token,
 			Status:       http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateurs requis"},
+			BodyContains: []string{"Droits administrateur requis"},
 		},
 		{
 			Token:        testCtx.Admin.Token,
@@ -63,7 +63,7 @@ func getPaymentCreditsTest(e *httpexpect.Expect, t *testing.T) {
 			Token:        testCtx.User.Token,
 			Status:       http.StatusBadRequest,
 			Param:        "a",
-			BodyContains: []string{`Liste d'enveloppes de crédits, décodage : `},
+			BodyContains: []string{`Liste des enveloppes de crédits, décodage : `},
 		},
 		{
 			Token:        testCtx.User.Token,
