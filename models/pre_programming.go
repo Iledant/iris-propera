@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 )
 
@@ -119,29 +120,31 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 		commission_id integer NOT NULL, value bigint NOT NULL, total_value bigint,
 		 state_ratio double precision, descript text)`); err != nil {
 		tx.Rollback()
-		return
+		return fmt.Errorf("create temptable %v", err)
 	}
-	var value string
-	var values []string
-	for _, pp := range p.PreProgrammings {
-		value = "(" + toSQL(pp.ID) + "," + toSQL(pp.Year) + "," + toSQL(pp.PhysicalOpID) +
-			"," + toSQL(pp.CommissionID) + "," + toSQL(pp.Value) + "," + toSQL(pp.TotalValue) +
-			"," + toSQL(pp.StateRatio) + ", NULL)"
-		values = append(values, value)
-	}
-	if _, err = tx.Exec(`INSERT INTO temp_pre_programmings (id, year, physical_op_id,
+	if len(p.PreProgrammings) > 0 {
+		var value string
+		var values []string
+		for _, pp := range p.PreProgrammings {
+			value = "(" + toSQL(pp.ID) + "," + toSQL(pp.Year) + "," + toSQL(pp.PhysicalOpID) +
+				"," + toSQL(pp.CommissionID) + "," + toSQL(pp.Value) + "," + toSQL(pp.TotalValue) +
+				"," + toSQL(pp.StateRatio) + ", NULL)"
+			values = append(values, value)
+		}
+		if _, err = tx.Exec(`INSERT INTO temp_pre_programmings (id, year, physical_op_id,
 	commission_id, value, total_value, state_ratio, descript) 
 	VALUES ` + strings.Join(values, ",")); err != nil {
-		tx.Rollback()
-		return
-	}
-	if _, err = tx.Exec(`UPDATE pre_programmings SET value = t.value, 
+			tx.Rollback()
+			return fmt.Errorf("insert temp %v", err)
+		}
+		if _, err = tx.Exec(`UPDATE pre_programmings SET value = t.value, 
 	physical_op_id = t.physical_op_id, commission_id = t.commission_id,
 	year = t.year, total_value = t.total_value, state_ratio = t.state_ratio,
 	descript = t.descript
   FROM temp_pre_programmings t WHERE pre_programmings.id = t.id`); err != nil {
-		tx.Rollback()
-		return
+			tx.Rollback()
+			return fmt.Errorf("update %v", err)
+		}
 	}
 	if uID == 0 {
 		if _, err = tx.Exec(`DELETE FROM pre_programmings pp 
@@ -149,7 +152,7 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 		 AND pp.id NOT IN (SELECT id FROM temp_pre_programmings) AND pp.year = $1`,
 			p.Year); err != nil {
 			tx.Rollback()
-			return
+			return fmt.Errorf("delete %v", err)
 		}
 	} else {
 		if _, err = tx.Exec(`DELETE FROM pre_programmings pp 
@@ -158,7 +161,7 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 				AND pp.id NOT IN (SELECT id FROM temp_pre_programmings) AND pp.year = $2`,
 			uID, p.Year); err != nil {
 			tx.Rollback()
-			return
+			return fmt.Errorf("delete %v", err)
 		}
 	}
 	if _, err = tx.Exec(`INSERT INTO pre_programmings (value, physical_op_id, commission_id, 
@@ -167,11 +170,11 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 		FROM temp_pre_programmings 
 		WHERE id ISNULL OR id NOT IN (SELECT DISTINCT id FROM pre_programmings))`); err != nil {
 		tx.Rollback()
-		return
+		return fmt.Errorf("insert table %v", err)
 	}
 	if _, err = tx.Exec(`DROP TABLE IF EXISTS temp_pre_programmings`); err != nil {
 		tx.Rollback()
-		return
+		return fmt.Errorf("droptable %v", err)
 	}
 	tx.Commit()
 	return err
