@@ -40,7 +40,7 @@ type PaymentCreditBatch struct {
 }
 
 // GetAll fetches all PaymentCredits of a year from database
-func (p *PaymentCredits) GetAll(year int64, db *sql.DB) error {
+func (p *PaymentCredits) GetAll(year int, db *sql.DB) error {
 	rows, err := db.Query(`SELECT pc.year,bc.id,bc.code,pc.sub_function_code,
 	pc.primitive_budget,pc.reported,pc.added_budget,pc.modify_decision,pc.movement
 	 FROM payment_credit pc
