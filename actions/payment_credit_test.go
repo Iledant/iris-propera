@@ -30,9 +30,11 @@ func batchPaymentCreditsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Batch d'enveloppes de crédits, décodage : "},
 		},
 		{
-			Token:        testCtx.Admin.Token,
-			Status:       http.StatusOK,
-			Sent:         []byte(`{"PaymentCredit":[{"ChapterCode":908,"SubFunctionCode":811,"PrimitiveBudget":1000000,"Reported":0,"AddedBudget":500000,"ModifyDecision":300000,"Movement":50000}]}`),
+			Token:  testCtx.Admin.Token,
+			Status: http.StatusOK,
+			Sent: []byte(`{"PaymentCredit":[{"Chapter":908,"Function":811,` +
+				`"Primitive":1000000,"Reported":0,"Added":500000,"Modified":300000,` +
+				`"Movement":50000}]}`),
 			BodyContains: []string{"Enveloppes de crédits importées"},
 		},
 	}
@@ -66,10 +68,12 @@ func getPaymentCreditsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{`Liste des enveloppes de crédits, décodage : `},
 		},
 		{
-			Token:        testCtx.User.Token,
-			Status:       http.StatusOK,
-			Param:        "2019",
-			BodyContains: []string{`{"PaymentCredit":[{"Year":2019,"ChapterID":2,"ChapterCode":908,"SubFunctionCode":811,"PrimitiveBudget":1000000,"Reported":0,"AddedBudget":500000,"ModifyDecision":300000,"Movement":50000}]}`},
+			Token:  testCtx.User.Token,
+			Status: http.StatusOK,
+			Param:  "2019",
+			BodyContains: []string{`{"PaymentCredit":[{"Year":2019,"ChapterID":2,` +
+				`"Chapter":908,"Function":811,"Primitive":1000000,"Reported":0,` +
+				`"Added":500000,"Modified":300000,"Movement":50000}]}`},
 		},
 	}
 	for i, tc := range testCases {

@@ -31,7 +31,7 @@ func BatchPaymentCredits(ctx iris.Context) {
 // GetAllPaymentCredits handles the get request to get all payment credits of
 // the given year
 func GetAllPaymentCredits(ctx iris.Context) {
-	year, err := ctx.URLParamInt64("Year")
+	year, err := ctx.URLParamInt("Year")
 	if err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Liste des enveloppes de crédits, décodage : " + err.Error()})
