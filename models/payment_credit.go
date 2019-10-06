@@ -95,7 +95,8 @@ func (p *PaymentCreditBatch) Save(year int64, db *sql.DB) error {
 		tx.Rollback()
 		return err
 	}
-	if _, err = tx.Exec(`INSERT INTO payment_credit 
+	if _, err = tx.Exec(`INSERT INTO payment_credit (year,chapter_id,function,
+		primitive,reported,added,modified,movement)
 		(SELECT $1, bc.id, tpc.function,tpc.primitive,tpc.reported,
 			tpc.added,tpc.modified,tpc.movement
 			FROM temp_payment_credit tpc
