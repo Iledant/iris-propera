@@ -12,7 +12,7 @@ type PaymentCreditJournal struct {
 	ID                int64     `json:"ID"`
 	Function          int64     `json:"Function"`
 	CreationDate      time.Time `json:"CreationDate"`
-	ModificationFDate time.Time `json:"ModificationFDate"`
+	ModificationFDate time.Time `json:"ModificationDate"`
 	Name              string    `json:"Name"`
 	Value             int64     `json:"Value"`
 }
