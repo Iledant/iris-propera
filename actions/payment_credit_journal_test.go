@@ -71,7 +71,7 @@ func getPaymentCreditJournalsTest(e *httpexpect.Expect, t *testing.T) {
 			Status: http.StatusOK,
 			Param:  "2019",
 			BodyContains: []string{`{"PaymentCreditJournal":[{"Chapter":908,"ID":1,` +
-				`"Function":811,"CreationDate":"2019-03-10T00:00:00Z","ModificationFDate"` +
+				`"Function":811,"CreationDate":"2019-03-10T00:00:00Z","ModificationDate"` +
 				`:"2019-03-15T00:00:00Z","Name":"Mouvement","Value":100000}]}`},
 		},
 	}

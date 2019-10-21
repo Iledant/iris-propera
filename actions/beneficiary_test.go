@@ -13,6 +13,7 @@ func testBeneficiary(t *testing.T) {
 	t.Run("Beneficiary", func(t *testing.T) {
 		getBeneficiariesTest(testCtx.E, t)
 		updateBeneficiaryTest(testCtx.E, t)
+		getBeneficiaryCmtsTest(testCtx.E, t)
 	})
 }
 
@@ -73,6 +74,50 @@ func updateBeneficiaryTest(e *httpexpect.Expect, t *testing.T) {
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
 			t.Errorf("\nUpdateBeneficiary[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+	}
+}
+
+// getBeneficiaryCmtsTest test route is users protected and the response fits.
+func getBeneficiaryCmtsTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{
+			Token:        "fake",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		},
+		{
+			Token:        testCtx.User.Token,
+			ID:           "a",
+			Status:       http.StatusBadRequest,
+			BodyContains: []string{"Engagement d'un bénéficiaire, paramètre :"},
+		},
+		{
+			Token:        testCtx.User.Token,
+			ID:           "10",
+			Status:       http.StatusOK,
+			BodyContains: []string{"BeneficiaryCommitment"},
+			ArraySize:    171,
+		},
+	}
+
+	for i, tc := range testCases {
+		response := e.GET("/api/beneficiary/"+tc.ID+"/commitment").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetBeneficiaryCmts[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetBeneficiaryCmts[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetBeneficiaryCmts[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
 		}
 	}
 }

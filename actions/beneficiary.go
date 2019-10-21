@@ -55,3 +55,22 @@ func UpdateBeneficiary(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(beResp{req})
 }
+
+// GetBeneficiaryCmts handles the get request to fetch commitments linked to a
+// beneficiary
+func GetBeneficiaryCmts(ctx iris.Context) {
+	bID, err := ctx.Params().GetInt64("beneficiaryID")
+	if err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Engagement d'un bénéficiaire, paramètre : " + err.Error()})
+		return
+	}
+	var resp models.BeneficiaryCmts
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err = resp.GetAll(bID, db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Engagement d'un bénéficiaire, requête : " + err.Error()})
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
