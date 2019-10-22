@@ -37,7 +37,6 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 	adminParty.Delete("/physical_ops/{opID:int}", DeletePhysicalOp)
 	adminParty.Get("/physical_ops/financial_commitments", GetOpsAndFCs)
 
-	adminParty.Get("/beneficiaries", GetBeneficiaries)
 	adminParty.Put("/beneficiaries/{beneficiaryID:int}", UpdateBeneficiary)
 
 	adminParty.Get("/budget_chapters", GetBudgetChapters)
@@ -237,6 +236,7 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	userParty.Get("/payment_credits/journal", GetAllPaymentCreditJournals)
 
+	userParty.Get("/beneficiaries", GetBeneficiaries)
 	userParty.Get("/beneficiary/{beneficiaryID}/commitment", GetBeneficiaryCmts)
 }
 

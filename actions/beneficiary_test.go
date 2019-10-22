@@ -20,10 +20,17 @@ func testBeneficiary(t *testing.T) {
 // getBeneficiariesTest test route is protected and the response fits.
 func getBeneficiariesTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"}, ArraySize: 0},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK,
-			BodyContains: []string{"Beneficiary"}, ArraySize: 530},
+		{
+			Token:        "fake",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		},
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusOK,
+			BodyContains: []string{"Beneficiary"},
+			ArraySize:    530,
+		},
 	}
 
 	for i, tc := range testCases {
