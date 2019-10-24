@@ -73,6 +73,10 @@ func (p *PaymentCreditBatch) Save(year int64, db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+	if _, err = tx.Exec(`DELETE FROM payment_credit WHERE year=$1`, year); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("initial delete %v", err)
+	}
 	for _, l := range p.Lines {
 		if _, err = tx.Exec(`INSERT INTO temp_payment_credit (chapter,
 			function,primitive,reported,added,modified,
@@ -83,32 +87,18 @@ func (p *PaymentCreditBatch) Save(year int64, db *sql.DB) error {
 			return fmt.Errorf("temp insert %v", err)
 		}
 	}
-	if _, err = tx.Exec(`UPDATE payment_credit SET year=$1,
-		chapter_id=t.chapter_id,function=t.function,
-		primitive=t.primitive,reported=t.reported,
-		added=t.added,modified=t.modified,
-		movement=t.movement
-		FROM (SELECT tpc.*,bc.id as chapter_id FROM temp_payment_credit tpc
-			JOIN budget_chapter bc ON bc.code=tpc.chapter) t 
-			WHERE (t.chapter,t.function) IN (SELECT chapter,function 
-				FROM payment_credit)`, year); err != nil {
-		tx.Rollback()
-		return err
-	}
 	if _, err = tx.Exec(`INSERT INTO payment_credit (year,chapter_id,function,
 		primitive,reported,added,modified,movement)
 		(SELECT $1, bc.id, tpc.function,tpc.primitive,tpc.reported,
 			tpc.added,tpc.modified,tpc.movement
 			FROM temp_payment_credit tpc
-			JOIN budget_chapter bc ON bc.code=tpc.chapter
-			WHERE (tpc.chapter,tpc.function) NOT IN
-			(SELECT chapter,function FROM payment_credit))`, year); err != nil {
+			JOIN budget_chapter bc ON bc.code=tpc.chapter)`, year); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("insert %v", err)
 	}
 	if _, err = tx.Exec(`DELETE FROM temp_payment_credit`); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("final delete %v", err)
 	}
 	tx.Commit()
 	return nil

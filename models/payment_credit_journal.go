@@ -71,6 +71,11 @@ func (p *PaymentCreditJournalBatch) Save(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+	if _, err = tx.Exec(`DELETE FROM payment_credit_journal 
+	WHERE extract(year FROM creation_date)=extract(year FROM CURRENT_DATE)`); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("initial delete %v", err)
+	}
 	var c, m time.Time
 	for _, l := range p.Lines {
 		c = time.Date(int(l.CreationDate/10000), time.Month(l.CreationDate/100%100),
@@ -85,29 +90,18 @@ func (p *PaymentCreditJournalBatch) Save(db *sql.DB) error {
 			return fmt.Errorf("temp insert %v", err)
 		}
 	}
-	if _, err = tx.Exec(`UPDATE payment_credit_journal SET 
-		modification_date=t.modification_date,name=t.name,value=t.value
-		FROM (SELECT tpc.*,bc.id as chapter_id FROM temp_payment_credit_journal tpc
-			JOIN budget_chapter bc ON bc.code=tpc.chapter) t 
-			WHERE (t.chapter,t.function,t.creation_date) IN
-			(SELECT chapter,function,creation_date FROM payment_credit_journal)`); err != nil {
-		tx.Rollback()
-		return err
-	}
 	if _, err = tx.Exec(`INSERT INTO payment_credit_journal (chapter_id,function,
 		creation_date,modification_date,name,value)
 		(SELECT bc.id, tpc.function,tpc.creation_date,tpc.modification_date,
 			tpc.name,tpc.value
 			FROM temp_payment_credit_journal tpc
-			JOIN budget_chapter bc ON bc.code=tpc.chapter
-			WHERE (tpc.chapter,tpc.function,tpc.creation_date) NOT IN
-			(SELECT chapter,function,creation_date FROM payment_credit_journal))`); err != nil {
+			JOIN budget_chapter bc ON bc.code=tpc.chapter)`); err != nil {
 		tx.Rollback()
 		return err
 	}
 	if _, err = tx.Exec(`DELETE FROM temp_payment_credit_journal`); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("final delete %v", err)
 	}
 	tx.Commit()
 	return nil
