@@ -103,7 +103,7 @@ func getBeneficiaryCmtsTest(e *httpexpect.Expect, t *testing.T) {
 			Token:        testCtx.User.Token,
 			ID:           "10",
 			Status:       http.StatusOK,
-			BodyContains: []string{"BeneficiaryCommitment"},
+			BodyContains: []string{`"BeneficiaryCommitment":[`},
 			ArraySize:    171,
 		},
 	}
