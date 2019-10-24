@@ -10,14 +10,14 @@ import (
 type BeneficiaryCmt struct {
 	ID        int64      `json:"id"`
 	Date      time.Time  `json:"date"`
-	IrisCode  string     `json:"iris_code"`
+	IrisCode  string     `json:"irisCode"`
 	Name      string     `json:"name"`
 	Value     int64      `json:"value"`
-	LapseDate NullTime   `json:"lapse_date"`
+	LapseDate NullTime   `json:"lapseDate"`
 	Available int64      `json:"available"`
-	OpID      NullInt64  `json:"op_id"`
-	OpNumber  NullString `json:"op_number"`
-	OpName    NullString `json:"op_name"`
+	OpID      NullInt64  `json:"opId"`
+	OpNumber  NullString `json:"opNumber"`
+	OpName    NullString `json:"opName"`
 }
 
 // BeneficiaryCmts embeddes an array of BeneficiaryCmt for json export and database
