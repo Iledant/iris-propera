@@ -17,7 +17,7 @@ func testPaymentNeed(t *testing.T) {
 			t.FailNow()
 		}
 		modifyPaymentNeedTest(testCtx.E, t, pnID)
-		getPaymentNeedsTest(testCtx.E, t)
+		getPaymentNeedsAndForecastTest(testCtx.E, t)
 		deletePaymentNeedTest(testCtx.E, t, pnID)
 	})
 }
@@ -134,8 +134,8 @@ func modifyPaymentNeedTest(e *httpexpect.Expect, t *testing.T, pnID int) {
 	}
 }
 
-// getPaymentNeedsTest tests route is protected and all PaymentNeeds are sent back.
-func getPaymentNeedsTest(e *httpexpect.Expect, t *testing.T) {
+// getPaymentNeedsAndForecastTest tests route is protected and all PaymentNeeds are sent back.
+func getPaymentNeedsAndForecastTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{
 			Token:        "fake",
@@ -152,24 +152,24 @@ func getPaymentNeedsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 
 	for i, tc := range testCases {
-		response := e.GET("/api/payment_need").
+		response := e.GET("/api/payment_needs/forecast").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithQueryString(tc.Param).Expect()
 		content := string(response.Content)
 		for _, s := range tc.BodyContains {
 			if !strings.Contains(content, s) {
-				t.Errorf("\nGetPaymentNeeds[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+				t.Errorf("\nGetPaymentNeedsAndForecast[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
 					i, s, content)
 			}
 		}
 		statusCode := response.Raw().StatusCode
 		if statusCode != tc.Status {
-			t.Errorf("\nGetPaymentNeeds[%d],statut :  attendu ->%v  reçu <-%v", i,
+			t.Errorf("\nGetPaymentNeedsAndForecast[%d],statut :  attendu ->%v  reçu <-%v", i,
 				tc.Status, statusCode)
 		}
 		if tc.ArraySize > 0 {
 			count := strings.Count(content, `"Need"`)
 			if count != tc.ArraySize {
-				t.Errorf("\nGetPaymentNeeds[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d",
+				t.Errorf("\nGetPaymentNeedsAndForecast[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d",
 					i, tc.ArraySize, count)
 			}
 		}

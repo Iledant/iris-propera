@@ -109,11 +109,10 @@ func (p *PaymentNeed) Delete(db *sql.DB) error {
 	return err
 }
 
-// GetAll fetches all PaymentNeed of the given year from database
-func (p *PaymentNeeds) GetAll(year int64, db *sql.DB) error {
+// GetAll fetches all PaymentNeed from database
+func (p *PaymentNeeds) GetAll(db *sql.DB) error {
 	rows, err := db.Query(`SELECT p.id,p.beneficiary_id,b.name,p.date,p.value,
-	p.comment FROM payment_need p JOIN beneficiary b ON p.beneficiary_id=b.id
-	WHERE extract(year FROM p.date)=$1`, year)
+	p.comment FROM payment_need p JOIN beneficiary b ON p.beneficiary_id=b.id`)
 	if err != nil {
 		return fmt.Errorf("select %v", err)
 	}

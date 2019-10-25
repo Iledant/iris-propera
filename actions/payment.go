@@ -112,6 +112,7 @@ type getAllPaymentsResp struct {
 	models.PaymentTypes
 	models.PaymentCreditJournals
 	models.PaymentCredits
+	models.PaymentNeeds
 }
 
 // GetAllPayments handle the get request to fetch all datas linked to payment frontend page.
@@ -151,6 +152,11 @@ func GetAllPayments(ctx iris.Context) {
 	if err = resp.PaymentCredits.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Tous les paiements, enveloppes de paiement : " + err.Error()})
+		return
+	}
+	if err = resp.PaymentNeeds.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Tous les paiements, besoins de paiement : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)

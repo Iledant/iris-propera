@@ -67,9 +67,9 @@ func DeletePaymentNeed(ctx iris.Context) {
 	ctx.JSON(jsonMessage{"Besoin de paiement supprimé"})
 }
 
-// GetPaymentNeeds handle the get request to calculates the latest payment needs
+// GetPaymentNeedsAndForecasts handle the get request to calculates the latest payment needs
 // and forecast of the year
-func GetPaymentNeeds(ctx iris.Context) {
+func GetPaymentNeedsAndForecasts(ctx iris.Context) {
 	year, err := ctx.URLParamInt64("Year")
 	if err != nil {
 		ctx.StatusCode(http.StatusBadRequest)

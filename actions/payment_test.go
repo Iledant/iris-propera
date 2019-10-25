@@ -10,12 +10,52 @@ import (
 
 func testPayment(t *testing.T) {
 	t.Run("Payment", func(t *testing.T) {
+		getAllPaymentsTest(testCtx.E, t)
 		getFcPaymentTest(testCtx.E, t)
 		getPaymentsPerMonthTest(testCtx.E, t)
 		getPrevisionRealizedTest(testCtx.E, t)
 		getCumulatedMonthPaymentTest(testCtx.E, t)
 		batchPaymentsTest(testCtx.E, t)
 	})
+}
+
+// getAllPaymentsTest check route is protected and payments correctly sent.
+func getAllPaymentsTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		{
+			Token:        "fake",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		},
+		{
+			Token:  testCtx.User.Token,
+			Param:  "?year=2019",
+			Status: http.StatusOK,
+			BodyContains: []string{"PaymentsPerMonth", "MonthCumulatedPayment", `"Beneficiary":[`,
+				`"PaymentType":`, `"PaymentCreditJournal":[`, `"PaymentCredit":[`, `"PaymentNeed":[`},
+			ArraySize: 533,
+		},
+	}
+	for i, tc := range testCases {
+		response := e.GET("/api/payments").WithQueryString("Param").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetAllPayments[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
+		}
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetAllPayments[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
+			}
+		}
+		if tc.ArraySize > 0 {
+			count := strings.Count(content, `"id"`)
+			if count != tc.ArraySize {
+				t.Errorf("\nGetAllPayments[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
+			}
+		}
+	}
 }
 
 // getFcPaymentTest check route is protected and payments correctly sent.
