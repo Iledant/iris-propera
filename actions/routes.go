@@ -138,6 +138,10 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	adminParty.Post("/payment_credits/journal", BatchPaymentCreditJournals)
 
+	adminParty.Post("/payment_need", CreatePaymentNeed)
+	adminParty.Put("/payment_need", ModifyPaymentNeed)
+	adminParty.Delete("/payment_need/{ID}", DeletePaymentNeed)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/user/logout", Logout)
 	userParty.Get("/physical_ops", GetPhysicalOps)
@@ -238,6 +242,8 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	userParty.Get("/beneficiaries", GetBeneficiaries)
 	userParty.Get("/beneficiary/{beneficiaryID}/commitment", GetBeneficiaryCmts)
+
+	userParty.Get("/payment_need", GetPaymentNeeds)
 }
 
 // setDBMiddleware return a middleware to add db to context values
