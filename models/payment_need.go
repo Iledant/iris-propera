@@ -35,8 +35,7 @@ type LastPaymentNeed struct {
 
 // LastPaymentNeeds embeddes an array of LastPaymentNeed forjson export
 type LastPaymentNeeds struct {
-	Lines            []LastPaymentNeed `json:"PaymentNeed"`
-	RemainingPayment int64             `json:"RemainingPayment"`
+	Lines []LastPaymentNeed `json:"PaymentNeed"`
 }
 
 // validate checks if fields matches database constraints
