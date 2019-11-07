@@ -154,14 +154,15 @@ func (p *LastPaymentNeeds) GetAll(year int64, pmtType int64, db *sql.DB) error {
 	WHERE b.id NOT IN
 		(SELECT beneficiary_id FROM payment_need WHERE extract(year FROM date)=$2)
 	UNION ALL
-	SELECT b.name, pn.value,pn.comment, max(pn.date)::date,fc.value::bigint,
-		COALESCE(p.value,0)::bigint
+	SELECT b.name, pn.value,pn.comment, pn.date ,fc.value::bigint,
+		 COALESCE(p.value,0)::bigint
 	FROM payment_need pn
 	LEFT JOIN beneficiary b ON pn.beneficiary_id=b.id
 	LEFT OUTER JOIN fc ON fc.beneficiary_code=b.code
 	LEFT OUTER JOIN p ON p.beneficiary_code = b.code
-	WHERE extract(year FROM pn.date)=$2
-	GROUP BY 1,2,3,5,6;`
+	WHERE (pn.beneficiary_id, pn.date) IN
+		(SELECT beneficiary_id, max(date)
+			FROM payment_need WHERE extract(year FROM DATE)=$2 GROUP BY 1);`
 
 	rows, err := db.Query(q, pmtType, year)
 	if err != nil {
