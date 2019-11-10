@@ -326,7 +326,7 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&r.FcID, &r.FcValue, &r.FcName, &r.IrisCode, &r.FcDate,
-			&r.PlName, &r.FcBeneficiary); err != nil {
+			&r.FcBeneficiary, &r.PlName); err != nil {
 			return err
 		}
 		p.Commitments = append(p.Commitments, r)

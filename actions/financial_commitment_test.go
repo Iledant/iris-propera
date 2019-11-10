@@ -231,9 +231,9 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{`{"FinancialCommitment":[{"fcId":98,"fcValue":` +
 				`78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU ` +
 				`PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":` +
-				`"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS ` +
-				`PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des ` +
-				`RER (schémas directeurs et gares)"},`,
+				`"2015-10-08T00:00:00Z","plName":"CPER01 - Amélioration et modernisation des ` +
+				`RER (schémas directeurs et gares)","fcBeneficiary":"RATP REGIE AUTONOME DES TRANSPORTS ` +
+				`PARISIENS"},`,
 				// cSpell:enable
 				`"items_count":253`},
 		}, // 4
@@ -248,9 +248,9 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{`{"FinancialCommitment":[{"fcId":123,"fcValue":` +
 				`1136100000,"fcName":"SCHEMA DIRECTEUR DU RER B SUD - AMENAGEMENT DES ` +
 				`GARES - PRO/REA DE LA  GARE DE LA CROIX DE BERNY","iris_code":"16007501",` +
-				`"fcDate":"2016-10-12T00:00:00Z","plName":"RATP REGIE AUTONOME DES ` +
-				`TRANSPORTS PARISIENS","fcBeneficiary":"CPER01 - Amélioration et ` +
-				`modernisation des RER (schémas directeurs et gares)"},`,
+				`"fcDate":"2016-10-12T00:00:00Z","plName":"CPER01 - Amélioration et ` +
+				`modernisation des RER (schémas directeurs et gares)",` +
+				`"fcBeneficiary":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS"},`,
 				// cSpell:enable
 				`"items_count":213`},
 		}, // 5
@@ -265,10 +265,10 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 				// cSpell:disable
 				`:"DEVELOPPEMENT NOUVEAU SYSTEME DE SIGNALISATION NEXTEO SUR RER B ET ` +
 				`RER D - CONVENTION ETUDES D'AVP","iris_code":"17013814",` +
-				`"fcDate":"2017-10-18T00:00:00Z","plName":"SNCF MOBILITES",` +
+				`"fcDate":"2017-10-18T00:00:00Z","plName":"CPER01 - Amélioration et ` +
+				`modernisation des RER (schémas directeurs et gares)",` +
 				// cSpell:enable
-				`"fcBeneficiary":"CPER01 - Amélioration et modernisation des RER ` +
-				`(schémas directeurs et gares)"}`, `"items_count":84`, `"current_page":9`},
+				`"fcBeneficiary":"SNCF MOBILITES"}`, `"items_count":84`, `"current_page":9`},
 		}, // 6
 	}
 
@@ -385,9 +385,9 @@ func unlinkFcsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{`{"FinancialCommitment":[{"fcId":98,"fcValue":` +
 				`78750000,"fcName":"SCHEMA DIRECTEUR RER A - ETUDES D'AVANT-PROJET NIVEAU ` +
 				`PROJET DE LA GARE D'AUBER","iris_code":"15014974","fcDate":` +
-				`"2015-10-08T00:00:00Z","plName":"RATP REGIE AUTONOME DES TRANSPORTS ` +
-				`PARISIENS","fcBeneficiary":"CPER01 - Amélioration et modernisation des ` +
-				`RER (schémas directeurs et gares)"},`,
+				`"2015-10-08T00:00:00Z","plName":"CPER01 - Amélioration et modernisation` +
+				` des RER (schémas directeurs et gares)","fcBeneficiary":` +
+				`"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS"},`,
 				// cSpell:enable
 				`"items_count":248`}},
 		{
