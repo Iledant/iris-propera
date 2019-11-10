@@ -428,3 +428,38 @@ FROM correspond WHERE financial_commitment.id = correspond.fc_id`}
 	err = tx.Commit()
 	return err
 }
+
+// GetAll fetches all commitments without a link to a plan line
+func (p *UnlinkedFinancialCommitments) GetAll(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query(`SELECT DISTINCT f.id,f.value,f.name,f.iris_code,
+	f.date,b.Name FROM financial_commitment f
+	JOIN beneficiary b ON f.beneficiary_code = b.code
+	WHERE f.plan_line_id IS NULL ORDER BY 5,4`)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	var r UnlinkedFinancialCommitment
+	defer rows.Close()
+	for rows.Next() {
+		if err = rows.Scan(&r.ID, &r.Value, &r.Name, &r.IrisCode, &r.Date,
+			&r.Beneficiary); err != nil {
+			return err
+		}
+		p.Commitments = append(p.Commitments, r)
+	}
+	err = rows.Err()
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	err = tx.Commit()
+	if len(p.Commitments) == 0 {
+		p.Commitments = []UnlinkedFinancialCommitment{}
+	}
+	return err
+}

@@ -55,6 +55,20 @@ func GetUnlinkedFcs(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
+// GetAllPlUnlinkedFcs handles the get request to gel all financial not linked
+// to a plan line
+func GetAllPlUnlinkedFcs(ctx iris.Context) {
+	var resp models.UnlinkedFinancialCommitments
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Liste de tous les engagements non liés, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
 //GetMonthFC handles the request to get the amount of financial commitments each montant of a given year.
 func GetMonthFC(ctx iris.Context) {
 	year, err := ctx.URLParamInt("year")

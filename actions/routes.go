@@ -76,15 +76,16 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 	adminParty.Put("/commissions/{coID:int}", ModifyCommission)
 	adminParty.Delete("/commissions/{coID:int}", DeleteCommission)
 
-	adminParty.Get("/financial_commitments", GetUnlinkedFcs)                      // changed, before financialcommitments
-	adminParty.Get("/financial_commitments/linked", GetLinkedFcs)                 // changed, before financialcommitments
-	adminParty.Post("/financial_commitments/physical_ops/{opID:int}", LinkFcToOp) // changed, before financialcommitments
-	adminParty.Post("/financial_commitments/plan_lines/{plID:int}", LinkFcToPl)   // changed, before financialcommitments
-	adminParty.Post("/financial_commitments/unlink", UnlinkFcs)                   // changed, before financialcommitments
-	adminParty.Post("/financial_commitments", BatchFcs)                           // changed, before financialcommitments
-	adminParty.Post("/financial_commitments/attachments", BatchOpFcs)             // changed, before financialcommitments
+	adminParty.Get("/financial_commitments", GetUnlinkedFcs)
+	adminParty.Get("/financial_commitments/linked", GetLinkedFcs)
+	adminParty.Get("/financial_commitments/unlinked", GetAllPlUnlinkedFcs)
+	adminParty.Post("/financial_commitments/physical_ops/{opID:int}", LinkFcToOp)
+	adminParty.Post("/financial_commitments/plan_lines/{plID:int}", LinkFcToPl)
+	adminParty.Post("/financial_commitments/unlink", UnlinkFcs)
+	adminParty.Post("/financial_commitments", BatchFcs)
+	adminParty.Post("/financial_commitments/attachments", BatchOpFcs)
 
-	adminParty.Post("/payment_types/{ptID:int}/payment_ratios", SetPtRatios) // changed, put strictly identical to post is no longer implemented
+	adminParty.Post("/payment_types/{ptID:int}/payment_ratios", SetPtRatios)
 	adminParty.Delete("/payment_types/{ptID:int}/payment_ratios", DeleteRatios)
 
 	adminParty.Post("/payment_types", CreatePaymentType)

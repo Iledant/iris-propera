@@ -14,6 +14,7 @@ func testFinancialCommitment(t *testing.T) {
 		getUnlinkedFcsTest(testCtx.E, t)
 		getMonthFCTest(testCtx.E, t)
 		getLinkedFcsTest(testCtx.E, t)
+		getAllPlUnlinkedFcs(testCtx.E, t)
 		getOpFcsTest(testCtx.E, t)
 		unlinkFcsTest(testCtx.E, t)
 		linkFcToOpTest(testCtx.E, t)
@@ -288,6 +289,53 @@ func getLinkedFcsTest(e *httpexpect.Expect, t *testing.T) {
 		if statusCode != tc.Status {
 			t.Errorf("\nGetLinkedFcs[%d],statut :  attendu ->%v  reçu <-%v",
 				i, tc.Status, statusCode)
+		}
+	}
+}
+
+// getAllPlUnlinkedFcs tests route is protected and all financial commitments
+// without a link to a plan line are sent back.
+func getAllPlUnlinkedFcs(e *httpexpect.Expect, t *testing.T) {
+	testCases := []struct {
+		Token        string
+		Status       int
+		BodyContains []string
+		Count        int
+	}{
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"},
+		}, // 0 bad token
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusOK,
+			Count:        4005,
+			BodyContains: []string{`"FinancialCommitment":[`},
+		}, // 2
+	}
+
+	for i, tc := range testCases {
+		response := e.GET("/api/financial_commitments/unlinked").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		content := string(response.Content)
+		for _, s := range tc.BodyContains {
+			if !strings.Contains(content, s) {
+				t.Errorf("\nGetAllUnlinkedFcs[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"",
+					i, s, content)
+			}
+		}
+		statusCode := response.Raw().StatusCode
+		if statusCode != tc.Status {
+			t.Errorf("\nGetAllUnlinkedFcs[%d],statut :  attendu ->%v  reçu <-%v",
+				i, tc.Status, statusCode)
+		}
+		if statusCode == http.StatusOK {
+			count := strings.Count(content, `"id":`)
+			if count != tc.Count {
+				t.Errorf("\nGetAllUnlinkedFcs[%d],count :  attendu ->%v  reçu <-%v",
+					i, tc.Count, count)
+			}
 		}
 	}
 }
