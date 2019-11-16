@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/kataras/iris"
 
@@ -127,9 +128,50 @@ func (p *ProperaConf) Get(app *iris.Application) (logFile *os.File, err error) {
 	return logFile, nil
 }
 
+type mig struct {
+	Batch int64
+	Query string
+}
+
+var migrations = []mig{
+	{
+		Batch: 21,
+		Query: `ALTER TABLE financial_commitment ADD COLUMN app boolean DEFAULT false`,
+	},
+}
+
+// handleMigrations checks against database if migrations queries must be executed
+func handleMigrations(db *sql.DB) error {
+	var bMax int64
+	err := db.QueryRow(`SELECT max(batch) FROM migrations`).Scan(&bMax)
+	if err != nil {
+		return err
+	}
+	for _, b := range migrations {
+		if b.Batch > bMax {
+			if _, err = db.Exec(b.Query); err != nil {
+				return fmt.Errorf("migration batch %d %v", b.Batch, err)
+			}
+			if _, err = db.Exec(`INSERT INTO migrations (migration,batch) VALUES($1,$2)`,
+				fmt.Sprintf("%s", time.Now().Format("2006-01-02-150405")),
+				b.Batch); err != nil {
+				return fmt.Errorf("migration insert %d %v", b.Batch, err)
+			}
+		}
+	}
+	return err
+}
+
 // LaunchDB launch the DB with DBConf parameters
 func LaunchDB(cfg *DBConf) (*sql.DB, error) {
-	cfgStr := fmt.Sprintf("sslmode=disable host=%s port=%s user=%s dbname=%s password=%s",
+	cfgStr := fmt.Sprintf(
+		"sslmode=disable host=%s port=%s user=%s dbname=%s password=%s",
 		cfg.Host, cfg.Port, cfg.UserName, cfg.Name, cfg.Password)
-	return sql.Open("postgres", cfgStr)
+	db, err := sql.Open("postgres", cfgStr)
+	fmt.Printf("LaunchDB %v", err)
+	if err != nil {
+		return nil, err
+	}
+	err = handleMigrations(db)
+	return db, err
 }
