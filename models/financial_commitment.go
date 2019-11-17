@@ -27,6 +27,7 @@ type FinancialCommitment struct {
 	Value           int64     `json:"value"`
 	ActionID        NullInt64 `json:"action_id"`
 	LapseDate       NullTime  `json:"lapse_date"`
+	APP             bool      `json:"app"`
 }
 
 // FinancialCommitments embeddes an array of FinancialCommitment for json export.
@@ -131,6 +132,7 @@ type FinancialCommitmentLine struct {
 	Date            ExcelDate `json:"date"`
 	Value           float64   `json:"value"`
 	LapseDate       ExcelDate `json:"lapse_date"`
+	APP             bool      `json:"app"`
 }
 
 // FinancialCommitmentsBatch embeddes the data sent by a financial commitments batch request.
@@ -165,8 +167,8 @@ func (f *FinancialCommitment) Unlink(LinkType string, fcIDs []int64, db *sql.DB)
 func (f *FinancialCommitments) GetOpAll(opID int64, db *sql.DB) (err error) {
 	rows, err := db.Query(`SELECT id,	physical_op_id,	plan_line_id,	chapter, action,
 	 iris_code, coriolis_year, coriolis_egt_code, coriolis_egt_num, coriolis_egt_line,
-	 name, beneficiary_code, date, value, action_id, lapse_date FROM financial_commitment
-	 WHERE physical_op_id=$1`, opID)
+	 name, beneficiary_code, date, value, action_id, lapse_date, app
+	 FROM financial_commitment WHERE physical_op_id=$1`, opID)
 	if err != nil {
 		return err
 	}
@@ -176,7 +178,7 @@ func (f *FinancialCommitments) GetOpAll(opID int64, db *sql.DB) (err error) {
 		if err = rows.Scan(&r.ID, &r.PhysicalOpID, &r.PlanLineID, &r.Chapter, &r.Action,
 			&r.IrisCode, &r.CoriolisYear, &r.CoriolisEgtCode, &r.CoriolisEgtNum,
 			&r.CoriolisEgtLine, &r.Name, &r.BeneficiaryCode, &r.Date, &r.Value, &r.ActionID,
-			&r.LapseDate); err != nil {
+			&r.LapseDate, &r.APP); err != nil {
 			return err
 		}
 		f.FinancialCommitments = append(f.FinancialCommitments, r)
@@ -361,35 +363,42 @@ func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
 			toSQL(fc.CoriolisEgtCode) + "," + toSQL(fc.CoriolisEgtNum) + "," +
 			toSQL(fc.CoriolisEgtLine) + "," + toSQL(fc.Name) + "," +
 			toSQL(fc.Beneficiary) + "," + toSQL(fc.BeneficiaryCode) + "," +
-			toSQL(fc.Date) + "," + toSQL(int64(100*fc.Value)) + "," + toSQL(fc.LapseDate) + ")"
+			toSQL(fc.Date) + "," + toSQL(int64(100*fc.Value)) + "," +
+			toSQL(fc.LapseDate) + "," + toSQL(fc.APP) + ")"
 		values = append(values, value)
 	}
 	if _, err = tx.Exec(`INSERT INTO temp_commitment (chapter,action,iris_code,
 		coriolis_year,coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
-		beneficiary,beneficiary_code,date,value,lapse_date) VALUES ` + strings.Join(values, ",")); err != nil {
+		beneficiary,beneficiary_code,date,value,lapse_date,app) VALUES ` +
+		strings.Join(values, ",")); err != nil {
 		tx.Rollback()
 		return err
 	}
 	queries := []string{
 		`WITH new AS (
-			SELECT f.id, t.chapter, t.action, t.iris_code, t.name, t.beneficiary_code, t.date, t.value, t.lapse_date
-			FROM temp_commitment t LEFT JOIN financial_commitment f ON t.iris_code = f.iris_code 
-			 WHERE (f.value <> t.value OR f.chapter <> t.chapter OR f.action <> t.action OR f.name <> t.name OR 
-							 f.coriolis_year <> t.coriolis_year OR  f.coriolis_egt_code <> t.coriolis_egt_code OR 
-							 f.coriolis_egt_num <> t.coriolis_egt_num OR f.coriolis_egt_line <> t.coriolis_egt_line OR 
-							 f.beneficiary_code <> t.beneficiary_code OR f.lapse_date IS DISTINCT FROM t.lapse_date) 
+			SELECT f.id,t.chapter,t.action,t.iris_code,t.name,t.beneficiary_code,t.date,
+				t.value,t.lapse_date,t.app
+			FROM temp_commitment t JOIN financial_commitment f ON t.iris_code=f.iris_code 
+			 WHERE (f.value<>t.value OR f.chapter<>t.chapter OR f.action<>t.action OR 
+							f.name<>t.name OR f.coriolis_year<>t.coriolis_year OR
+							f.coriolis_egt_code<>t.coriolis_egt_code OR
+							f.coriolis_egt_num<>t.coriolis_egt_num OR
+							f.coriolis_egt_line<>t.coriolis_egt_line OR 
+							f.beneficiary_code<>t.beneficiary_code OR
+							f.lapse_date IS DISTINCT FROM t.lapse_date OR f.app<>t.app) 
 							 AND f.date = t.date) 
 		UPDATE financial_commitment SET 
-		chapter = new.chapter,  action = new.action, name = new.name, beneficiary_code = new.beneficiary_code, 
-		 value = new.value, lapse_date = new.lapse_date 
+		chapter=new.chapter,action=new.action,name=new.name,value=new.value,
+		beneficiary_code=new.beneficiary_code,lapse_date=new.lapse_date,app=new.app
 		FROM new WHERE financial_commitment.id = new.id`,
-		`INSERT INTO financial_commitment (physical_op_id, chapter, action, iris_code,
-			coriolis_year, coriolis_egt_code, coriolis_egt_num, coriolis_egt_line, name, beneficiary_code, date,
-			value, lapse_date) 
-		SELECT NULL as physical_op_id, chapter, action, iris_code, coriolis_year, coriolis_egt_code, coriolis_egt_num, 
-			coriolis_egt_line, name, beneficiary_code, date, value, lapse_date
+		`INSERT INTO financial_commitment (physical_op_id,chapter,action,iris_code,
+			coriolis_year,coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
+			beneficiary_code,date,value,lapse_date,app) 
+		SELECT NULL as physical_op_id,chapter,action,iris_code,coriolis_year,
+			coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
+			beneficiary_code,date,value,lapse_date,app
 			FROM temp_commitment t 
-		WHERE (t.iris_code, t.date) NOT IN (SELECT iris_code, date FROM financial_commitment)`,
+		WHERE (t.iris_code,t.date) NOT IN (SELECT iris_code,date FROM financial_commitment)`,
 		`WITH new AS (
 			SELECT t.beneficiary_code, t.beneficiary, t.date FROM temp_commitment t
 			WHERE t.beneficiary_code NOT IN (SELECT code FROM beneficiary) )

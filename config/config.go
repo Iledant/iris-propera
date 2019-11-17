@@ -138,6 +138,10 @@ var migrations = []mig{
 		Batch: 21,
 		Query: `ALTER TABLE financial_commitment ADD COLUMN app boolean DEFAULT false`,
 	},
+	{
+		Batch: 22,
+		Query: `ALTER TABLE temp_commitment ADD COLUMN app boolean`,
+	},
 }
 
 // handleMigrations checks against database if migrations queries must be executed

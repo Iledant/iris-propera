@@ -607,7 +607,8 @@ func batchFcsTest(e *httpexpect.Expect, t *testing.T) {
 				`"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"553827",` +
 				`"coriolis_egt_line":"1","name":"ROUTE - INNOVATION INFRASTRUCTURE ` +
 				`ROUTIERE - VAL D'OISE","beneficiary":"DEPARTEMENT DU VAL D'OISE",` +
-				`"beneficiary_code":2306,"date":43175,"value":3000000,"lapse_date":44271},
+				`"beneficiary_code":2306,"date":43175,"value":3000000,"lapse_date":44271,` +
+				`"app":false},
 				{"chapter":"907","action":"17700301 - Intégration environnementale des ` +
 				`infrastructures de transport","iris_code":"18003295","coriolis_year":` +
 				`"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"557246",` +
@@ -615,7 +616,7 @@ func batchFcsTest(e *httpexpect.Expect, t *testing.T) {
 				`FERROVIAIRE - PONT METALLIQUE DES CHANTIERS A VERSAILLES - AVENANT N°1 ` +
 				`A LA CONVENTION DE FINANCEMENT ETUDES DE PROJET ET TRAVAUX",` +
 				`"beneficiary":"RFF SNCF RESEAU","beneficiary_code":14154,"date":43250,` +
-				`"value":198688,"lapse_date":44346}]}`)},
+				`"value":198688,"lapse_date":44346,"app":true}]}`)},
 		//cSpell:enable
 	}
 

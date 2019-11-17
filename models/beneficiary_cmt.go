@@ -14,6 +14,7 @@ type BeneficiaryCmt struct {
 	Name      string     `json:"name"`
 	Value     int64      `json:"value"`
 	LapseDate NullTime   `json:"lapseDate"`
+	APP       bool       `json:"app"`
 	Available int64      `json:"available"`
 	OpID      NullInt64  `json:"opId"`
 	OpNumber  NullString `json:"opNumber"`
@@ -28,14 +29,14 @@ type BeneficiaryCmts struct {
 
 // GetAll fetches all commitments linked to a beneficiary whose ID is given
 func (b *BeneficiaryCmts) GetAll(ID int64, db *sql.DB) error {
-	rows, err := db.Query(`SELECT f.id, f.date, f.iris_code, f.name AS name, f.value, 
-	f.lapse_date, f.value - COALESCE(SUM(p.value - p.cancelled_value),0) AS available,
+	rows, err := db.Query(`SELECT f.id, f.date, f.iris_code, f.name, f.value, 
+	f.lapse_date, f.app, f.value - COALESCE(SUM(p.value - p.cancelled_value),0),
 	op.id,op.number,op.name
 	FROM financial_commitment f
 	JOIN beneficiary b ON b.code = f.beneficiary_code
 	LEFT JOIN payment p ON p.financial_commitment_id = f.id
 	LEFT OUTER JOIN physical_op op ON f.physical_op_id=op.id
-	WHERE b.id = $1 GROUP BY 1,2,3,5,6,8,9,10 ORDER BY 2`, ID)
+	WHERE b.id = $1 GROUP BY 1,2,3,5,6,7,9,10,11 ORDER BY 2`, ID)
 	if err != nil {
 		return fmt.Errorf("select %v", err)
 	}
@@ -43,7 +44,7 @@ func (b *BeneficiaryCmts) GetAll(ID int64, db *sql.DB) error {
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&r.ID, &r.Date, &r.IrisCode, &r.Name, &r.Value,
-			&r.LapseDate, &r.Available, &r.OpID, &r.OpNumber, &r.OpName); err != nil {
+			&r.LapseDate, &r.APP, &r.Available, &r.OpID, &r.OpNumber, &r.OpName); err != nil {
 			return fmt.Errorf("scan %v", err)
 		}
 		b.Lines = append(b.Lines, r)
