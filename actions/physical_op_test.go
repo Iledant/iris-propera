@@ -199,13 +199,27 @@ func batchPhysicalOpsTest(e *httpexpect.Expect, t *testing.T) {
 // getPrevisionsTests check route is protected and datas sent are correct
 func getPrevisionsTests(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: "fake", ID: "0", Status: http.StatusInternalServerError,
-			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, ID: "0", Status: http.StatusInternalServerError,
-			BodyContains: []string{"Prévision d'opération, check : Opération introuvable"}},
-		{Token: testCtx.User.Token, ID: "10", Status: http.StatusOK,
-			BodyContains: []string{"PrevCommitment", "PrevPayment", "FinancialCommitment", "PendingCommitment",
-				"Payment", "PaymentPerBeneficiary", "FinancialCommitmentPerBeneficiary", "ImportLog", "Event", "Document", "PaymentType"}},
+		{
+			Token:        "fake",
+			ID:           "0",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Token invalide"},
+		},
+		{
+			Token:        testCtx.User.Token,
+			ID:           "0",
+			Status:       http.StatusInternalServerError,
+			BodyContains: []string{"Prévision d'opération, check : Opération introuvable"},
+		},
+		{
+			Token:  testCtx.User.Token,
+			ID:     "10",
+			Status: http.StatusOK,
+			BodyContains: []string{"PrevCommitment", "PrevPayment", "FinancialCommitment",
+				"PendingCommitment", "Payment", "PaymentPerBeneficiary",
+				"FinancialCommitmentPerBeneficiary", "ImportLog", "Event", "Document",
+				"PaymentType"},
+		},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/physical_ops/"+tc.ID+"/previsions").WithHeader("Authorization", "Bearer "+tc.Token).Expect()

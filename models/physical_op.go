@@ -78,6 +78,7 @@ type OpCommitment struct {
 	Beneficiary string    `json:"beneficiary"`
 	Value       int64     `json:"value"`
 	LapseDate   NullTime  `json:"lapse_date"`
+	APP         NullBool  `json:"app"`
 	Available   int64     `json:"available"`
 }
 
@@ -368,12 +369,12 @@ func (op *PhysicalOpsBatch) Save(db *sql.DB) (err error) {
 
 // GetOpAll fetches all commitments previsions of a physical operation.
 func (o *OpCommitments) GetOpAll(opID int64, db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT f.id, f.date, f.iris_code, f.name AS name, b.name AS beneficiary, f.value, 
-	f.lapse_date, f.value - COALESCE(SUM(p.value - p.cancelled_value),0) AS available
+	rows, err := db.Query(`SELECT f.id,f.date,f.iris_code,f.name,b.name,f.value, 
+	f.lapse_date,f.app,f.value-COALESCE(SUM(p.value-p.cancelled_value),0)
 	FROM financial_commitment f
-	JOIN beneficiary b ON b.code = f.beneficiary_code
-	LEFT JOIN payment p ON p.financial_commitment_id = f.id
-	WHERE f.physical_op_id = $1 GROUP BY 1,2,3,5,6,7 ORDER BY 2`, opID)
+	JOIN beneficiary b ON b.code=f.beneficiary_code
+	LEFT JOIN payment p ON p.financial_commitment_id=f.id
+	WHERE f.physical_op_id=$1 GROUP BY 1,2,3,5,6,7,8 ORDER BY 2`, opID)
 	if err != nil {
 		return err
 	}
@@ -381,7 +382,7 @@ func (o *OpCommitments) GetOpAll(opID int64, db *sql.DB) (err error) {
 	defer rows.Close()
 	for rows.Next() {
 		if err = rows.Scan(&r.ID, &r.Date, &r.IrisCode, &r.Name, &r.Beneficiary,
-			&r.Value, &r.LapseDate, &r.Available); err != nil {
+			&r.Value, &r.LapseDate, &r.APP, &r.Available); err != nil {
 			return err
 		}
 		o.OpCommitments = append(o.OpCommitments, r)
