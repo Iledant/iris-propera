@@ -375,48 +375,62 @@ func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
 		return err
 	}
 	queries := []string{
+		// remove duplicated commitment due to IRIS query bug
+		`WITH cnt as (SELECT count(1) cnt,value,beneficiary_code,name
+				FROM temp_commitment GROUP by 2,3,4),
+			dup as (SELECT value,beneficiary_code,name FROM cnt WHERE cnt.cnt > 1),
+			max_ids as (SELECT id FROM temp_commitment 
+				WHERE (value,beneficiary_code,name,coriolis_year||coriolis_egt_num) in
+				(SELECT value,beneficiary_code,name,max(coriolis_year||coriolis_egt_num) 
+					FROM temp_commitment
+					WHERE (value,beneficiary_code,name) in (SELECT * FROM dup)
+					GROUP by 1,2,3)),
+			sing_ids as (SELECT id FROM temp_commitment WHERE (value,beneficiary_code,name) in
+				(SELECT value,beneficiary_code,name FROM cnt WHERE cnt.cnt = 1))
+			DELETE FROM temp_commitment WHERE id not in
+				(SELECT * FROM max_ids union all SELECT * FROM sing_ids)`,
 		`WITH new AS (
-			SELECT f.id,t.chapter,t.action,t.iris_code,t.name,t.beneficiary_code,t.date,
-				t.value,t.lapse_date,t.app
-			FROM temp_commitment t JOIN financial_commitment f ON t.iris_code=f.iris_code 
-			 WHERE (f.value<>t.value OR f.chapter<>t.chapter OR f.action<>t.action OR 
-							f.name<>t.name OR f.coriolis_year<>t.coriolis_year OR
-							f.coriolis_egt_code<>t.coriolis_egt_code OR
-							f.coriolis_egt_num<>t.coriolis_egt_num OR
-							f.coriolis_egt_line<>t.coriolis_egt_line OR 
-							f.beneficiary_code<>t.beneficiary_code OR
-							f.lapse_date IS DISTINCT FROM t.lapse_date OR f.app<>t.app) 
-							 AND f.date = t.date) 
-		UPDATE financial_commitment SET 
-		chapter=new.chapter,action=new.action,name=new.name,value=new.value,
-		beneficiary_code=new.beneficiary_code,lapse_date=new.lapse_date,app=new.app
-		FROM new WHERE financial_commitment.id = new.id`,
+				SELECT f.id,t.chapter,t.action,t.iris_code,t.name,t.beneficiary_code,t.date,
+					t.value,t.lapse_date,t.app
+				FROM temp_commitment t JOIN financial_commitment f ON t.iris_code=f.iris_code
+				 WHERE (f.value<>t.value OR f.chapter<>t.chapter OR f.action<>t.action OR
+								f.name<>t.name OR f.coriolis_year<>t.coriolis_year OR
+								f.coriolis_egt_code<>t.coriolis_egt_code OR
+								f.coriolis_egt_num<>t.coriolis_egt_num OR
+								f.coriolis_egt_line<>t.coriolis_egt_line OR
+								f.beneficiary_code<>t.beneficiary_code OR
+								f.lapse_date IS DISTINCT FROM t.lapse_date OR f.app<>t.app)
+								 AND f.date = t.date)
+			UPDATE financial_commitment SET
+			chapter=new.chapter,action=new.action,name=new.name,value=new.value,
+			beneficiary_code=new.beneficiary_code,lapse_date=new.lapse_date,app=new.app
+			FROM new WHERE financial_commitment.id = new.id`,
 		`INSERT INTO financial_commitment (physical_op_id,chapter,action,iris_code,
-			coriolis_year,coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
-			beneficiary_code,date,value,lapse_date,app) 
-		SELECT NULL as physical_op_id,chapter,action,iris_code,coriolis_year,
-			coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
-			beneficiary_code,date,value,lapse_date,app
-			FROM temp_commitment t 
-		WHERE (t.iris_code,t.date) NOT IN (SELECT iris_code,date FROM financial_commitment)`,
+				coriolis_year,coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
+				beneficiary_code,date,value,lapse_date,app)
+			SELECT NULL as physical_op_id,chapter,action,iris_code,coriolis_year,
+				coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
+				beneficiary_code,date,value,lapse_date,app
+				FROM temp_commitment t
+			WHERE (t.iris_code,t.date) NOT IN (SELECT iris_code,date FROM financial_commitment)`,
 		`WITH new AS (
-			SELECT t.beneficiary_code, t.beneficiary, t.date FROM temp_commitment t
-			WHERE t.beneficiary_code NOT IN (SELECT code FROM beneficiary) )
-		INSERT INTO beneficiary (code, name) SELECT beneficiary_code, beneficiary FROM new
-			WHERE (date, beneficiary_code) IN (SELECT Max(date), beneficiary_code FROM temp_commitment GROUP BY 2)`,
+				SELECT t.beneficiary_code, t.beneficiary, t.date FROM temp_commitment t
+				WHERE t.beneficiary_code NOT IN (SELECT code FROM beneficiary) )
+			INSERT INTO beneficiary (code, name) SELECT beneficiary_code, beneficiary FROM new
+				WHERE (date, beneficiary_code) IN (SELECT Max(date), beneficiary_code FROM temp_commitment GROUP BY 2)`,
 		` WITH duplicated AS (SELECT id from financial_commitment WHERE iris_code IN
-	(SELECT iris_code FROM financial_commitment WHERE iris_code in
-		(SELECT iris_code FROM
-			(SELECT SUM(1) as count, iris_code FROM financial_commitment GROUP BY 2) fcCount WHERE fcCount.count > 1)
-					AND coriolis_egt_line <> '1') AND coriolis_egt_line = '1')
-UPDATE financial_commitment SET value = 0 FROM duplicated WHERE financial_commitment.id=duplicated.id`,
-		`WITH correspond AS (SELECT fc_extract.fc_id, ba_full.ba_id FROM 
-	(SELECT fc.id AS fc_id, substring (fc.action FROM '^[0-9sS]+') AS fc_action FROM financial_commitment fc) fc_extract,
-(SELECT ba.id AS ba_id, bp.code_contract || bp.code_function || bp.code_number || ba.code AS ba_code 
-FROM budget_action ba, budget_program bp WHERE ba.program_id = bp.id) ba_full
-WHERE fc_extract.fc_action = ba_full.ba_code)
-UPDATE financial_commitment SET action_id = correspond.ba_id
-FROM correspond WHERE financial_commitment.id = correspond.fc_id`}
+		(SELECT iris_code FROM financial_commitment WHERE iris_code in
+			(SELECT iris_code FROM
+				(SELECT SUM(1) as count, iris_code FROM financial_commitment GROUP BY 2) fcCount WHERE fcCount.count > 1)
+						AND coriolis_egt_line <> '1') AND coriolis_egt_line = '1')
+	UPDATE financial_commitment SET value = 0 FROM duplicated WHERE financial_commitment.id=duplicated.id`,
+		`WITH correspond AS (SELECT fc_extract.fc_id, ba_full.ba_id FROM
+		(SELECT fc.id AS fc_id, substring (fc.action FROM '^[0-9sS]+') AS fc_action FROM financial_commitment fc) fc_extract,
+	(SELECT ba.id AS ba_id, bp.code_contract || bp.code_function || bp.code_number || ba.code AS ba_code
+	FROM budget_action ba, budget_program bp WHERE ba.program_id = bp.id) ba_full
+	WHERE fc_extract.fc_action = ba_full.ba_code)
+	UPDATE financial_commitment SET action_id = correspond.ba_id
+	FROM correspond WHERE financial_commitment.id = correspond.fc_id`}
 	for _, qry := range queries {
 		if _, err := tx.Exec(qry); err != nil {
 			tx.Rollback()
@@ -427,9 +441,9 @@ FROM correspond WHERE financial_commitment.id = correspond.fc_id`}
 		tx.Rollback()
 		return err
 	}
-	if _, err := tx.Exec(`INSERT INTO import_logs (category,last_date) 
-		VALUES ('FinancialCommitments',$1)
-		ON CONFLICT (category) DO UPDATE SET last_date = EXCLUDED.last_date;`,
+	if _, err := tx.Exec(`INSERT INTO import_logs (category,last_date)
+			VALUES ('FinancialCommitments',$1)
+			ON CONFLICT (category) DO UPDATE SET last_date = EXCLUDED.last_date;`,
 		time.Now()); err != nil {
 		tx.Rollback()
 		return err

@@ -142,6 +142,31 @@ var migrations = []mig{
 		Batch: 22,
 		Query: `ALTER TABLE temp_commitment ADD COLUMN app boolean`,
 	},
+	{
+		Batch: 23,
+		Query: `update financial_commitment set coriolis_year='2019',coriolis_egt_code='IRIS',
+  coriolis_egt_num='609297',coriolis_egt_line='1'  where id=4695`,
+	},
+	{
+		Batch: 24,
+		Query: `update financial_commitment set coriolis_egt_num='609307', coriolis_year='2019' 
+  where id=4697`,
+	},
+	{
+		Batch: 25,
+		Query: `update financial_commitment set coriolis_egt_num='609308', coriolis_year='2019' 
+  where id=4699`,
+	},
+	{
+		Batch: 26,
+		Query: `update financial_commitment set coriolis_egt_num='609309', coriolis_year='2019' 
+  where id=4701`,
+	},
+	{
+		Batch: 27,
+		Query: `update financial_commitment set coriolis_egt_num='604865', coriolis_year='2019' 
+  where id=4678`,
+	},
 }
 
 // handleMigrations checks against database if migrations queries must be executed
