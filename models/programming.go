@@ -30,6 +30,7 @@ type ProgrammingFullDatas struct {
 	TotalPrevision      NullInt64   `json:"total_prevision"`
 	StateRatioPrevision NullFloat64 `json:"state_ratio_prevision"`
 	PreProgValue        NullInt64   `json:"pre_prog_value"`
+	PreProgCommissionID NullInt64   `json:"pre_prog_commission_id"`
 	PreProgTotalValue   NullInt64   `json:"pre_prog_total_value"`
 	PreProgStateRatio   NullFloat64 `json:"pre_prog_state_ratio"`
 	PreProgDescript     NullString  `json:"pre_prog_descript"`
@@ -65,10 +66,10 @@ func (p *Programmings) GetAll(year int64, db *sql.DB) (err error) {
 	rows, err := db.Query(`SELECT pr.id, pr.value, pr.total_value, pr.state_ratio, op.id AS physical_op_id, 
 	pr.commission_id, op.number as op_number, op.name as op_name, pc.value as prevision, 
 	pc.total_value as total_prevision, pc.state_ratio as state_ratio_prevision,
-	pp.value AS pre_prog_value, pp.total_value AS pre_prog_total_value,
+	pp.value AS pre_prog_value, pp.commission_id AS pre_prog_commission_id,pp.total_value AS pre_prog_total_value,
 	pp.state_ratio AS pre_prog_state_ratio, pp.descript AS pre_prog_descript, pl.plan_name, 
 	pl.plan_line_name, pl.plan_line_value, pl.plan_line_total_value
-FROM physical_op op
+FROM physical_op op	
 LEFT OUTER JOIN (SELECT pl.id, pl.name AS plan_line_name, pl.value AS plan_line_value, 
 		pl.total_value AS plan_line_total_value, p.name AS plan_name 
 	FROM plan_line pl, plan p WHERE pl.plan_id = p.id) pl ON op.plan_line_id = pl.id
@@ -83,9 +84,9 @@ LEFT OUTER JOIN (SELECT * FROM pre_programmings WHERE year=$1) pp ON op.id = pp.
 	for rows.Next() {
 		err = rows.Scan(&r.ID, &r.Value, &r.TotalValue, &r.StateRatio, &r.PhysicalOpID,
 			&r.CommissionID, &r.OpNumber, &r.OpName, &r.Prevision, &r.TotalPrevision,
-			&r.StateRatioPrevision, &r.PreProgValue, &r.PreProgTotalValue,
-			&r.PreProgStateRatio, &r.PreProgDescript, &r.PlanName, &r.PlanLineName,
-			&r.PlanLineValue, &r.PlanLineTotalValue)
+			&r.StateRatioPrevision, &r.PreProgValue, &r.PreProgCommissionID,
+			&r.PreProgTotalValue, &r.PreProgStateRatio, &r.PreProgDescript, &r.PlanName,
+			&r.PlanLineName, &r.PlanLineValue, &r.PlanLineTotalValue)
 		if err != nil {
 			return err
 		}
