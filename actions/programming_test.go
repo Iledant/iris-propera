@@ -19,10 +19,17 @@ func testProgramming(t *testing.T) {
 // getProgrammingsTest check route is protected and programmings correctly sent.
 func getProgrammingsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: "fake", Param: "2018", Status: http.StatusInternalServerError,
+		{
+			Token:        "fake",
+			Param:        "2018",
+			Status:       http.StatusInternalServerError,
 			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.Admin.Token, Param: "2018", Status: http.StatusOK,
-			BodyContains: []string{"Programmings"}, ArraySize: 626},
+		{
+			Token:        testCtx.Admin.Token,
+			Param:        "2018",
+			Status:       http.StatusOK,
+			BodyContains: []string{"Programmings", `"PrevCommitmentTotal":96730644861`},
+			ArraySize:    626},
 	}
 	for i, tc := range testCases {
 		response := e.GET("/api/programmings").WithHeader("Authorization", "Bearer "+tc.Token).

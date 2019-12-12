@@ -36,6 +36,12 @@ type PrevCommitmentBatch struct {
 	PrevCommitments []PrevCommitmentLine `json:"PrevCommitment"`
 }
 
+// PrevCommitmentTotal is used to calculate the value of prevision commitment
+// of a given year for others queries with duplicated prevision commitment lines
+type PrevCommitmentTotal struct {
+	PrevCommitmentTotal int64 `json:"PrevCommitmentTotal"`
+}
+
 // Save inserts and updates a batch of prevision commitments into database.
 func (p *PrevCommitmentBatch) Save(db *sql.DB) (err error) {
 	var value string
@@ -94,4 +100,10 @@ func (p *PrevCommitmentBatch) Save(db *sql.DB) (err error) {
 	}
 	err = tx.Commit()
 	return err
+}
+
+// Get calculted the prevision commitment total of the given year
+func (p *PrevCommitmentTotal) Get(year int64, db *sql.DB) error {
+	return db.QueryRow(`SELECT coalesce(sum(value),0) FROM prev_commitment 
+		WHERE year=$1`, year).Scan(&p.PrevCommitmentTotal)
 }

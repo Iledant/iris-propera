@@ -9,17 +9,27 @@ import (
 	"github.com/kataras/iris"
 )
 
+type programmingsResp struct {
+	models.Programmings
+	models.PrevCommitmentTotal
+}
+
 // GetProgrammings handle the get request to fetch the programming of a year.
 func GetProgrammings(ctx iris.Context) {
 	year, err := ctx.URLParamInt64("year")
 	if err != nil {
 		year = int64(time.Now().Year())
 	}
-	var resp models.Programmings
+	var resp programmingsResp
 	db := ctx.Values().Get("db").(*sql.DB)
-	if err := resp.GetAll(year, db); err != nil {
+	if err := resp.Programmings.GetAll(year, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Programmation annuelle, requête : " + err.Error()})
+		ctx.JSON(jsonError{"Programmation annuelle, requête programmings : " + err.Error()})
+		return
+	}
+	if err := resp.PrevCommitmentTotal.Get(year, db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Programmation annuelle, requête prev commitment total : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)

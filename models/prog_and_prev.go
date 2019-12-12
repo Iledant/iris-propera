@@ -4,13 +4,17 @@ import "database/sql"
 
 // ProgrammingAndPrevision is used to decode one line of dedicated query.
 type ProgrammingAndPrevision struct {
-	Name            string     `json:"name"`
-	Number          string     `json:"number"`
-	Programmings    NullInt64  `json:"programmings"`
-	PreProgrammings NullInt64  `json:"pre_programmings"`
-	Prevision       NullInt64  `json:"prevision"`
-	CategoryName    NullString `json:"category_name"`
-	ChapterCode     NullInt64  `json:"chapter_code"`
+	Name              string     `json:"name"`
+	Number            string     `json:"number"`
+	Programmings      NullInt64  `json:"programmings"`
+	ProgCommission    NullString `json:"programmings_commission"`
+	ProgDate          NullTime   `json:"programmings_date"`
+	PreProgrammings   NullInt64  `json:"pre_programmings"`
+	PreProgCommission NullString `json:"pre_programmings_commission"`
+	PreProgDate       NullTime   `json:"pre_programmings_date"`
+	Prevision         NullInt64  `json:"prevision"`
+	CategoryName      NullString `json:"category_name"`
+	ChapterCode       NullInt64  `json:"chapter_code"`
 }
 
 // ProgrammingAndPrevisions embeddes an array of ProgrammingAndPrevision for json export.
