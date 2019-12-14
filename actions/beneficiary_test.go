@@ -2,7 +2,6 @@ package actions
 
 import (
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -23,65 +22,58 @@ func getBeneficiariesTest(e *httpexpect.Expect, t *testing.T) {
 		{
 			Token:        "fake",
 			Status:       http.StatusInternalServerError,
-			BodyContains: []string{"Token invalide"},
-		},
+			BodyContains: []string{"Token invalide"}},
 		{
-			Token:        testCtx.User.Token,
-			Status:       http.StatusOK,
-			BodyContains: []string{"Beneficiary"},
-			ArraySize:    530,
-		},
+			Token:         testCtx.User.Token,
+			Status:        http.StatusOK,
+			BodyContains:  []string{"Beneficiary"},
+			ArraySize:     530,
+			CountItemName: `"id"`},
 	}
 
-	for i, tc := range testCases {
-		response := e.GET("/api/beneficiaries").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nGetBeneficiaries[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nGetBeneficiaries[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
-		if tc.ArraySize > 0 {
-			count := strings.Count(content, `"id"`)
-			if count != tc.ArraySize {
-				t.Errorf("\nGetBeneficiaries[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
-			}
-		}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/beneficiaries").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	}
+	for _, r := range chtTestCases(testCases, f, "GetBeneficiaries") {
+		t.Error(r)
 	}
 }
 
 // updateBeneficiaryTest test route is protected and name changed works
 func updateBeneficiaryTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{ID: "1", Token: testCtx.User.Token, Status: http.StatusUnauthorized,
+		{
+			ID:           "1",
+			Token:        testCtx.User.Token,
+			Status:       http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}},
-		{ID: "0", Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
+		{
+			ID:           "0",
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusBadRequest,
 			BodyContains: []string{"Modification de bénéficiaire : Champ name manquant"},
 			Sent:         []byte("{}")},
-		{ID: "0", Token: testCtx.Admin.Token, Status: http.StatusInternalServerError,
+		{
+			ID:           "0",
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusInternalServerError,
 			BodyContains: []string{"Modification de bénéficiaire, requête : Bénéficiaire introuvable"},
 			Sent:         []byte(`{"Name":"Essai bénéficiaire"}`)},
-		{ID: "1", Token: testCtx.Admin.Token, Status: http.StatusOK,
+		{
+			ID:           "1",
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusOK,
 			BodyContains: []string{"Beneficiary", `"name":"Essai bénéficiaire"`},
 			Sent:         []byte(`{"Name":"Essai bénéficiaire"}`)},
 	}
 
-	for i, tc := range testCases {
-		response := e.PUT("/api/beneficiaries/"+tc.ID).WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nUpdateBeneficiary[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nUpdateBeneficiary[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.PUT("/api/beneficiaries/"+tc.ID).
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+	}
+	for _, r := range chtTestCases(testCases, f, "UpdateBeneficiary") {
+		t.Error(r)
 	}
 }
 
@@ -91,40 +83,26 @@ func getBeneficiaryCmtsTest(e *httpexpect.Expect, t *testing.T) {
 		{
 			Token:        "fake",
 			Status:       http.StatusInternalServerError,
-			BodyContains: []string{"Token invalide"},
-		},
+			BodyContains: []string{"Token invalide"}},
 		{
 			Token:        testCtx.User.Token,
 			ID:           "a",
 			Status:       http.StatusBadRequest,
-			BodyContains: []string{"Engagement d'un bénéficiaire, paramètre :"},
-		},
+			BodyContains: []string{"Engagement d'un bénéficiaire, paramètre :"}},
 		{
-			Token:        testCtx.User.Token,
-			ID:           "10",
-			Status:       http.StatusOK,
-			BodyContains: []string{`"BeneficiaryCommitment":[`},
-			ArraySize:    171,
-		},
+			Token:         testCtx.User.Token,
+			ID:            "10",
+			Status:        http.StatusOK,
+			BodyContains:  []string{`"BeneficiaryCommitment":[`},
+			ArraySize:     171,
+			CountItemName: `"id"`},
 	}
 
-	for i, tc := range testCases {
-		response := e.GET("/api/beneficiary/"+tc.ID+"/commitment").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nGetBeneficiaryCmts[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nGetBeneficiaryCmts[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
-		if tc.ArraySize > 0 {
-			count := strings.Count(content, `"id"`)
-			if count != tc.ArraySize {
-				t.Errorf("\nGetBeneficiaryCmts[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
-			}
-		}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/beneficiary/"+tc.ID+"/commitment").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	}
+	for _, r := range chtTestCases(testCases, f, "GetBeneficiaryCmts") {
+		t.Error(r)
 	}
 }

@@ -20,13 +20,14 @@ import (
 
 // testCase is the common structure for all case
 type testCase struct {
-	Token        string
-	Status       int
-	ID           string
-	Param        string
-	BodyContains []string
-	Sent         []byte
-	ArraySize    int
+	Token         string
+	Status        int
+	ID            string
+	Param         string
+	BodyContains  []string
+	Sent          []byte
+	CountItemName string
+	ArraySize     int
 }
 
 // TestContext contains all items for units tests in API.
@@ -98,7 +99,8 @@ func testCommons(t *testing.T) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if testCtx == nil {
-		app := iris.New().Configure(iris.WithConfiguration(iris.Configuration{DisablePathCorrection: true}))
+		app := iris.New().Configure(iris.WithConfiguration(iris.Configuration{
+			DisablePathCorrection: true}))
 		var cfg config.ProperaConf
 		if _, err := cfg.Get(app); err != nil {
 			t.Errorf("Configuration : %v\n", err)
@@ -157,4 +159,42 @@ func fetchLoginResponse(e *httpexpect.Expect, t *testing.T, c *config.Credential
 	response.Status(http.StatusOK).Body().Contains("token").Contains(role)
 
 	return &lr
+}
+
+type tcReqFunc func(testCase) *httpexpect.Response
+
+// chkTestCases launches the test cases agains the callback function and checks
+// the status, response and numbers according to the test cases.
+func chtTestCases(tcc []testCase, f tcReqFunc, testName string) []string {
+	var resp []string
+	for i, tc := range tcc {
+		response := f(tc)
+		body := string(response.Content)
+		for _, r := range tc.BodyContains {
+			if !strings.Contains(body, r) {
+				resp = append(resp,
+					fmt.Sprintf("\n%s[%d]\n  ->attendu %s\n  ->reçu: %s", testName, i, r, body))
+			}
+		}
+		status := response.Raw().StatusCode
+		if status != tc.Status {
+			resp = append(resp, fmt.Sprintf("\n%s[%d]  ->status attendu %d  ->reçu: %d",
+				testName, i, tc.Status, status))
+		}
+		if status == http.StatusOK && tc.ArraySize > 0 && tc.CountItemName != "" {
+			count := strings.Count(body, tc.CountItemName)
+			if count != tc.ArraySize {
+				resp = append(resp, fmt.Sprintf("\n%s[%d]  ->nombre attendu %d  ->reçu: %d",
+					testName, i, tc.ArraySize, count))
+			}
+		}
+		// TODO : implement ID fetching
+		// if status == http.StatusCreated && tc.Status == http.StatusCreated && len(b) > 0 {
+		// 	index := strings.Index(body, tc.IDName)
+		// 	if index > 0 {
+		// 		fmt.Sscanf(body[index:], tc.IDName+":%d", b[0])
+		// 	}
+		// }
+	}
+	return resp
 }
