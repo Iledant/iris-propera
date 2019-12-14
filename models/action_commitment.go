@@ -27,7 +27,8 @@ type ActionCommitments struct {
 // GetAll fetches commitments per budget action for the given year from the database.
 func (a *ActionCommitments) GetAll(year int64, db *sql.DB) (err error) {
 	sy := strconv.FormatInt(year, 10)
-	rows, err := db.Query(`WITH budget as (SELECT ba.id, bc.code AS chapter, bs.code AS sector, 
+	rows, err := db.Query(`
+	WITH bud as (SELECT ba.id, bc.code AS chapter, bs.code AS sector, 
 		bp.code_function || COALESCE(bp.code_subfunction, '') AS subfunction,
 		bp.code_contract || bp.code_function || bp.code_number as program,
 		bp.code_contract || bp.code_function || bp.code_number || ba.code as action, 
@@ -35,23 +36,25 @@ func (a *ActionCommitments) GetAll(year int64, db *sql.DB) (err error) {
 	FROM budget_chapter bc, budget_program bp, budget_action ba, budget_sector bs
 	WHERE ba.program_id = bp.id AND bp.chapter_id = bc.id AND ba.sector_id = bs.id) 
 	
-SELECT budget.chapter, budget.sector, budget.subfunction, budget.program, budget.action, budget.action_name,
-SUM(y0) AS y0, SUM(tot.y1) AS y1, SUM(tot.y2) AS y2, SUM(tot.y3) AS y3
-FROM 
-(SELECT *, NULL as y0 
-FROM crosstab('SELECT op.budget_action_id, pc.year, SUM(pc.value) * 0.01 
-		FROM
-			(SELECT * FROM prev_commitment WHERE year >= `+sy+` 
-		 AND year <= `+sy+` + 2) pc, physical_op op 
-		WHERE pc.physical_op_id = op.id GROUP BY 1,2 ORDER BY 1,2', 
-		'SELECT m FROM generate_series(`+sy+`, `+sy+` + 2) AS m')
-AS (budget_action_id INTEGER, y1 NUMERIC, y2 NUMERIC, y3 NUMERIC)
-UNION ALL 
-SELECT op.budget_action_id, NULL as y1, NULL as y2, NULL as y3, SUM(pg.value) * 0.01 AS y0
-FROM programmings pg, physical_op op
-WHERE pg.year = $1 - 1 AND pg.physical_op_id = op.id GROUP BY 1) tot, budget
-WHERE tot.budget_action_id = budget.id
-GROUP BY 1,2,3,4,5,6 ORDER BY 1,2,3,4,5`, year)
+	SELECT bud.chapter,bud.sector,bud.subfunction,bud.program,bud.action,bud.action_name,
+		SUM(y0) AS y0, SUM(tot.y1) AS y1, SUM(tot.y2) AS y2, SUM(tot.y3) AS y3
+	FROM 
+	(SELECT *, NULL as y0 FROM
+		crosstab(
+			'SELECT op.budget_action_id, pc.year, SUM(pc.value) * 0.01 
+			FROM
+				(SELECT * FROM prev_commitment WHERE year >= `+sy+` 
+				AND year <= `+sy+` + 2) pc, physical_op op 
+			WHERE pc.physical_op_id = op.id GROUP BY 1,2 ORDER BY 1,2', 
+			'SELECT m FROM generate_series(`+sy+`, `+sy+` + 2) AS m')
+		AS (budget_action_id INTEGER, y1 NUMERIC, y2 NUMERIC, y3 NUMERIC)
+	UNION ALL 
+	SELECT op.budget_action_id,NULL as y1,NULL as y2,NULL as y3,SUM(pg.value)*0.01 AS y0
+	FROM programmings pg
+	JOIN physical_op op ON pg.physical_op_id = op.id
+	WHERE pg.year = $1 - 1 GROUP BY 1) tot
+	JOIN bud ON tot.budget_action_id=bud.id
+	GROUP BY 1,2,3,4,5,6 ORDER BY 1,2,3,4,5`, year)
 	if err != nil {
 		return err
 	}
