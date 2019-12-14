@@ -19,10 +19,7 @@ func testBeneficiary(t *testing.T) {
 // getBeneficiariesTest test route is protected and the response fits.
 func getBeneficiariesTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			Token:        "fake",
-			Status:       http.StatusInternalServerError,
-			BodyContains: []string{"Token invalide"}},
+		notLoggedTestCase,
 		{
 			Token:         testCtx.User.Token,
 			Status:        http.StatusOK,
@@ -80,10 +77,7 @@ func updateBeneficiaryTest(e *httpexpect.Expect, t *testing.T) {
 // getBeneficiaryCmtsTest test route is users protected and the response fits.
 func getBeneficiaryCmtsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			Token:        "fake",
-			Status:       http.StatusInternalServerError,
-			BodyContains: []string{"Token invalide"}},
+		notLoggedTestCase,
 		{
 			Token:        testCtx.User.Token,
 			ID:           "a",

@@ -83,7 +83,7 @@ func CreateBudgetAction(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'action budgétaire, requête : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(baResp{req})
 }
 

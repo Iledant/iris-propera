@@ -27,6 +27,7 @@ type testCase struct {
 	BodyContains  []string
 	Sent          []byte
 	CountItemName string
+	IDName        string
 	ArraySize     int
 }
 
@@ -51,7 +52,13 @@ type Credentials struct {
 	Email, Password string
 }
 
-var testCtx *TestContext
+var (
+	testCtx           *TestContext
+	notLoggedTestCase = testCase{
+		Token:        "fake",
+		Status:       http.StatusInternalServerError,
+		BodyContains: []string{"Token invalide"}}
+)
 
 func TestAll(t *testing.T) {
 	testCommons(t)
@@ -165,7 +172,7 @@ type tcReqFunc func(testCase) *httpexpect.Response
 
 // chkTestCases launches the test cases agains the callback function and checks
 // the status, response and numbers according to the test cases.
-func chtTestCases(tcc []testCase, f tcReqFunc, testName string) []string {
+func chtTestCases(tcc []testCase, f tcReqFunc, testName string, id ...*int) []string {
 	var resp []string
 	for i, tc := range tcc {
 		response := f(tc)
@@ -188,13 +195,12 @@ func chtTestCases(tcc []testCase, f tcReqFunc, testName string) []string {
 					testName, i, tc.ArraySize, count))
 			}
 		}
-		// TODO : implement ID fetching
-		// if status == http.StatusCreated && tc.Status == http.StatusCreated && len(b) > 0 {
-		// 	index := strings.Index(body, tc.IDName)
-		// 	if index > 0 {
-		// 		fmt.Sscanf(body[index:], tc.IDName+":%d", b[0])
-		// 	}
-		// }
+		if status == http.StatusCreated && tc.Status == http.StatusCreated && len(id) > 0 {
+			index := strings.Index(body, tc.IDName)
+			if index > 0 {
+				fmt.Sscanf(body[index:], tc.IDName+":%d", id[0])
+			}
+		}
 	}
 	return resp
 }
