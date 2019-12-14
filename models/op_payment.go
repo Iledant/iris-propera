@@ -20,12 +20,12 @@ type OpPayments struct {
 
 // GetOpAll fetches formatted payments attached to a physical operation from database.
 func (o *OpPayments) GetOpAll(opID int64, db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT p.date, (p.value - p.cancelled_value) AS value, 
+	rows, err := db.Query(`SELECT p.date, (p.value-p.cancelled_value) AS value, 
 	b.name AS beneficiary, f.iris_code FROM payment p 
-	JOIN financial_commitment f ON p.financial_commitment_id = f.id 
-	JOIN beneficiary b ON b.code = f.beneficiary_code 
+	JOIN financial_commitment f ON p.financial_commitment_id=f.id 
+	JOIN beneficiary b ON b.code=f.beneficiary_code 
 	WHERE p.financial_commitment_id IN 
-	(SELECT f.id FROM financial_commitment f WHERE f.physical_op_id = $1)`, opID)
+	(SELECT id FROM financial_commitment WHERE physical_op_id = $1)`, opID)
 	if err != nil {
 		return err
 	}
