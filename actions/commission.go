@@ -45,7 +45,7 @@ func CreateCommission(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'une commission, requête : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(coResp{req})
 }
 
