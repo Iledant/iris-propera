@@ -13,22 +13,6 @@ type caResp struct {
 	Category models.Category `json:"Category"`
 }
 
-// caReq is used for creation and modification of a category.
-type caReq struct {
-	Name *string `json:"name"`
-}
-
-// Invalid checks if request fields are present and well formed.
-func (req caReq) Invalid() bool {
-	return req.Name == nil || len(*req.Name) == 0 || len(*req.Name) > 50
-}
-
-// Populate fills category's fields with valid request content.
-func (req caReq) Populate(ID int64, c *models.Category) {
-	c.Name = *req.Name
-	c.ID = ID
-}
-
 // GetCategories handles request get all categories.
 func GetCategories(ctx iris.Context) {
 	var resp models.Categories
@@ -61,7 +45,7 @@ func CreateCategory(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'une catégorie, requête : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(caResp{req})
 }
 
