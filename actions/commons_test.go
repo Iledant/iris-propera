@@ -56,6 +56,7 @@ var (
 	testCtx           *TestContext
 	notLoggedTestCase = testCase{
 		Token:        "fake",
+		ID:           "0",
 		Status:       http.StatusInternalServerError,
 		BodyContains: []string{"Token invalide"}}
 	notAdminTestCase testCase

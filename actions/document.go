@@ -58,7 +58,7 @@ func CreateDocument(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'un document, requête : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(doResp{req})
 }
 
