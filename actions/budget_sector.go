@@ -45,7 +45,7 @@ func CreateBudgetSector(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'un secteur budgétaire, requête : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(bsResp{req})
 }
 
