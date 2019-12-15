@@ -58,7 +58,7 @@ func CreateEvent(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'un événement, requête : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(evResp{req})
 }
 
