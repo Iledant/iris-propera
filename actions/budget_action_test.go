@@ -44,7 +44,7 @@ func getAllBudgetActions(e *httpexpect.Expect, t *testing.T) {
 		return e.GET("/api/budget_actions").WithQueryString(tc.Param).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "AllBudgetActions") {
+	for _, r := range chkTestCases(testCases, f, "AllBudgetActions") {
 		t.Error(r)
 	}
 }
@@ -52,11 +52,7 @@ func getAllBudgetActions(e *httpexpect.Expect, t *testing.T) {
 // getProgramBudgetActions tests route is protected and sent actions linked are sent back.
 func getProgramBudgetActions(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			Token:        testCtx.User.Token,
-			Status:       http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"},
-			ArraySize:    0},
+		notAdminTestCase,
 		{
 			Token:        testCtx.Admin.Token,
 			Status:       http.StatusOK,
@@ -68,7 +64,7 @@ func getProgramBudgetActions(e *httpexpect.Expect, t *testing.T) {
 		return e.GET("/api/budget_chapters/1/programs/123/actions").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "ProgramBudgetAction") {
+	for _, r := range chkTestCases(testCases, f, "ProgramBudgetAction") {
 		t.Error(r)
 	}
 }
@@ -76,10 +72,7 @@ func getProgramBudgetActions(e *httpexpect.Expect, t *testing.T) {
 // createBudgetActionTest tests route is protected and sent action is created.
 func createBudgetActionTest(e *httpexpect.Expect, t *testing.T) int {
 	testCases := []testCase{
-		{
-			Token:        testCtx.User.Token,
-			Status:       http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"}},
+		notAdminTestCase,
 		{
 			Token: testCtx.Admin.Token, Status: http.StatusBadRequest,
 			Sent:         []byte(`{}`),
@@ -96,7 +89,7 @@ func createBudgetActionTest(e *httpexpect.Expect, t *testing.T) int {
 		return e.POST("/api/budget_chapters/1/programs/123/actions").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "CreateBudgetAction", &baID) {
+	for _, r := range chkTestCases(testCases, f, "CreateBudgetAction", &baID) {
 		t.Error(r)
 	}
 	return baID
@@ -105,11 +98,7 @@ func createBudgetActionTest(e *httpexpect.Expect, t *testing.T) int {
 // modifyBudgetActionTest tests route is protected and modify work properly.
 func modifyBudgetActionTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			Token:        testCtx.User.Token,
-			ID:           "0",
-			Status:       http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"}},
+		notAdminTestCase,
 		{
 			Token:        testCtx.Admin.Token,
 			ID:           "0",
@@ -128,7 +117,7 @@ func modifyBudgetActionTest(e *httpexpect.Expect, t *testing.T) {
 		return e.PUT("/api/budget_chapters/1/programs/123/actions/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "ModifyBudgetAction") {
+	for _, r := range chkTestCases(testCases, f, "ModifyBudgetAction") {
 		t.Error(r)
 	}
 }
@@ -136,12 +125,7 @@ func modifyBudgetActionTest(e *httpexpect.Expect, t *testing.T) {
 // deleteBudgetActionTest tests route is protected and delete work properly.
 func deleteBudgetActionTest(e *httpexpect.Expect, t *testing.T, baID int) {
 	testCases := []testCase{
-		{
-			Token:        testCtx.User.Token,
-			Status:       http.StatusUnauthorized,
-			ID:           "0",
-			BodyContains: []string{"Droits administrateur requis"}},
-
+		notAdminTestCase,
 		{
 			Token:        testCtx.Admin.Token,
 			ID:           "0",
@@ -158,7 +142,7 @@ func deleteBudgetActionTest(e *httpexpect.Expect, t *testing.T, baID int) {
 		return e.DELETE("/api/budget_chapters/1/programs/123/actions/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "DeleteBudgetAction") {
+	for _, r := range chkTestCases(testCases, f, "DeleteBudgetAction") {
 		t.Error(r)
 	}
 }
@@ -166,10 +150,7 @@ func deleteBudgetActionTest(e *httpexpect.Expect, t *testing.T, baID int) {
 // batchBudgetActionsTest tests route is protected and update and creations works.
 func batchBudgetActionsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			Token:        testCtx.User.Token,
-			Status:       http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"}},
+		notAdminTestCase,
 		{
 			Token:        testCtx.Admin.Token,
 			Sent:         []byte(`{"BudgetAction":[{"Code":"000","Name":"batch BA name","Sector":"batch BA sector"}]}`),
@@ -187,7 +168,7 @@ func batchBudgetActionsTest(e *httpexpect.Expect, t *testing.T) {
 		return e.POST("/api/budget_actions").
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "BatchBudgetAction") {
+	for _, r := range chkTestCases(testCases, f, "BatchBudgetAction") {
 		t.Error(r)
 	}
 
@@ -203,7 +184,7 @@ func batchBudgetActionsTest(e *httpexpect.Expect, t *testing.T) {
 		return e.GET("/api/budget_actions").
 			WithHeader("Authorization", "Bearer "+testCtx.Admin.Token).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "BatchBudgetAction") {
+	for _, r := range chkTestCases(testCases, f, "BatchBudgetAction") {
 		t.Error(r)
 	}
 }

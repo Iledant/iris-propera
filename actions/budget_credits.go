@@ -80,7 +80,7 @@ func CreateBudgetCredit(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création de crédits, requête : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(brResp{req})
 }
 

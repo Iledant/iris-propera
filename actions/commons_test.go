@@ -58,6 +58,7 @@ var (
 		Token:        "fake",
 		Status:       http.StatusInternalServerError,
 		BodyContains: []string{"Token invalide"}}
+	notAdminTestCase testCase
 )
 
 func TestAll(t *testing.T) {
@@ -126,7 +127,11 @@ func testCommons(t *testing.T) {
 		e := httptest.New(t, app)
 		admin := fetchLoginResponse(e, t, &cfg.Users.Admin, "ADMIN")
 		user := fetchLoginResponse(e, t, &cfg.Users.User, "USER")
-
+		notAdminTestCase = testCase{
+			Token:        user.Token,
+			ID:           "0",
+			Status:       http.StatusUnauthorized,
+			BodyContains: []string{"Droits administrateur requis"}}
 		t := TestContext{DB: db, App: app, E: e, Admin: admin, User: user, Config: &cfg}
 		testCtx = &t
 	}
@@ -172,7 +177,7 @@ type tcReqFunc func(testCase) *httpexpect.Response
 
 // chkTestCases launches the test cases agains the callback function and checks
 // the status, response and numbers according to the test cases.
-func chtTestCases(tcc []testCase, f tcReqFunc, testName string, id ...*int) []string {
+func chkTestCases(tcc []testCase, f tcReqFunc, testName string, id ...*int) []string {
 	var resp []string
 	for i, tc := range tcc {
 		response := f(tc)

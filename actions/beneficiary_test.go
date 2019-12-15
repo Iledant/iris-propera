@@ -32,7 +32,7 @@ func getBeneficiariesTest(e *httpexpect.Expect, t *testing.T) {
 		return e.GET("/api/beneficiaries").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "GetBeneficiaries") {
+	for _, r := range chkTestCases(testCases, f, "GetBeneficiaries") {
 		t.Error(r)
 	}
 }
@@ -40,11 +40,7 @@ func getBeneficiariesTest(e *httpexpect.Expect, t *testing.T) {
 // updateBeneficiaryTest test route is protected and name changed works
 func updateBeneficiaryTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			ID:           "1",
-			Token:        testCtx.User.Token,
-			Status:       http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"}},
+		notAdminTestCase,
 		{
 			ID:           "0",
 			Token:        testCtx.Admin.Token,
@@ -69,7 +65,7 @@ func updateBeneficiaryTest(e *httpexpect.Expect, t *testing.T) {
 		return e.PUT("/api/beneficiaries/"+tc.ID).
 			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "UpdateBeneficiary") {
+	for _, r := range chkTestCases(testCases, f, "UpdateBeneficiary") {
 		t.Error(r)
 	}
 }
@@ -96,7 +92,7 @@ func getBeneficiaryCmtsTest(e *httpexpect.Expect, t *testing.T) {
 		return e.GET("/api/beneficiary/"+tc.ID+"/commitment").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
-	for _, r := range chtTestCases(testCases, f, "GetBeneficiaryCmts") {
+	for _, r := range chkTestCases(testCases, f, "GetBeneficiaryCmts") {
 		t.Error(r)
 	}
 }
