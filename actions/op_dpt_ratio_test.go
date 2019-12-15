@@ -17,7 +17,8 @@ func testOpDptRatio(t *testing.T) {
 	})
 }
 
-// getOpWithDptRatiosTest check route is protected and datas sent has got items and number of lines.
+// getOpWithDptRatiosTest check route is protected and datas sent has got items
+// and number of lines.
 func getOpWithDptRatiosTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		notLoggedTestCase,
@@ -28,7 +29,8 @@ func getOpWithDptRatiosTest(e *httpexpect.Expect, t *testing.T) {
 				"r78", "r91", "r92", "r93", "r94", "r95", "ProgrammingsYears"}},
 	}
 	f := func(tc testCase) *httpexpect.Response {
-		return e.GET("/api/op_dpt_ratios/ops").WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+		return e.GET("/api/op_dpt_ratios/ops").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
 	for _, r := range chkTestCases(testCases, f, "GetOpWithDptRatios") {
 		t.Error(r)
@@ -78,7 +80,8 @@ func getFCPerDptTest(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// getDetailedFCPerDptTest check route is protected and datas sent has got items and number of lines.
+// getDetailedFCPerDptTest check route is protected and datas sent has got items
+// and number of lines.
 func getDetailedFCPerDptTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		notLoggedTestCase,
@@ -103,7 +106,8 @@ func getDetailedFCPerDptTest(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// getDetailedPrgPerDptTest check route is protected and datas sent has got items and number of lines.
+// getDetailedPrgPerDptTest check route is protected and datas sent has got
+// items and number of lines.
 func getDetailedPrgPerDptTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		notLoggedTestCase,
