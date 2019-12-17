@@ -2,7 +2,6 @@ package actions
 
 import (
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -22,177 +21,144 @@ func testPayment(t *testing.T) {
 // getAllPaymentsTest check route is protected and payments correctly sent.
 func getAllPaymentsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			Token:        "fake",
-			Status:       http.StatusInternalServerError,
-			BodyContains: []string{"Token invalide"},
-		},
+		notLoggedTestCase,
 		{
 			Token:  testCtx.User.Token,
 			Param:  "?year=2019",
 			Status: http.StatusOK,
 			BodyContains: []string{"PaymentsPerMonth", "MonthCumulatedPayment", `"Beneficiary":[`,
 				`"PaymentType":`, `"PaymentCreditJournal":[`, `"PaymentCredit":[`, `"PaymentNeed":[`},
-			ArraySize: 533,
-		},
+			CountItemName: `"id"`,
+			ArraySize:     533},
 	}
-	for i, tc := range testCases {
-		response := e.GET("/api/payments").WithQueryString("Param").
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/payments").WithQueryString("Param").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nGetAllPayments[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nGetAllPayments[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		if tc.ArraySize > 0 {
-			count := strings.Count(content, `"id"`)
-			if count != tc.ArraySize {
-				t.Errorf("\nGetAllPayments[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
-			}
-		}
+	}
+	for _, r := range chkTestCases(testCases, f, "GetAllPayments") {
+		t.Error(r)
 	}
 }
 
 // getFcPaymentTest check route is protected and payments correctly sent.
 func getFcPaymentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: "fake", ID: "219", Status: http.StatusInternalServerError,
-			BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, ID: "0", Status: http.StatusOK,
+		notLoggedTestCase,
+		{
+			Token:        testCtx.User.Token,
+			ID:           "0",
+			Status:       http.StatusOK,
 			BodyContains: []string{`"Payment":[]`}},
-		{Token: testCtx.User.Token, ID: "219", Status: http.StatusOK,
-			BodyContains: []string{"Payment"}, ArraySize: 9},
+		{
+			Token:         testCtx.User.Token,
+			ID:            "219",
+			Status:        http.StatusOK,
+			BodyContains:  []string{"Payment"},
+			CountItemName: `"id"`,
+			ArraySize:     9},
 	}
-	for i, tc := range testCases {
-		response := e.GET("/api/physical_ops/152/financial_commitments/"+tc.ID+"/payments").
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/physical_ops/152/financial_commitments/"+tc.ID+"/payments").
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nGetFcPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nGetFcPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		if tc.ArraySize > 0 {
-			count := strings.Count(content, `"id"`)
-			if count != tc.ArraySize {
-				t.Errorf("\nGetFcPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
-			}
-		}
+	}
+	for _, r := range chkTestCases(testCases, f, "GetFcPayment") {
+		t.Error(r)
 	}
 }
 
 // getPaymentsPerMonthTest check if route is protected and payments per month correctly sent.
 func getPaymentsPerMonthTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Param: "2018", Status: http.StatusOK,
-			BodyContains: []string{"PaymentsPerMonth", `"year":2017`, `"month":1`, `"value":`}, ArraySize: 15},
+		notLoggedTestCase,
+		{
+			Token:         testCtx.User.Token,
+			Param:         "2018",
+			Status:        http.StatusOK,
+			BodyContains:  []string{"PaymentsPerMonth", `"year":2017`, `"month":1`, `"value":`},
+			CountItemName: "year",
+			ArraySize:     15},
 	}
-	for i, tc := range testCases {
-		response := e.GET("/api/payments/month").WithHeader("Authorization", "Bearer "+tc.Token).
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/payments/month").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("year", tc.Param).Expect()
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nGetPaymentsPerMonth[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nGetPaymentsPerMonth[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		if tc.ArraySize > 0 {
-			count := strings.Count(content, `year`)
-			if count != tc.ArraySize {
-				t.Errorf("\nGetPaymentsPerMonth[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
-			}
-		}
+	}
+	for _, r := range chkTestCases(testCases, f, "GetPaymentsPerMonth") {
+		t.Error(r)
 	}
 }
 
 // getPrevisionRealizedTest check if route is protected and sent datas are correct.
 func getPrevisionRealizedTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, Param: "", ID: "1", Status: http.StatusBadRequest,
-			BodyContains: []string{"Prévu réalisé erreur sur year"}, ArraySize: 0},
-		{Token: testCtx.User.Token, Param: "2017", ID: "1", Status: http.StatusOK,
-			BodyContains: []string{`"PaymentPrevisionAndRealized":[]`}, ArraySize: 0},
-		{Token: testCtx.User.Token, Param: "2017", ID: "4", Status: http.StatusOK,
+		notLoggedTestCase,
+
+		{Token: testCtx.User.Token,
+			Param:        "",
+			ID:           "1",
+			Status:       http.StatusBadRequest,
+			BodyContains: []string{"Prévu réalisé erreur sur year"}},
+		{
+			Token:        testCtx.User.Token,
+			Param:        "2017",
+			ID:           "1",
+			Status:       http.StatusOK,
+			BodyContains: []string{`"PaymentPrevisionAndRealized":[]`}},
+		{
+			Token:  testCtx.User.Token,
+			Param:  "2017",
+			ID:     "4",
+			Status: http.StatusOK,
 			//cSpell:disable
 			BodyContains: []string{`{"PaymentPrevisionAndRealized":[{"name":"RATP REGIE AUTONOME DES TRANSPORTS PARISIENS","prev_payment":14879877199,"payment":21297216350},`},
 			//cSpell:enable
-			ArraySize: 386},
+			CountItemName: `"name"`,
+			ArraySize:     386},
 	}
-	for i, tc := range testCases {
-		response := e.GET("/api/payments/prevision_realized").WithHeader("Authorization", "Bearer "+tc.Token).
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/payments/prevision_realized").
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("year", tc.Param).WithQuery("paymentTypeId", tc.ID).Expect()
-		content := string(response.Content)
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nGetPrevisionRealized[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nGetPrevisionRealized(%d) :\n attendu -> \"%s\"\n reçu <-\"%s\"\n", i, s, content)
-			}
-		}
-		if tc.ArraySize != 0 {
-			count := strings.Count(content, "\"name\"")
-			if count != tc.ArraySize {
-				t.Errorf("\nGetPrevisionRealized(%d) :\n nombre attendu de champs -> \"%d\"\n nombre reçu de champ <-\"%d\"\n",
-					i, tc.ArraySize, count)
-			}
-		}
+	}
+	for _, r := range chkTestCases(testCases, f, "GetPrevisionRealized") {
+		t.Error(r)
 	}
 }
 
 // getCumulatedMonthPaymentTest check if route is protected and datas has good size.
 func getCumulatedMonthPaymentTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: "fake", Status: http.StatusInternalServerError, BodyContains: []string{"Token invalide"}},
-		{Token: testCtx.User.Token, ID: "", Status: http.StatusOK,
-			BodyContains: []string{"MonthCumulatedPayment", `"cumulated":7626791.01`}, ArraySize: 132},
-		{Token: testCtx.User.Token, ID: "8", Status: http.StatusOK,
-			BodyContains: []string{"MonthCumulatedPayment", `"year":2007`, `"month":1`, `"cumulated":1440789.04`}, ArraySize: 110},
+		notLoggedTestCase,
+		{
+			Token:         testCtx.User.Token,
+			ID:            "",
+			Status:        http.StatusOK,
+			BodyContains:  []string{"MonthCumulatedPayment", `"cumulated":7626791.01`},
+			CountItemName: `year`,
+			ArraySize:     132},
+		{
+			Token:         testCtx.User.Token,
+			ID:            "8",
+			Status:        http.StatusOK,
+			BodyContains:  []string{"MonthCumulatedPayment", `"year":2007`, `"month":1`, `"cumulated":1440789.04`},
+			CountItemName: `year`,
+			ArraySize:     110},
 	}
-	for i, tc := range testCases {
-		response := e.GET("/api/payments/month_cumulated").WithHeader("Authorization", "Bearer "+tc.Token).
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/payments/month_cumulated").
+			WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("beneficiaryId", tc.ID).Expect()
-		content := string(response.Content)
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nGetFcPayment[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nGetCumulatedMonthPayment[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		if tc.ArraySize > 0 {
-			count := strings.Count(content, `year`)
-			if count != tc.ArraySize {
-				t.Errorf("\nGetCumulatedMonthPayment[%d] :\n  nombre attendu -> %d\n  nombre reçu <-%d", i, tc.ArraySize, count)
-			}
-		}
+	}
+	for _, r := range chkTestCases(testCases, f, "GetFcPayment") {
+		t.Error(r)
 	}
 }
 
 // batchPaymentsTest check route is protected and a small batch doesn't raise error
 func batchPaymentsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{Token: testCtx.User.Token, Status: http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"}},
-		{Token: testCtx.Admin.Token, Status: http.StatusOK,
+		notAdminTestCase,
+		{Token: testCtx.Admin.Token,
+			Status: http.StatusOK,
 			//cSpell:disable
 			Sent: []byte(`{"Payment":[{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"501","date":43168,"number":"4784","value":445899.87,"cancelled_value":445899.87,"beneficiary_code":14154},
 			{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"504","date":43132,"number":"6078","value":445899.87,"cancelled_value":0,"beneficiary_code":14154},
@@ -207,18 +173,11 @@ func batchPaymentsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Paiements importés"}},
 		//cSpell:enable
 	}
-	for i, tc := range testCases {
-		response := e.POST("/api/payments").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).
-			Expect()
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nBatchPayments[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nBatchPayments[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.POST("/api/payments").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+	}
+	for _, r := range chkTestCases(testCases, f, "BatchPayments") {
+		t.Error(r)
 	}
 }
