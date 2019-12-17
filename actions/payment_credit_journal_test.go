@@ -2,7 +2,6 @@ package actions
 
 import (
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/iris-contrib/httpexpect"
@@ -18,11 +17,7 @@ func testPaymentCreditJournals(t *testing.T) {
 // batchPaymentCreditJournalsTest check route is admin protected and response is ok
 func batchPaymentCreditJournalsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			Token:        testCtx.User.Token,
-			Status:       http.StatusUnauthorized,
-			BodyContains: []string{"Droits administrateur requis"},
-		},
+		notAdminTestCase,
 		{
 			Token:        testCtx.Admin.Token,
 			Status:       http.StatusBadRequest,
@@ -37,57 +32,37 @@ func batchPaymentCreditJournalsTest(e *httpexpect.Expect, t *testing.T) {
 			BodyContains: []string{"Mouvements de crédits importés"},
 		},
 	}
-	for i, tc := range testCases {
-		response := e.POST("/api/payment_credits/journal").WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nBatchPaymentCreditJournals[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nBatchPaymentCreditJournals[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.POST("/api/payment_credits/journal").
+			WithHeader("Authorization", "Bearer "+tc.Token).WithBytes(tc.Sent).Expect()
+	}
+	for _, r := range chkTestCases(testCases, f, "BatchPaymentCreditJournals") {
+		t.Error(r)
 	}
 }
 
 // getPaymentCreditJournalsTest check route is protected and datas sent back are correct
 func getPaymentCreditJournalsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
-		{
-			Token:        "fake",
-			Status:       http.StatusInternalServerError,
-			BodyContains: []string{"Token invalide"},
-		},
+		notLoggedTestCase,
 		{
 			Token:        testCtx.User.Token,
 			Status:       http.StatusBadRequest,
 			Param:        "a",
-			BodyContains: []string{`Mouvements de crédits, décodage : `},
-		},
+			BodyContains: []string{`Mouvements de crédits, décodage : `}},
 		{
 			Token:  testCtx.User.Token,
 			Status: http.StatusOK,
 			Param:  "2019",
 			BodyContains: []string{`{"PaymentCreditJournal":[{"Chapter":908,"ID":1,` +
 				`"Function":811,"CreationDate":"2019-03-10T00:00:00Z","ModificationDate"` +
-				`:"2019-03-15T00:00:00Z","Name":"Mouvement","Value":100000}]}`},
-		},
+				`:"2019-03-15T00:00:00Z","Name":"Mouvement","Value":100000}]}`}},
 	}
-	for i, tc := range testCases {
-		response := e.GET("/api/payment_credits/journal").WithHeader("Authorization", "Bearer "+tc.Token).
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/payment_credits/journal").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("Year", tc.Param).Expect()
-		content := string(response.Content)
-		for _, s := range tc.BodyContains {
-			if !strings.Contains(content, s) {
-				t.Errorf("\nGetPaymentCreditJournals[%d] :\n  attendu ->\"%s\"\n  reçu <-\"%s\"", i, s, content)
-			}
-		}
-		statusCode := response.Raw().StatusCode
-		if statusCode != tc.Status {
-			t.Errorf("\nGetPaymentCreditJournals[%d],statut :  attendu ->%v  reçu <-%v", i, tc.Status, statusCode)
-		}
 	}
-
+	for _, r := range chkTestCases(testCases, f, "GetPaymentCreditjournal") {
+		t.Error(r)
+	}
 }
