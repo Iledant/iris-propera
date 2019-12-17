@@ -131,6 +131,7 @@ func testCommons(t *testing.T) {
 		notAdminTestCase = testCase{
 			Token:        user.Token,
 			ID:           "0",
+			Param:        "0",
 			Status:       http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}}
 		t := TestContext{DB: db, App: app, E: e, Admin: admin, User: user, Config: &cfg}

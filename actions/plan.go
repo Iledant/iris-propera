@@ -45,7 +45,7 @@ func CreatePlan(ctx iris.Context) {
 		return
 	}
 
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(planResp{req})
 }
 

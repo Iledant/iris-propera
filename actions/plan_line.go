@@ -141,7 +141,7 @@ func CreatePlanLine(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création de ligne de plan, requête get : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(pl)
 }
 
