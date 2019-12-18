@@ -45,7 +45,7 @@ func CreateStep(ctx iris.Context) {
 		ctx.JSON(jsonError{"Création d'étape, requête : " + err.Error()})
 		return
 	}
-	ctx.StatusCode(http.StatusOK)
+	ctx.StatusCode(http.StatusCreated)
 	ctx.JSON(stResp{req})
 }
 
