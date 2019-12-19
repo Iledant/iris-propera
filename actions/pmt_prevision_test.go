@@ -41,7 +41,7 @@ func getMultiannualPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 		{
 			Token:         testCtx.User.Token,
 			Status:        http.StatusOK,
-			BodyContains:  []string{`"MultiannualDifPmtPreision":[`},
+			BodyContains:  []string{`"MultiannualDifPmtPrevision":[`},
 			CountItemName: `"year"`,
 			ArraySize:     5},
 	}
