@@ -35,35 +35,50 @@ type MultiannualDifPmtPrevisions struct {
 // this ratios
 func (d *DifPmtPrevisions) Get(db *sql.DB) error {
 	q := `
-	with fcy as ((SELECT sum(value)::bigint as v, EXTRACT(year FROM date)::int as y
-		FROM financial_commitment
-		WHERE EXTRACT(year from date)<EXTRACT(year FROM CURRENT_DATE)
-		GROUP by 2 ORDER by 2)
-		UNION ALL
-		(select sum(value)::bigint as v,EXTRACT(year FROM CURRENT_DATE)::int as y
-		FROM programmings WHERE year=EXTRACT(year FROM CURRENT_DATE))),
-	pmt_y as (SELECT sum(p.value)::bigint as v, EXTRACT(year FROM p.date)::int-
+	with 
+  years as (SELECT * FROM generate_series(2007,EXTRACT(year FROM CURRENT_DATE)::int-1) y),
+  fcy as (SELECT sum(value)::bigint as v, EXTRACT(year FROM date)::int as y
+    FROM financial_commitment WHERE EXTRACT(year FROM date)<EXTRACT(year FROM CURRENT_DATE)
+      AND EXTRACT (year FROM date)>=2007
+		GROUP by 2 ORDER by 2),
+  fcyn as (SELECT years.y,COALESCE(fcy.v,0::bigint) v
+    FROM years LEFT OUTER JOIN fcy ON years.y=fcy.y),
+  max_idx as (SELECT max(EXTRACT(year FROM p.date)-EXTRACT(year FROM f.date))::int as m
+    FROM payment p
+    JOIN financial_commitment f on p.financial_commitment_id=f.id
+		WHERE EXTRACT(year FROM p.date)-EXTRACT(year FROM f.date)>=0
+			AND EXTRACT(year FROM p.date)<EXTRACT(year FROM CURRENT_DATE)
+      AND EXTRACT(year FROM f.date)>=2007),
+	pmty as (SELECT sum(p.value)::bigint as v, EXTRACT(year FROM p.date)::int-
 		EXTRACT(year FROM f.date)::int as idx,EXTRACT(year FROM f.date)::int as y
 		FROM payment p
 		JOIN financial_commitment f on p.financial_commitment_id=f.id
 		WHERE EXTRACT(year FROM p.date)-EXTRACT(year FROM f.date)>=0
 			AND EXTRACT(year FROM p.date)<EXTRACT(year FROM CURRENT_DATE)
+      AND EXTRACT(year FROM f.date)>=2007
 		GROUP by 2,3 ORDER by 3,2),
-	c_pmt_y as (SELECT y,idx,sum(v) over (partition by y ORDER by y,idx) FROM pmt_y),
-	ram_y as (SELECT fcy.v as v,fcy.y as y,0 as idx FROM fcy
+  idx as (select generate_series(0,m) i from max_idx),
+  pmtyn as (SELECT years.y,idx.i,COALESCE(pmty.v,0) v from years
+    CROSS join idx 
+    LEFT JOIN pmty ON pmty.y=years.y AND pmty.idx=idx.i
+    WHERE years.y+idx.i <= 2018
+  order by 1,2),
+	c_pmty as (SELECT y,i,sum(v) over (partition by y ORDER by y,i) FROM pmtyn),
+  ram_y as (select sum(value)::bigint as v,EXTRACT(year FROM CURRENT_DATE)::int as y,0 as idx
+		FROM programmings WHERE year=EXTRACT(year FROM CURRENT_DATE)
 		UNION ALL
-		SELECT fcy.v-c_pmt_y.sum as v,fcy.y as y,c_pmt_y.idx+1 as idx FROM fcy 
-		JOIN c_pmt_y on fcy.y=c_pmt_y.y),
-	ratio_y as (SELECT ram_y.y,pmt_y.idx,pmt_y.v::double precision/ram_y.v as ratio
-		FROM pmt_y,ram_y
-		WHERE pmt_y.y=ram_y.y and ram_y.idx=pmt_y.idx and ram_y.y>=2008),
-	avg_ratio as (select idx,avg(ratio) as ratio from ratio_y group by 1)
-	(SELECT COALESCE(SUM(ram_y.v*ratio_y.ratio)/100000000.0,0),ratio_y.y FROM ram_y, ratio_y
+		SELECT fcyn.v-c_pmty.sum as v,fcyn.y as y,c_pmty.i+1 as idx FROM fcyn 
+		JOIN c_pmty on fcyn.y=c_pmty.y),
+  ratio_y as (SELECT ram_y.y,pmty.idx,pmty.v::double precision/ram_y.v as ratio
+		FROM pmty,ram_y
+		WHERE pmty.y=ram_y.y and ram_y.idx=pmty.idx and ram_y.y>=2008),
+    avg_ratio as (select idx,avg(ratio) as ratio from ratio_y group by 1)
+(SELECT COALESCE(SUM(ram_y.v*ratio_y.ratio)/100000000.0,0),ratio_y.y FROM ram_y, ratio_y
 		WHERE ram_y.idx=ratio_y.idx AND ram_y.y+ram_y.idx=EXTRACT(year FROM CURRENT_DATE)
 		GROUP by 2 ORDER by 2)
 	UNION ALL
 	(SELECT SUM(ram_y.v*avg_ratio.ratio)/100000000.0,0 FROM ram_y, avg_ratio
-		WHERE ram_y.idx=avg_ratio.idx and ram_y.y+avg_ratio.idx=EXTRACT(year FROM CURRENT_DATE));`
+		WHERE ram_y.y+avg_ratio.idx=EXTRACT(year FROM CURRENT_DATE));`
 	rows, err := db.Query(q)
 	if err != nil {
 		return fmt.Errorf("select %v", err)
@@ -86,29 +101,30 @@ func (d *DifPmtPrevisions) Get(db *sql.DB) error {
 
 func getDifRatios(db *sql.DB) ([]float64, error) {
 	q := `
-	WITH fcy AS ((SELECT SUM(value)::bigint AS v, EXTRACT(year FROM date)::int AS y
-		FROM financial_commitment
-		WHERE EXTRACT(year from date)<EXTRACT(year FROM CURRENT_DATE)
-		GROUP BY 2 ORDER BY 2)
-		UNION ALL
-		(SELECT SUM(value)::bigint AS v,EXTRACT(year FROM CURRENT_DATE)::int AS y
-		FROM programmings WHERE year=EXTRACT(year FROM CURRENT_DATE))),
-	pmt_y AS (SELECT SUM(p.value)::bigint AS v, EXTRACT(year FROM p.date)::int-
-		EXTRACT(year FROM f.date)::int AS idx,EXTRACT(year FROM f.date)::int AS y
-		FROM payment p
-		JOIN financial_commitment f ON p.financial_commitment_id=f.id
-		WHERE EXTRACT(year FROM p.date)-EXTRACT(year FROM f.date)>=0
-			AND EXTRACT(year FROM p.date)<EXTRACT(year FROM CURRENT_DATE)
-		GROUP BY 2,3 ORDER BY 3,2),
-	c_pmt_y AS (SELECT y,idx,SUM(v) OVER (PARTITION BY y ORDER BY y,idx) FROM pmt_y),
-	ram_y AS (SELECT fcy.v AS v,fcy.y AS y,0 AS idx FROM fcy
-		UNION ALL
-		SELECT fcy.v-c_pmt_y.SUM AS v,fcy.y AS y,c_pmt_y.idx+1 AS idx FROM fcy 
-		JOIN c_pmt_y on fcy.y=c_pmt_y.y),
-	ratio_y AS (SELECT ram_y.y,pmt_y.idx,pmt_y.v::double precision/ram_y.v AS ratio
-		FROM pmt_y,ram_y
-		WHERE pmt_y.y=ram_y.y and ram_y.idx=pmt_y.idx and ram_y.y>=2008)
-	select idx,avg(ratio) AS ratio from ratio_y group BY 1 order BY 1`
+	with fcy as (select extract (year from date) y,sum(value) v from financial_commitment
+  where extract (year from date)>=2007
+    and extract(year from date)<extract(year from current_date)
+  group by 1 order by 1),
+pmy as (select extract(year from f.date) y,
+  extract(year from p.date)-extract(year from f.date) as idx, sum(p.value) v
+  from payment p
+  join financial_commitment f ON p.financial_commitment_id=f.id
+  where extract(year from f.date)>=2007
+    AND extract(year from p.date)-extract(year from f.date)>=0
+    AND extract(year from p.date)<extract(year from CURRENT_DATE)
+group by 1,2 order by 1,2),
+spy as (select y,idx,sum(v) OVER (PARTITION by y ORDER BY y,idx) from pmy),
+ry as (select y,0 as idx,fcy.v from fcy
+UNION ALL
+  select spy.y,spy.idx+1,fcy.v-spy.sum v from fcy join spy on fcy.y=spy.y
+),
+r as (select ry.y,ry.idx,COALESCE(pmy.v,0)::double precision/ry.v r
+  FROM ry join pmy on ry.y=pmy.y and ry.idx=pmy.idx
+  where ry.y<extract(year from current_date)
+  )
+select idx,avg(r) from r where idx+y>=extract(year from current_date) - 2
+  group by 1 order by 1
+`
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, fmt.Errorf("select ratio %v", err)
@@ -137,26 +153,38 @@ type yearVal struct {
 
 func getRAM(db *sql.DB) ([]yearVal, error) {
 	q := `
-	with fcy as ((SELECT sum(value)::bigint as v, EXTRACT(year FROM date)::int as y
-		FROM financial_commitment
-		WHERE EXTRACT(year from date)<EXTRACT(year FROM CURRENT_DATE)
-		GROUP by 2 ORDER by 2)
-		UNION ALL
-		(select sum(value)::bigint as v,EXTRACT(year FROM CURRENT_DATE)::int as y
-		FROM programmings WHERE year=EXTRACT(year FROM CURRENT_DATE))),
-	pmt_y as (SELECT sum(p.value)::bigint as v, EXTRACT(year FROM p.date)::int-
-		EXTRACT(year FROM f.date)::int as idx,EXTRACT(year FROM f.date)::int as y
-		FROM payment p
-		JOIN financial_commitment f on p.financial_commitment_id=f.id
-		WHERE EXTRACT(year FROM p.date)-EXTRACT(year FROM f.date)>=0
-			AND EXTRACT(year FROM p.date)<EXTRACT(year FROM CURRENT_DATE)
-		GROUP by 2,3 ORDER by 3,2),
-	c_pmt_y as (SELECT y,idx,sum(v) over (partition by y ORDER by y,idx) FROM pmt_y),
-	ram_y as (SELECT fcy.v as v,fcy.y as y,0 as idx FROM fcy
-		UNION ALL
-		SELECT fcy.v-c_pmt_y.sum as v,fcy.y as y,c_pmt_y.idx+1 as idx FROM fcy 
-		JOIN c_pmt_y on fcy.y=c_pmt_y.y)
-  SELECT y,COALESCE(sum(v),0)*0.00000001::double precision FROM ram_y WHERE y+idx=2019 group by 1;`
+	with fcy as (select extract (year from date) y,sum(value) v from financial_commitment
+  where extract (year from date)>=2007
+    and extract(year from date)<extract(year from current_date)
+  group by 1 order by 1),
+pmy as (select extract(year from f.date) y,
+  extract(year from p.date)-extract(year from f.date) as idx, sum(p.value) v
+  from payment p
+  join financial_commitment f ON p.financial_commitment_id=f.id
+  where extract(year from f.date)>=2007
+    AND extract(year from p.date)-extract(year from f.date)>=0
+    AND extract(year from p.date)<extract(year from CURRENT_DATE)
+group by 1,2 order by 1,2),
+spy as (select y,idx,sum(v) OVER (PARTITION by y ORDER BY y,idx) from pmy),
+ry as (select y,0 as idx,fcy.v from fcy
+UNION ALL
+  select spy.y,spy.idx+1,fcy.v-spy.sum v from fcy join spy on fcy.y=spy.y
+),
+r as (select ry.y,ry.idx,COALESCE(pmy.v,0)::double precision/ry.v r
+  FROM ry join pmy on ry.y=pmy.y and ry.idx=pmy.idx
+  where ry.y<extract(year from current_date)
+  ),
+avr as (select idx,avg(r) from r where idx+y>=extract(year from current_date) - 2
+  group by 1 order by 1)
+	select y,v*0.00000001::double precision from
+	(select * from ry
+  UNION ALL
+  select year,0 idx,sum(value) from programmings 
+  where year=extract(year from current_date)
+	group by 1,2) q
+  where y+idx = extract(year from current_date)
+	order by 1
+`
 	rows, err := db.Query(q)
 	if err != nil {
 		return nil, fmt.Errorf("select ram %v", err)
@@ -175,17 +203,6 @@ func getRAM(db *sql.DB) ([]yearVal, error) {
 		return nil, fmt.Errorf("rows err ram %v", err)
 	}
 	return rr, nil
-}
-
-func getProg(db *sql.DB) (float64, error) {
-	q := `
-		SELECT COALESCE(SUM(value),0)::double precision*0.00000001 FROM programmings
-		WHERE year=EXTRACT(year FROM current_date)`
-	var p float64
-	if err := db.QueryRow(q).Scan(&p); err != nil {
-		return 0, fmt.Errorf("query prog %v", err)
-	}
-	return p, nil
 }
 
 func getPrev(db *sql.DB) ([]yearVal, error) {
@@ -227,12 +244,7 @@ func (m *MultiannualDifPmtPrevisions) Get(db *sql.DB) error {
 	}
 	ramLen := len(ram)
 
-	prog, err := getProg(db)
-	if err != nil {
-		return err
-	}
 	actualYear := time.Now().Year()
-	ram = append(ram, yearVal{Year: int64(actualYear), Val: prog})
 
 	prev, err := getPrev(db)
 	if err != nil {
@@ -250,11 +262,11 @@ func (m *MultiannualDifPmtPrevisions) Get(db *sql.DB) error {
 		ram = append(ram, yearVal{Year: int64(y + i), Val: 0})
 		i++
 	}
-	j = ramLen
+	j = ramLen - 1
 	for y = 0; y < 5; y++ {
 		p.Year = int64(y + actualYear)
 		p.Prev = 0
-		for i = 0; i < ratioLen; i++ {
+		for i = 0; i < ratioLen && j-i > 0; i++ {
 			q := ratios[i] * ram[j-i].Val
 			p.Prev += q
 			ram[j-i].Val -= q
