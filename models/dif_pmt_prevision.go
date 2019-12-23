@@ -12,91 +12,10 @@ type DifPmtPrevision struct {
 	Prev float64 `json:"prev"`
 }
 
-// DifPmtPrevisions embeddes an array of DifPmtPrevision for json export and query
+// DifPmtPrevisions embeddes an array of DifPmtPrevision
+// for json export and calculation
 type DifPmtPrevisions struct {
 	Lines []DifPmtPrevision `json:"DifPmtPrevision"`
-}
-
-// MultiannualDifPmtPrevision model
-type MultiannualDifPmtPrevision struct {
-	Year int64   `json:"year"`
-	Prev float64 `json:"prev"`
-}
-
-// MultiannualDifPmtPrevisions embeddes an array of MultiannualDifPmtPrevision
-// for json export and calculation
-type MultiannualDifPmtPrevisions struct {
-	Lines []MultiannualDifPmtPrevision `json:"MultiannualDifPmtPrevision"`
-}
-
-// Get calculates the paiement prevision of the current year
-// using differential ratios (i.e. applied to the difference between commitments
-// and payments) for the commitments of different years and for the avarage of
-// this ratios
-func (d *DifPmtPrevisions) Get(db *sql.DB) error {
-	q := `
-	with 
-  years as (SELECT * FROM generate_series(2007,EXTRACT(year FROM CURRENT_DATE)::int-1) y),
-  fcy as (SELECT sum(value)::bigint as v, EXTRACT(year FROM date)::int as y
-    FROM financial_commitment WHERE EXTRACT(year FROM date)<EXTRACT(year FROM CURRENT_DATE)
-      AND EXTRACT (year FROM date)>=2007
-		GROUP by 2 ORDER by 2),
-  fcyn as (SELECT years.y,COALESCE(fcy.v,0::bigint) v
-    FROM years LEFT OUTER JOIN fcy ON years.y=fcy.y),
-  max_idx as (SELECT max(EXTRACT(year FROM p.date)-EXTRACT(year FROM f.date))::int as m
-    FROM payment p
-    JOIN financial_commitment f on p.financial_commitment_id=f.id
-		WHERE EXTRACT(year FROM p.date)-EXTRACT(year FROM f.date)>=0
-			AND EXTRACT(year FROM p.date)<EXTRACT(year FROM CURRENT_DATE)
-      AND EXTRACT(year FROM f.date)>=2007),
-	pmty as (SELECT sum(p.value)::bigint as v, EXTRACT(year FROM p.date)::int-
-		EXTRACT(year FROM f.date)::int as idx,EXTRACT(year FROM f.date)::int as y
-		FROM payment p
-		JOIN financial_commitment f on p.financial_commitment_id=f.id
-		WHERE EXTRACT(year FROM p.date)-EXTRACT(year FROM f.date)>=0
-			AND EXTRACT(year FROM p.date)<EXTRACT(year FROM CURRENT_DATE)
-      AND EXTRACT(year FROM f.date)>=2007
-		GROUP by 2,3 ORDER by 3,2),
-  idx as (select generate_series(0,m) i from max_idx),
-  pmtyn as (SELECT years.y,idx.i,COALESCE(pmty.v,0) v from years
-    CROSS join idx 
-    LEFT JOIN pmty ON pmty.y=years.y AND pmty.idx=idx.i
-    WHERE years.y+idx.i <= 2018
-  order by 1,2),
-	c_pmty as (SELECT y,i,sum(v) over (partition by y ORDER by y,i) FROM pmtyn),
-  ram_y as (select sum(value)::bigint as v,EXTRACT(year FROM CURRENT_DATE)::int as y,0 as idx
-		FROM programmings WHERE year=EXTRACT(year FROM CURRENT_DATE)
-		UNION ALL
-		SELECT fcyn.v-c_pmty.sum as v,fcyn.y as y,c_pmty.i+1 as idx FROM fcyn 
-		JOIN c_pmty on fcyn.y=c_pmty.y),
-  ratio_y as (SELECT ram_y.y,pmty.idx,pmty.v::double precision/ram_y.v as ratio
-		FROM pmty,ram_y
-		WHERE pmty.y=ram_y.y and ram_y.idx=pmty.idx and ram_y.y>=2008),
-    avg_ratio as (select idx,avg(ratio) as ratio from ratio_y group by 1)
-(SELECT COALESCE(SUM(ram_y.v*ratio_y.ratio)/100000000.0,0),ratio_y.y FROM ram_y, ratio_y
-		WHERE ram_y.idx=ratio_y.idx AND ram_y.y+ram_y.idx=EXTRACT(year FROM CURRENT_DATE)
-		GROUP by 2 ORDER by 2)
-	UNION ALL
-	(SELECT SUM(ram_y.v*avg_ratio.ratio)/100000000.0,0 FROM ram_y, avg_ratio
-		WHERE ram_y.y+avg_ratio.idx=EXTRACT(year FROM CURRENT_DATE));`
-	rows, err := db.Query(q)
-	if err != nil {
-		return fmt.Errorf("select %v", err)
-	}
-	var l DifPmtPrevision
-	for rows.Next() {
-		if err = rows.Scan(&l.Prev, &l.Year); err != nil {
-			return fmt.Errorf("scan %v", err)
-		}
-		d.Lines = append(d.Lines, l)
-	}
-	if err = rows.Err(); err != nil {
-		return fmt.Errorf("rows err %v", err)
-	}
-	if len(d.Lines) == 0 {
-		d.Lines = []DifPmtPrevision{}
-	}
-	return nil
 }
 
 func getDifRatios(db *sql.DB) ([]float64, error) {
@@ -230,9 +149,9 @@ func getPrev(db *sql.DB) ([]yearVal, error) {
 	return rr, nil
 }
 
-// Get calculates the MultiannualDifPmtPrevision using the average differential
+// Get calculates the DifPmtPrevision using the average differential
 // ratios
-func (m *MultiannualDifPmtPrevisions) Get(db *sql.DB) error {
+func (m *DifPmtPrevisions) Get(db *sql.DB) error {
 	ratios, err := getDifRatios(db)
 	if err != nil {
 		return err
@@ -254,7 +173,7 @@ func (m *MultiannualDifPmtPrevisions) Get(db *sql.DB) error {
 		ram = append(ram, p)
 	}
 	var (
-		p       MultiannualDifPmtPrevision
+		p       DifPmtPrevision
 		i, j, y int
 	)
 	y = actualYear + len(prev) + 1

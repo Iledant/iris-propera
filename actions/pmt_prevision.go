@@ -32,18 +32,3 @@ func GetPaymentPrevisions(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(resp)
 }
-
-// GetMultiAnnualPaymentPrevision handle the get request to calculate the
-// payment previsions for the 5 coming years using the average differential
-// ratio methods
-func GetMultiAnnualPaymentPrevision(ctx iris.Context) {
-	var resp models.MultiannualDifPmtPrevisions
-	db := ctx.Values().Get("db").(*sql.DB)
-	if err := resp.Get(db); err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"Prévisions pluriannuelle différentielles de paiement, requête : " + err.Error()})
-		return
-	}
-	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(resp)
-}
