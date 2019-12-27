@@ -20,7 +20,7 @@ func getPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 		{
 			Token:         testCtx.User.Token,
 			Status:        http.StatusOK,
-			BodyContains:  []string{`"PmtPreviion":[`, `"DifPmtPrevision":[`},
+			BodyContains:  []string{`"PmtPrevision":[`, `"DifPmtPrevision":[`},
 			CountItemName: `"year"`,
 			ArraySize:     9},
 	}
