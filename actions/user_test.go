@@ -9,12 +9,6 @@ import (
 	"github.com/iris-contrib/httpexpect"
 )
 
-type SentUserCase struct {
-	Sent         []byte
-	Status       int
-	BodyContains string
-}
-
 // UserTest includes all tests for users
 func testUser(t *testing.T, userCredentials *config.Credentials) {
 	t.Run("User", func(t *testing.T) {

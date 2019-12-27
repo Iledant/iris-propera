@@ -128,14 +128,21 @@ func testCommons(t *testing.T) {
 		e := httptest.New(t, app)
 		admin := fetchLoginResponse(e, t, &cfg.Users.Admin, "ADMIN")
 		user := fetchLoginResponse(e, t, &cfg.Users.User, "USER")
+
 		notAdminTestCase = testCase{
 			Token:        user.Token,
 			ID:           "0",
 			Param:        "0",
 			Status:       http.StatusUnauthorized,
 			BodyContains: []string{"Droits administrateur requis"}}
-		t := TestContext{DB: db, App: app, E: e, Admin: admin, User: user, Config: &cfg}
-		testCtx = &t
+
+		testCtx = &TestContext{
+			DB:     db,
+			App:    app,
+			E:      e,
+			Admin:  admin,
+			User:   user,
+			Config: &cfg}
 	}
 }
 
@@ -177,7 +184,7 @@ func fetchLoginResponse(e *httpexpect.Expect, t *testing.T, c *config.Credential
 
 type tcReqFunc func(testCase) *httpexpect.Response
 
-// chkTestCases launches the test cases agains the callback function and checks
+// chkTestCases launches the test cases against the callback function and checks
 // the status, response and numbers according to the test cases.
 func chkTestCases(tcc []testCase, f tcReqFunc, testName string, id ...*int) []string {
 	var resp []string
