@@ -115,7 +115,6 @@ func testCommons(t *testing.T) {
 			t.Errorf("Configuration : %v\n", err)
 			t.FailNow()
 		}
-
 		restoreTestDB(t, &cfg.Databases.Test)
 
 		db, err := config.LaunchDB(&cfg.Databases.Test)

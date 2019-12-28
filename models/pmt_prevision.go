@@ -18,7 +18,7 @@ type PmtPrevisions struct {
 }
 
 // Get calculates the paiement prevision of the current year
-// using differential ratios (i.e. applied to the difference between commitments
+// using direct ratios (i.e. applied to the difference between commitments
 // and payments) for the commitments of different years and for the avarage of
 // this ratios
 func (d *PmtPrevisions) Get(db *sql.DB) error {

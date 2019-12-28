@@ -197,7 +197,6 @@ func LaunchDB(cfg *DBConf) (*sql.DB, error) {
 		"sslmode=disable host=%s port=%s user=%s dbname=%s password=%s",
 		cfg.Host, cfg.Port, cfg.UserName, cfg.Name, cfg.Password)
 	db, err := sql.Open("postgres", cfgStr)
-	fmt.Printf("LaunchDB %v", err)
 	if err != nil {
 		return nil, err
 	}
