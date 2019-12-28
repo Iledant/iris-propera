@@ -14,7 +14,7 @@ type pmtPrevisionsResp struct {
 }
 
 // GetPaymentPrevisions handle the get request to calculate the payment previsions
-// of the current year according to the past commitments and the actual programmation
+// of the current year using the past commitments and the actual programmation
 // using two statistical methods
 func GetPaymentPrevisions(ctx iris.Context) {
 	var resp pmtPrevisionsResp
@@ -27,6 +27,21 @@ func GetPaymentPrevisions(ctx iris.Context) {
 	if err := resp.DifPmtPrevisions.Get(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Prévisions de paiement, requête 2 : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
+// GetActionPaymentPrevisions handle the get request to calculate the payment
+// previsions per action using the past commitments, the programmation of the
+// actual year and the commitment previsions for the coming years
+func GetActionPaymentPrevisions(ctx iris.Context) {
+	var resp models.DifActionPmtPrevisions
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.Get(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions de paiement par action, requête : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
