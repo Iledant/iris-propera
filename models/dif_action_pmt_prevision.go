@@ -8,15 +8,16 @@ import (
 
 // DifActionPmtPrevision model
 type DifActionPmtPrevision struct {
-	Chapter  int64   `json:"chapter"`
-	ActionID int64   `json:"action_id"`
-	Action   string  `json:"action"`
-	Prev     float64 `json:"prev"`
-	Y0       float64 `json:"y0"`
-	Y1       float64 `json:"y1"`
-	Y2       float64 `json:"y2"`
-	Y3       float64 `json:"y3"`
-	Y4       float64 `json:"y4"`
+	Chapter    int64   `json:"chapter"`
+	ActionID   int64   `json:"action_id"`
+	ActionCode string  `json:"action_code"`
+	ActionName string  `json:"action_name"`
+	Prev       float64 `json:"prev"`
+	Y0         float64 `json:"y0"`
+	Y1         float64 `json:"y1"`
+	Y2         float64 `json:"y2"`
+	Y3         float64 `json:"y3"`
+	Y4         float64 `json:"y4"`
 }
 
 // DifActionPmtPrevisions embeddes an array of DifActionPmtPrevision for json
@@ -32,9 +33,10 @@ type yearActionVal struct {
 }
 
 type actionItem struct {
-	Chapter  int64
-	ActionID int64
-	Action   string
+	Chapter    int64
+	ActionID   int64
+	ActionCode string
+	ActionName string
 }
 
 type actionItems struct {
@@ -130,7 +132,7 @@ SELECT q.y,q.action_id,COALESCE(ramProg.v,0)::double precision*0.00000001
 
 func (a *actionItems) Get(db *sql.DB) error {
 	q := `SELECT chap.code,ba.id,bp.code_contract||bp.code_function||bp.code_number
-	||COALESCE(bp.code_subfunction,'')||ba.code FROM budget_action ba
+	||COALESCE(bp.code_subfunction,'')||ba.code,ba.name FROM budget_action ba
 	JOIN budget_program bp ON ba.program_id=bp.id
 	JOIN budget_chapter chap ON bp.chapter_id=chap.id
 	ORDER BY 2`
@@ -140,7 +142,8 @@ func (a *actionItems) Get(db *sql.DB) error {
 	}
 	var line actionItem
 	for rows.Next() {
-		if err = rows.Scan(&line.Chapter, &line.ActionID, &line.Action); err != nil {
+		if err = rows.Scan(&line.Chapter, &line.ActionID, &line.ActionCode,
+			&line.ActionName); err != nil {
 			return fmt.Errorf("scan action ram %v", err)
 		}
 		a.Lines = append(a.Lines, line)
@@ -240,7 +243,8 @@ func (m *DifActionPmtPrevisions) Get(db *sql.DB) error {
 			}
 		}
 		m.Lines[x].Chapter = actions.Lines[i].Chapter
-		m.Lines[x].Action = actions.Lines[i].Action
+		m.Lines[x].ActionCode = actions.Lines[i].ActionCode
+		m.Lines[x].ActionName = actions.Lines[i].ActionName
 	}
 	return nil
 }
