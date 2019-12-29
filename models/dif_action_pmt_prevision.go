@@ -8,11 +8,15 @@ import (
 
 // DifActionPmtPrevision model
 type DifActionPmtPrevision struct {
-	Year     int64   `json:"year"`
 	Chapter  int64   `json:"chapter"`
 	ActionID int64   `json:"action_id"`
 	Action   string  `json:"action"`
 	Prev     float64 `json:"prev"`
+	Y0       float64 `json:"y0"`
+	Y1       float64 `json:"y1"`
+	Y2       float64 `json:"y2"`
+	Y3       float64 `json:"y3"`
+	Y4       float64 `json:"y4"`
 }
 
 // DifActionPmtPrevisions embeddes an array of DifActionPmtPrevision for json
@@ -44,55 +48,65 @@ type actionItems struct {
 func getActionRAM(db *sql.DB) ([]yearActionVal, error) {
 	q := `
 	WITH
-		actionCmt as (SELECT extract(year FROM date) y,action_id,greatest(sum(value),0) v 
-			FROM financial_commitment
-			WHERE extract (year FROM date)>=2007
-			AND extract(year FROM date)<extract(year FROM CURRENT_DATE)
-			GROUP BY 1,2 order by 1,2),
-		actionPmt as (SELECT extract(year FROM f.date) y,f.action_id,
-			extract(year FROM p.date)-extract(year FROM f.date) as idx,sum(p.value) v
-			FROM payment p
-			JOIN financial_commitment f ON p.financial_commitment_id=f.id
-			WHERE extract(year FROM f.date)>=2007
-				AND extract(year FROM p.date)-extract(year FROM f.date)>=0
-				AND extract(year FROM p.date)<extract(year FROM CURRENT_DATE)
-			GROUP BY 1,2,3 order by 1,2,3),
-		cumActionPmt as (SELECT y,action_id,idx,sum(v) 
-			OVER (PARTITION by y,action_id ORDER BY y,action_id,idx) FROM actionPmt),
-		dry as (SELECT y,action_id,0 as idx,actionCmt.v::bigint FROM actionCmt
-			UNION ALL
-			SELECT cumActionPmt.y,actionCmt.action_id,cumActionPmt.idx+1,
-				greatest(actionCmt.v-cumActionPmt.sum,0) v 
-			FROM actionCmt
-			JOIN cumActionPmt on actionCmt.y=cumActionPmt.y AND 
-				actionCmt.action_id=cumActionPmt.action_id
+	actionCmt as (SELECT extract(year FROM date) y,action_id,sum(value)::bigint v 
+		FROM financial_commitment
+		WHERE extract (year FROM date)>=2007
+		AND extract(year FROM date)<extract(year FROM CURRENT_DATE)
+	  	AND value > 0
+		GROUP BY 1,2 order by 1,2),
+	actionPmt as (SELECT extract(year FROM f.date) y,f.action_id,
+		extract(year FROM p.date)-extract(year FROM f.date) as idx,sum(p.value) v
+		FROM payment p
+		JOIN financial_commitment f ON p.financial_commitment_id=f.id
+		WHERE extract(year FROM f.date)>=2007
+			AND extract(year FROM p.date)-extract(year FROM f.date)>=0
+			AND extract(year FROM p.date)<extract(year FROM CURRENT_DATE)
+		GROUP BY 1,2,3 order by 1,2,3),
+	actionId as (select distinct action_id FROM actionCmt),
+	y as (select generate_series(2007,extract(year from CURRENT_DATE)::int) y),
+	idx as (select generate_series(0,max(idx)::int) idx from actionPmt idx),
+	yidx as (select y.y,idx.idx from y,idx WHERE idx.idx+y.y<extract(year from current_date)),
+	compActionPmt as (select yidx.y,actionID.action_id,yidx.idx,COALESCE(actionPmt.v,0) v
+		FROM yidx
+	  	CROSS JOIN actionID
+		LEFT OUTER JOIN actionPmt ON actionPmt.y=yidx.y 
+			AND actionPmt.idx=yidx.idx AND actionPmt.action_id=actionID.action_id
+		order by 1,2,3
+	),
+	cumActionPmt as (SELECT y,action_id,idx,sum(v) 
+		OVER (PARTITION by y,action_id ORDER BY y,action_id,idx) FROM compActionPmt),
+	dry as (SELECT y,action_id,0 as idx,actionCmt.v::bigint FROM actionCmt
+		UNION ALL
+		SELECT cumActionPmt.y,actionCmt.action_id,cumActionPmt.idx+1,
+			actionCmt.v-cumActionPmt.sum v 
+		FROM actionCmt
+		JOIN cumActionPmt on actionCmt.y=cumActionPmt.y AND 
+			actionCmt.action_id=cumActionPmt.action_id
+	),
+	ramProg as (SELECT y,action_id,v FROM dry 
+			WHERE y+idx=extract(year FROM CURRENT_DATE)
+		UNION ALL
+		SELECT p.year,op.budget_action_id action_id,sum(p.value) v
+		FROM programmings p
+		JOIN physical_op op on p.physical_op_id=op.id
+		WHERE year=extract(year FROM CURRENT_DATE)
+		GROUP BY 1,2
+		UNION ALL
+		SELECT year,action_id,v FROM
+			(SELECT p.year,op.budget_action_id action_id,sum(p.value) v
+				FROM prev_commitment p
+				JOIN physical_op op on p.physical_op_id=op.id
+				WHERE year>extract(year FROM CURRENT_DATE)
+					AND year<extract(year FROM CURRENT_DATE)+5
+				GROUP BY 1,2) prg 
 		),
-		ramProg as (SELECT y,action_id,v FROM dry 
-				WHERE y+idx=extract(year FROM CURRENT_DATE)
-			UNION ALL
-			SELECT p.year,op.budget_action_id action_id,sum(p.value) v
-			FROM programmings p
-			JOIN physical_op op on p.physical_op_id=op.id
-			WHERE year=extract(year FROM CURRENT_DATE)
-			GROUP BY 1,2
-			UNION ALL
-			SELECT year,action_id,v FROM
-				(SELECT p.year,op.budget_action_id action_id,sum(p.value) v
-					FROM prev_commitment p
-					JOIN physical_op op on p.physical_op_id=op.id
-					WHERE year>extract(year FROM CURRENT_DATE)
-						AND year<extract(year FROM CURRENT_DATE)+5
-					GROUP BY 1,2) prg 
-			WHERE v<>0),
-			years as (SELECT generate_series(min(y)::int,
-				extract(year FROM CURRENT_DATE)::int+4) y FROM ramProg),
-		aid as (SELECT distinct action_id FROM ramProg)
-	SELECT years.y,aid.action_id,COALESCE(ramProg.v,0)*0.00000001::double precision 
-	FROM years
-	CROSS JOIN aid
-	LEFT OUTER JOIN ramProg on years.y=ramProg.y
-		AND aid.action_id=ramProg.action_id
-	WHERE aid.action_id NOTNULL
+		years as (SELECT generate_series(min(y)::int,
+			extract(year FROM CURRENT_DATE)::int+4) y FROM ramProg),
+	aid as (SELECT distinct action_id FROM ramProg)
+SELECT q.y,q.action_id,COALESCE(ramProg.v,0)::double precision*0.00000001
+	FROM (SELECT years.y,aid.action_id FROM years,aid) q
+	LEFT OUTER JOIN ramProg on q.y=ramProg.y AND q.action_id=ramProg.action_id
+	WHERE q.action_id NOTNULL
 	ORDER BY 1,2`
 	rows, err := db.Query(q)
 	if err != nil {
@@ -172,19 +186,34 @@ func (m *DifActionPmtPrevisions) Get(db *sql.DB) error {
 	if actualYearBegin == 0 {
 		return fmt.Errorf("impossible de trouver l'année en cours dans la requête")
 	}
-	m.Lines = make([]DifActionPmtPrevision, 0, 5*actionLen)
+	var prev float64
+	m.Lines = make([]DifActionPmtPrevision, actionLen, actionLen)
 	for y := 0; y < 5; y++ {
-		p.Year = int64(y + actualYear)
-		p.Prev = 0
 		for a := 0; a < actionLen; a++ {
+			prev = 0
 			j = actualYearBegin + a + y*actionLen
 			p.ActionID = ram[j].ActionID
-			for i := 0; i < ratioLen && j-i*actionLen > 0; i++ {
+			for i := 0; i < ratioLen && j-i*actionLen >= 0; i++ {
 				q := ratios[i] * ram[j-i*actionLen].Val
-				p.Prev += q
+				if i+int(ram[j-i*actionLen].Year) != actualYear+y {
+					fmt.Printf("différence de ratio+year : %+v Année : %d\n", ram[j-i*actionLen], actualYear+y)
+				}
+				prev += q
 				ram[j-i*actionLen].Val -= q
 			}
-			m.Lines = append(m.Lines, p)
+			m.Lines[a].ActionID = ram[j].ActionID
+			switch y {
+			case 0:
+				m.Lines[a].Y0 = prev
+			case 1:
+				m.Lines[a].Y1 = prev
+			case 2:
+				m.Lines[a].Y2 = prev
+			case 3:
+				m.Lines[a].Y3 = prev
+			case 4:
+				m.Lines[a].Y4 = prev
+			}
 		}
 	}
 	var actions actionItems
@@ -198,6 +227,10 @@ func (m *DifActionPmtPrevisions) Get(db *sql.DB) error {
 		j = actionLen - 1
 		for {
 			if m.Lines[x].ActionID == actions.Lines[i].ActionID {
+				break
+			}
+			if m.Lines[x].ActionID == actions.Lines[j].ActionID {
+				i = j
 				break
 			}
 			if m.Lines[x].ActionID < actions.Lines[(i+j)/2].ActionID {
