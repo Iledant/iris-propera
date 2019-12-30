@@ -10,6 +10,7 @@ import (
 func testSettings(t *testing.T) {
 	testCommons(t)
 	t.Run("Settings", func(t *testing.T) {
+		t.Parallel()
 		getSettingsTest(testCtx.E, t)
 		getBudgetTablesTest(testCtx.E, t)
 	})

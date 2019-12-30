@@ -9,6 +9,7 @@ import (
 
 func testPaymentPrevisions(t *testing.T) {
 	t.Run("PaymentPrevisions", func(t *testing.T) {
+		t.Parallel()
 		getPaymentPrevisionsTest(testCtx.E, t)
 		getActionPaymentPrevisionsTest(testCtx.E, t)
 	})

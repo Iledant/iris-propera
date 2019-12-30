@@ -9,6 +9,7 @@ import (
 
 func testSummaries(t *testing.T) {
 	t.Run("Summaries", func(t *testing.T) {
+		t.Parallel()
 		multiannualProgrammationTest(testCtx.E, t)
 		annualProgrammationTest(testCtx.E, t)
 		initAnnualProgrammationTest(testCtx.E, t)
