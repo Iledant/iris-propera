@@ -10,6 +10,7 @@ type CurYearActionPmtPrevision struct {
 	ActionID     int64
 	Chapter      string
 	Sector       string
+	Function     string
 	ActionCode   string
 	ActionName   string
 	PmtPrevision float64
@@ -101,9 +102,10 @@ func (c *CurYearActionPmtPrevisions) Get(db *sql.DB) error {
 			JOIN financial_commitment f ON p.financial_commitment_id=f.id
 			WHERE extract(year FROM p.date)=extract(year FROM current_date)
 			GROUP BY 1)
-	SELECT action_id.action_id,chap.code,bs.code,bp.code_contract||
-		bp.code_function||bp.code_number||COALESCE(bp.code_subfunction,''),
-		ba.name,COALESCE(q.v,0)::double precision,COALESCE(actual_pmt.v,0)
+	SELECT action_id.action_id,chap.code,bs.code,bp.code_function||
+		COALESCE(bp.code_subfunction,''),bp.code_contract||bp.code_function||
+		bp.code_number||COALESCE(bp.code_subfunction,''),ba.name,
+		COALESCE(q.v,0)::double precision,COALESCE(actual_pmt.v,0)
 	FROM action_id
 	JOIN budget_action ba ON action_id.action_id=ba.id
 	JOIN budget_program bp ON ba.program_id=bp.id
@@ -121,8 +123,9 @@ func (c *CurYearActionPmtPrevisions) Get(db *sql.DB) error {
 	}
 	var line CurYearActionPmtPrevision
 	for rows.Next() {
-		if err = rows.Scan(&line.ActionID, &line.Chapter, &line.Sector, &line.ActionCode,
-			&line.ActionName, &line.PmtPrevision, &line.Payment); err != nil {
+		if err = rows.Scan(&line.ActionID, &line.Chapter, &line.Sector,
+			&line.Function, &line.ActionCode, &line.ActionName, &line.PmtPrevision,
+			&line.Payment); err != nil {
 			return fmt.Errorf("scan ratio %v", err)
 		}
 		c.Lines = append(c.Lines, line)
