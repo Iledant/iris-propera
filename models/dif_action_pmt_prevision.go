@@ -50,65 +50,46 @@ type actionItems struct {
 func getActionRAM(db *sql.DB) ([]yearActionVal, error) {
 	q := `
 	WITH
-	actionCmt as (SELECT extract(year FROM date) y,action_id,sum(value)::bigint v 
-		FROM financial_commitment
-		WHERE extract (year FROM date)>=2007
-		AND extract(year FROM date)<extract(year FROM CURRENT_DATE)
-	  	AND value > 0
-		GROUP BY 1,2 order by 1,2),
-	actionPmt as (SELECT extract(year FROM f.date) y,f.action_id,
-		extract(year FROM p.date)-extract(year FROM f.date) as idx,sum(p.value) v
-		FROM payment p
-		JOIN financial_commitment f ON p.financial_commitment_id=f.id
-		WHERE extract(year FROM f.date)>=2007
-			AND extract(year FROM p.date)-extract(year FROM f.date)>=0
-			AND extract(year FROM p.date)<extract(year FROM CURRENT_DATE)
-		GROUP BY 1,2,3 order by 1,2,3),
-	actionId as (select distinct action_id FROM actionCmt),
-	y as (select generate_series(2007,extract(year from CURRENT_DATE)::int) y),
-	idx as (select generate_series(0,max(idx)::int) idx from actionPmt idx),
-	yidx as (select y.y,idx.idx from y,idx WHERE idx.idx+y.y<extract(year from current_date)),
-	compActionPmt as (select yidx.y,actionID.action_id,yidx.idx,COALESCE(actionPmt.v,0) v
-		FROM yidx
-	  	CROSS JOIN actionID
-		LEFT OUTER JOIN actionPmt ON actionPmt.y=yidx.y 
-			AND actionPmt.idx=yidx.idx AND actionPmt.action_id=actionID.action_id
-		order by 1,2,3
-	),
-	cumActionPmt as (SELECT y,action_id,idx,sum(v) 
-		OVER (PARTITION by y,action_id ORDER BY y,action_id,idx) FROM compActionPmt),
-	dry as (SELECT y,action_id,0 as idx,actionCmt.v::bigint FROM actionCmt
-		UNION ALL
-		SELECT cumActionPmt.y,actionCmt.action_id,cumActionPmt.idx+1,
-			actionCmt.v-cumActionPmt.sum v 
-		FROM actionCmt
-		JOIN cumActionPmt on actionCmt.y=cumActionPmt.y AND 
-			actionCmt.action_id=cumActionPmt.action_id
-	),
-	ramProg as (SELECT y,action_id,v FROM dry 
-			WHERE y+idx=extract(year FROM CURRENT_DATE)
-		UNION ALL
-		SELECT p.year,op.budget_action_id action_id,sum(p.value) v
-		FROM programmings p
-		JOIN physical_op op on p.physical_op_id=op.id
-		WHERE year=extract(year FROM CURRENT_DATE)
-		GROUP BY 1,2
-		UNION ALL
-		SELECT year,action_id,v FROM
-			(SELECT p.year,op.budget_action_id action_id,sum(p.value) v
-				FROM prev_commitment p
-				JOIN physical_op op on p.physical_op_id=op.id
-				WHERE year>extract(year FROM CURRENT_DATE)
-					AND year<extract(year FROM CURRENT_DATE)+5
-				GROUP BY 1,2) prg 
+		cmt AS (SELECT extract(year FROM date) y,action_id,sum(value)::bigint v 
+			FROM financial_commitment
+			WHERE extract (year FROM date)>=2007
+			AND extract(year FROM date)<extract(year FROM CURRENT_DATE)
+				AND value > 0
+			GROUP BY 1,2),
+		pmt AS (SELECT extract(year FROM f.date) y,f.action_id,sum(p.value) v
+			FROM payment p
+			JOIN financial_commitment f ON p.financial_commitment_id=f.id
+			WHERE extract(year FROM f.date)>=2007
+				AND extract(year FROM p.date)-extract(year FROM f.date)>=0
+				AND extract(year FROM p.date)<extract(year FROM CURRENT_DATE)
+			GROUP BY 1,2),
+		prg AS (SELECT p.year y,op.budget_action_id action_id,sum(p.value)::bigint v
+			FROM programmings p
+			JOIN physical_op op on p.physical_op_id=op.id
+			WHERE year=extract(year FROM CURRENT_DATE)
+			GROUP BY 1,2),
+		prev AS (SELECT year y,action_id,v FROM
+			(SELECT p.year,op.budget_action_id action_id,sum(p.value)::bigint v
+					FROM prev_commitment p
+					JOIN physical_op op on p.physical_op_id=op.id
+					WHERE year>extract(year FROM CURRENT_DATE)
+						AND year<extract(year FROM CURRENT_DATE)+5
+					GROUP BY 1,2) q),
+		ram AS (SELECT cmt.y,cmt.action_id,(cmt.v-COALESCE(pmt.v,0)::bigint) v FROM cmt
+			LEFT OUTER JOIN pmt ON cmt.y=pmt.y AND cmt.action_id=pmt.action_id
+			UNION ALL
+			SELECT y,action_id,v FROM prg
+			UNION ALL
+			SELECT y,action_id,v FROM prev
 		),
-		years as (SELECT generate_series(min(y)::int,
-			extract(year FROM CURRENT_DATE)::int+4) y FROM ramProg),
-	aid as (SELECT distinct action_id FROM ramProg)
-SELECT q.y,q.action_id,COALESCE(ramProg.v,0)::double precision*0.00000001
-	FROM (SELECT years.y,aid.action_id FROM years,aid) q
-	LEFT OUTER JOIN ramProg on q.y=ramProg.y AND q.action_id=ramProg.action_id
-	WHERE q.action_id NOTNULL
+		action_id AS (SELECT distinct action_id FROM ram),
+		years AS (SELECT generate_series(2007,
+			extract(year FROM current_date)::int+4)::int y)
+	SELECT years.y,action_id.action_id,COALESCE(ram.v,0)::double precision*0.00000001
+	FROM action_id
+	CROSS JOIN years
+	LEFT OUTER JOIN ram ON ram.action_id=action_id.action_id AND ram.y=years.y
+	WHERE action_id.action_id NOTNULL
 	ORDER BY 1,2`
 	rows, err := db.Query(q)
 	if err != nil {
