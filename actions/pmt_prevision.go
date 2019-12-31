@@ -47,3 +47,18 @@ func GetActionPaymentPrevisions(ctx iris.Context) {
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(resp)
 }
+
+// GetCurYearActionPmtPrevisions handle the get request to calculate the payment
+// previsions per action using the past commitments and programmation of the
+// current year and compares it to the payment of the current year
+func GetCurYearActionPmtPrevisions(ctx iris.Context) {
+	var resp models.CurYearActionPmtPrevisions
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.Get(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions de paiement par action de l'année, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}

@@ -12,10 +12,12 @@ func testPaymentPrevisions(t *testing.T) {
 		t.Parallel()
 		getPaymentPrevisionsTest(testCtx.E, t)
 		getActionPaymentPrevisionsTest(testCtx.E, t)
+		getCurYearActionPmtPrevisionsTest(testCtx.E, t)
 	})
 }
 
-// getPaymentPrevisionsTest check route is protected and pre programmings correctly sent.
+// getPaymentPrevisionsTest check route is protected and pre programmings
+// correctly sent.
 func getPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		notLoggedTestCase, // 0 : bad token
@@ -35,7 +37,8 @@ func getPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 	}
 }
 
-// getActionPaymentPrevisionsTest check route is protected and pre programmings correctly sent.
+// getActionPaymentPrevisionsTest check route is protected and pre programmings
+// correctly sent.
 func getActionPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		notLoggedTestCase, // 0 : bad token
@@ -51,6 +54,25 @@ func getActionPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
 	for _, r := range chkTestCases(testCases, f, "GetActionPaymentPrevisions") {
+		t.Error(r)
+	}
+}
+
+// getCurYearActionPmtPrevisionsTest check route is protected and pre programmings
+// correctly sent.
+func getCurYearActionPmtPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		notLoggedTestCase, // 0 : bad token
+		{
+			Token:        testCtx.User.Token,
+			Status:       http.StatusOK,
+			BodyContains: []string{`"CurYearActionPmtPrevision":[`}},
+	}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/payment_previsions/current_year").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	}
+	for _, r := range chkTestCases(testCases, f, "GetCurYearActionPmtPrevisions") {
 		t.Error(r)
 	}
 }
