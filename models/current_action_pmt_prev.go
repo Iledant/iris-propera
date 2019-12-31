@@ -7,12 +7,12 @@ import (
 
 // CurYearActionPmtPrevision model
 type CurYearActionPmtPrevision struct {
-	ActionID     int64
-	Chapter      string
-	Sector       string
-	Function     string
-	ActionCode   string
-	ActionName   string
+	ActionID     sql.NullInt64
+	Chapter      NullString
+	Sector       NullString
+	Function     NullString
+	ActionCode   NullString
+	ActionName   NullString
 	PmtPrevision float64
 	Payment      float64
 }
@@ -99,7 +99,7 @@ func (c *CurYearActionPmtPrevisions) Get(db *sql.DB) error {
 			GROUP BY 1),
 		actual_pmt as (SELECT f.action_id,sum(p.value)::double precision*0.00000001 v
 			FROM payment p 
-			JOIN financial_commitment f ON p.financial_commitment_id=f.id
+			LEFT OUTER JOIN financial_commitment f ON p.financial_commitment_id=f.id
 			WHERE extract(year FROM p.date)=extract(year FROM current_date)
 			GROUP BY 1)
 	SELECT action_id.action_id,chap.code,bs.code,bp.code_function||
@@ -115,7 +115,7 @@ func (c *CurYearActionPmtPrevisions) Get(db *sql.DB) error {
 					FROM full_ram f JOIN avg_ratio a ON f.y+a.idx=extract(year FROM CURRENT_DATE)
 				GROUP BY 1) q
 	ON q.action_id=action_id.action_id
-	LEFT OUTER JOIN actual_pmt ON action_id.action_id=actual_pmt.action_id
+	FULL OUTER JOIN actual_pmt ON action_id.action_id=actual_pmt.action_id
 	ORDER BY 1;`
 	rows, err := db.Query(q)
 	if err != nil {
