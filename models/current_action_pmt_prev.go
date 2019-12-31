@@ -7,14 +7,14 @@ import (
 
 // CurYearActionPmtPrevision model
 type CurYearActionPmtPrevision struct {
-	ActionID     sql.NullInt64
-	Chapter      NullString
-	Sector       NullString
-	Function     NullString
-	ActionCode   NullString
-	ActionName   NullString
-	PmtPrevision float64
-	Payment      float64
+	ActionID     sql.NullInt64 `json:"action_id"`
+	Chapter      NullString    `json:"chapter"`
+	Sector       NullString    `json:"sector"`
+	Function     NullString    `json:"function"`
+	ActionCode   NullString    `json:"action_code"`
+	ActionName   NullString    `json:"action_name"`
+	PmtPrevision float64       `json:"pmt_prevision"`
+	Payment      float64       `json:"payment"`
 }
 
 // CurYearActionPmtPrevisions embeddes an array of CurYearActionPmtPrevision for
