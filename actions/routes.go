@@ -143,6 +143,8 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 	adminParty.Put("/payment_need", ModifyPaymentNeed)
 	adminParty.Delete("/payment_need/{ID}", DeletePaymentNeed)
 
+	adminParty.Get("/consistency/datas", GetConsistencyDatas)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/user/logout", Logout)
 	userParty.Get("/physical_ops", GetPhysicalOps)

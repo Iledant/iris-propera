@@ -99,6 +99,7 @@ func TestAll(t *testing.T) {
 		testPaymentNeed(t)
 		testUser(t, &testCtx.Config.Users.User)
 		testPaymentPrevisions(t)
+		testConsistency(t)
 	})
 }
 
