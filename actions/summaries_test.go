@@ -269,7 +269,7 @@ func actionPaymentTest(e *httpexpect.Expect, t *testing.T) {
 				"sector", "subfunction", "program", "action", "action_name", "y1",
 				"y2", "y3"},
 			CountItemName: `"chapter"`,
-			ArraySize:     58},
+			ArraySize:     56},
 	}
 	f := func(tc testCase) *httpexpect.Response {
 		return e.GET("/api/summaries/payment_per_budget_action").

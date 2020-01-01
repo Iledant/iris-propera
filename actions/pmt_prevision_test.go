@@ -47,7 +47,7 @@ func getActionPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 			Status:        http.StatusOK,
 			BodyContains:  []string{`"DifActionPmtPrevision":[`},
 			CountItemName: `"action_id"`,
-			ArraySize:     85},
+			ArraySize:     84},
 	}
 	f := func(tc testCase) *httpexpect.Response {
 		return e.GET("/api/payment_previsions/actions").

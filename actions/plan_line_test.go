@@ -27,8 +27,9 @@ func getPlanLinesTest(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		notLoggedTestCase,
 		{
-			Token: testCtx.User.Token,
-			ID:    "1", Status: http.StatusOK,
+			Token:         testCtx.User.Token,
+			ID:            "1",
+			Status:        http.StatusOK,
 			BodyContains:  []string{"PlanLine", "Beneficiary"},
 			CountItemName: `"total_value"`,
 			ArraySize:     59},
@@ -56,7 +57,7 @@ func getDetailedPlanLinesTest(e *httpexpect.Expect, t *testing.T) {
 			Status:        http.StatusOK,
 			BodyContains:  []string{"DetailedPlanLine"},
 			CountItemName: `"id"`,
-			ArraySize:     380},
+			ArraySize:     190},
 	}
 	f := func(tc testCase) *httpexpect.Response {
 		return e.GET("/api/plans/"+tc.ID+"/planlines/detailed").

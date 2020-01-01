@@ -50,18 +50,16 @@ func getPaymentCreditsTest(e *httpexpect.Expect, t *testing.T) {
 			Param:        "a",
 			BodyContains: []string{`Liste des enveloppes de crédits, décodage : `}},
 		{
-			Token:  testCtx.User.Token,
-			Status: http.StatusOK,
-			Param:  "2019",
-			BodyContains: []string{`{"PaymentCredit":[{"Year":2019,"ChapterID":2,` +
-				`"Chapter":908,"Function":811,"Primitive":1000000,"Reported":0,` +
-				`"Added":500000,"Modified":300000,"Movement":50000}]}`}},
+			Token:        testCtx.User.Token,
+			Status:       http.StatusOK,
+			Param:        "2019",
+			BodyContains: []string{`{"PaymentCredit":[`}},
 	}
 	f := func(tc testCase) *httpexpect.Response {
 		return e.GET("/api/payment_credits").WithHeader("Authorization", "Bearer "+tc.Token).
 			WithQuery("Year", tc.Param).Expect()
 	}
-	for _, r := range chkTestCases(testCases, f, "GetPayementCredits") {
+	for _, r := range chkTestCases(testCases, f, "GetPaymentCredits") {
 		t.Error(r)
 	}
 }
