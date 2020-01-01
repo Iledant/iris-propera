@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ func (p *PlanLineAndPrevisions) GetAll(plan *Plan, plID int64, db *sql.DB) (err 
 	bIDs, bID := []int64{}, int64(0)
 	rows, err := db.Query(beneficiaryIdsQry)
 	if err != nil {
-		return err
+		return fmt.Errorf("beneficiary select %v ", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
@@ -78,10 +79,21 @@ func (p *PlanLineAndPrevisions) GetAll(plan *Plan, plID int64, db *sql.DB) (err 
 	jsonQry := strings.Join(jj, ",")
 
 	actualYear := strconv.Itoa(time.Now().Year())
+	var prevPart string
+	if lastYear >= firstYear {
+		prevQry = "," + prevQry
+		prevPart = `
+		LEFT JOIN (SELECT * FROM 
+			crosstab ('SELECT p.plan_line_id, c.year, SUM(c.value) FROM physical_op p, prev_commitment c 
+									WHERE p.id = c.physical_op_id AND p.plan_line_id NOTNULL GROUP BY 1,2 ORDER BY 1,2',
+								'SELECT m FROM generate_series( ` + strconv.FormatInt(firstYear, 10) + `, ` + strconv.FormatInt(lastYear, 10) + `) AS m')
+				AS (plan_line_id INTEGER, ` + convertQry + `)) prev 
+		ON prev.plan_line_id = p.id`
+	}
 	finalQry := `SELECT json_build_object('id',q.id,'name',q.name, 'descript', q.descript,'value', q.value, 
-	'total_value', q.total_value, 'commitment', q.commitment, 'programmings', q.programmings,` + jsonQry + jsonBenQry + ` ) FROM
+	'total_value', q.total_value, 'commitment', q.commitment, 'programmings', q.programmings` + jsonQry + jsonBenQry + ` ) FROM
 	(SELECT p.id, p.name, p.descript, p.value, p.total_value, 
-	CAST(fc.value AS bigint) AS commitment, CAST(pr.value AS bigint) AS programmings, ` + prevQry + benQry + `
+	CAST(fc.value AS bigint) AS commitment, CAST(pr.value AS bigint) AS programmings ` + prevQry + benQry + `
 FROM plan_line p` + benCrossQry + `
 LEFT JOIN (SELECT f.plan_line_id, SUM(f.value) AS value FROM financial_commitment f
 						WHERE f.plan_line_id NOTNULL AND EXTRACT(year FROM f.date) < ` + actualYear + `
@@ -89,23 +101,17 @@ LEFT JOIN (SELECT f.plan_line_id, SUM(f.value) AS value FROM financial_commitmen
 	ON fc.plan_line_id = p.id
 LEFT JOIN (SELECT op.plan_line_id, SUM(p.value) AS value FROM physical_op op, programmings p 
 						WHERE p.physical_op_id = op.id AND p.year = ` + actualYear + ` GROUP BY 1) pr 
-	ON pr.plan_line_id = p.id
-LEFT JOIN (SELECT * FROM 
-	crosstab ('SELECT p.plan_line_id, c.year, SUM(c.value) FROM physical_op p, prev_commitment c 
-							WHERE p.id = c.physical_op_id AND p.plan_line_id NOTNULL GROUP BY 1,2 ORDER BY 1,2',
-						'SELECT m FROM generate_series( ` + strconv.FormatInt(firstYear, 10) + `, ` + strconv.FormatInt(lastYear, 10) + `) AS m')
-		AS (plan_line_id INTEGER, ` + convertQry + `)) prev 
-ON prev.plan_line_id = p.id
+	ON pr.plan_line_id = p.id` + prevPart + `
 WHERE ` + whereQry + ` ORDER BY 1) q`
 	lines, line := []string{}, ""
 	rows, err = db.Query(finalQry)
 	if err != nil {
-		return err
+		return fmt.Errorf("select json %v", err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(&line); err != nil {
-			return err
+			return fmt.Errorf("scan %v", err)
 		}
 		lines = append(lines, line)
 	}
