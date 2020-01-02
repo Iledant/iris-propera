@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -258,4 +259,21 @@ func (m *MonthCumulatedPayments) GetAll(bID int64, db *sql.DB) (err error) {
 		m.MonthCumulatedPayments = []MonthCumulatedPayment{}
 	}
 	return err
+}
+
+// LinkCmt is used to add to a payment a link to a commitment
+func (p *Payment) LinkCmt(cmtID int64, db *sql.DB) error {
+	res, err := db.Exec(`UPDATE payment SET financial_commitment_id=$1 WHERE id=$2`,
+		cmtID, p.ID)
+	if err != nil {
+		return fmt.Errorf("update %v", err)
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("count %v", err)
+	}
+	if count != 1 {
+		return fmt.Errorf("payment not found")
+	}
+	return nil
 }

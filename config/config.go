@@ -167,6 +167,10 @@ var migrations = []mig{
 		Query: `update financial_commitment set coriolis_egt_num='604865', coriolis_year='2019' 
   where id=4678`,
 	},
+	{
+		Batch: 28,
+		Query: `CREATE EXTENSION IF NOT EXISTS fuzzystrmatch`,
+	},
 }
 
 // handleMigrations checks against database if migrations queries must be executed

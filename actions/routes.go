@@ -145,6 +145,9 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	adminParty.Get("/consistency/datas", GetConsistencyDatas)
 
+	adminParty.Get("/payment/{pmtID:int64}/possible_linked_commitment", GetPossibleLinkedCmts)
+	adminParty.Post("/payment/{pmtID:int64}/link_commitment/{cmtID}", LinkPaymentToCmt)
+
 	userParty := api.Party("", ActiveMiddleware)
 	userParty.Post("/user/logout", Logout)
 	userParty.Get("/physical_ops", GetPhysicalOps)
