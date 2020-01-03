@@ -8,6 +8,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// ErrBadCredential is the error of a user whose login ou password is not in the
+// user database
+var ErrBadCredential = errors.New("Erreur de login ou de mot de passe")
+
 // User model
 type User struct {
 	ID            int        `json:"id"`
@@ -55,7 +59,11 @@ func (u *User) CryptPwd() (err error) {
 
 // ValidatePwd compared sent uncodded password with internal password.
 func (u *User) ValidatePwd(pwd string) error {
-	return bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(pwd))
+	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(pwd))
+	if err != nil && errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+		return ErrBadCredential
+	}
+	return err
 }
 
 // GetAll fetches all users from database.
@@ -109,6 +117,9 @@ func (u *User) GetByEmail(email string, db *sql.DB) (err error) {
 	err = db.QueryRow(`SELECT id, created_at, updated_at, name, email, role, 
 	password, active FROM users WHERE email = $1 LIMIT 1`, email).Scan(&u.ID,
 		&u.Created, &u.Updated, &u.Name, &u.Email, &u.Role, &u.Password, &u.Active)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrBadCredential
+	}
 	return err
 }
 

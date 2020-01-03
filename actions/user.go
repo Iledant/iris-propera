@@ -48,13 +48,21 @@ func Login(ctx iris.Context) {
 	}
 	db, user := ctx.Values().Get("db").(*sql.DB), models.User{}
 	if err := user.GetByEmail(*c.Email, db); err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
+		if err == models.ErrBadCredential {
+			ctx.StatusCode(http.StatusBadRequest)
+		} else {
+			ctx.StatusCode(http.StatusInternalServerError)
+		}
 		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 	if err := user.ValidatePwd(*c.Password); err != nil {
-		ctx.StatusCode(http.StatusNotFound)
-		ctx.JSON(jsonError{"Erreur de login ou mot de passe"})
+		if err == models.ErrBadCredential {
+			ctx.StatusCode(http.StatusBadRequest)
+		} else {
+			ctx.StatusCode(http.StatusInternalServerError)
+		}
+		ctx.JSON(jsonError{err.Error()})
 		return
 	}
 	token, err := setToken(&user)
