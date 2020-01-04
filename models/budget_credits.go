@@ -4,8 +4,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // BudgetCredit model
@@ -180,6 +181,12 @@ func (b *BudgetCredit) Delete(db *sql.DB) (err error) {
 
 // Save update or insert a batch of budget credits lines into database.
 func (b *BudgetCreditBatch) Save(db *sql.DB) error {
+	for _, r := range b.Lines {
+		if r.CommissionDate == 0 || r.Chapter == 0 {
+			return errors.New("Date de commission ou chapitre incorrect")
+		}
+
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -188,50 +195,49 @@ func (b *BudgetCreditBatch) Save(db *sql.DB) error {
 		tx.Rollback()
 		return err
 	}
-	if _, err = tx.Exec(`CREATE TABLE temp_budget_credits 
-	(commission_date date, chapter integer CHECK (chapter > 0), primary_commitment bigint, 
-	frozen_commitment bigint, reserved_commitment bigint)`); err != nil {
+	q := `CREATE TABLE temp_budget_credits 
+	(	commission_date date,
+		chapter integer CHECK (chapter > 0), 
+		primary_commitment bigint,
+		frozen_commitment bigint, 
+		reserved_commitment bigint)`
+	if _, err = tx.Exec(q); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("create temp table %v", err)
 	}
-	var values []string
+	stmt, err := tx.Prepare(pq.CopyIn("temp_budget_credits", "commission_date",
+		"chapter", "primary_commitment", "frozen_commitment", "reserved_commitment"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
+	}
+	defer stmt.Close()
 	for _, r := range b.Lines {
-		if r.CommissionDate == 0 || r.Chapter == 0 {
+		if _, err = stmt.Exec(r.CommissionDate.ToDate(), r.Chapter,
+			int64(r.PrimaryCommitment*100), int64(100*r.FrozenCommitment),
+			int64(100*r.ReservedCommitment)); err != nil {
 			tx.Rollback()
-			return errors.New("Date de commission ou chapitre incorrect")
+			return fmt.Errorf("insertion de %+v  %v", r, err)
 		}
-		values = append(values, "("+toSQL(r.CommissionDate)+","+toSQL(r.Chapter)+","+
-			toSQL(int64(100*r.PrimaryCommitment))+","+toSQL(int64(100*r.ReservedCommitment))+","+
-			toSQL(int64(100*r.FrozenCommitment))+")")
 	}
-	res, err := tx.Exec(`INSERT INTO temp_budget_credits (commission_date, chapter,
-		 primary_commitment, reserved_commitment, frozen_commitment) VALUES ` + strings.Join(values, ","))
-	if err != nil {
+	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("statement exec flush %v", err)
 	}
-	count, err := res.RowsAffected()
-	if err != nil {
-		tx.Rollback()
-		return err
-	}
-	if count != int64(len(b.Lines)) {
-		tx.Rollback()
-		return errors.New("Impossible d'insérer tous les éléments")
-	}
-	if _, err = tx.Exec(`INSERT INTO budget_credits
-	(commission_date, chapter_id, primary_commitment, frozen_commitment, reserved_commitment)
-	SELECT t.commission_date, bc.id, t.primary_commitment, t.frozen_commitment, t.reserved_commitment
+	if _, err = tx.Exec(`INSERT INTO budget_credits (commission_date,chapter_id,
+		primary_commitment,frozen_commitment,reserved_commitment)
+	SELECT t.commission_date,bc.id,t.primary_commitment,t.frozen_commitment,
+		t.reserved_commitment
 	FROM temp_budget_credits t
-	LEFT JOIN budget_chapter bc ON t.chapter = bc.code
-	WHERE (t.commission_date, t.chapter) NOT IN
-	(SELECT b.commission_date, c.code FROM budget_credits b, budget_chapter c WHERE b.chapter_id = c.id)`); err != nil {
+	LEFT JOIN budget_chapter bc ON t.chapter=bc.code
+	WHERE (t.commission_date,t.chapter) NOT IN
+	(SELECT b.commission_date,c.code
+		FROM budget_credits b, budget_chapter c WHERE b.chapter_id = c.id)`); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("insert query %v", err)
 	}
 	if _, err = tx.Exec(`DROP TABLE IF EXISTS temp_budget_credits`); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("drop temp table %v", err)
 	}
 	err = tx.Commit()
 	return err

@@ -25,6 +25,11 @@ type NullExcelDate struct {
 	Date  int64
 }
 
+// ToDate calculates the date according to the int64 ExcelDate
+func (e ExcelDate) ToDate() time.Time {
+	return b.Add(time.Duration(e*24) * time.Hour)
+}
+
 // NullTime is used for null time commands
 type NullTime struct {
 	Time  time.Time
