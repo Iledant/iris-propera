@@ -3,7 +3,9 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"strings"
+	"fmt"
+
+	"github.com/lib/pq"
 )
 
 // PrevCommitment model
@@ -44,8 +46,6 @@ type PrevCommitmentTotal struct {
 
 // Save inserts and updates a batch of prevision commitments into database.
 func (p *PrevCommitmentBatch) Save(db *sql.DB) (err error) {
-	var value string
-	var values []string
 	for _, pc := range p.PrevCommitments {
 		if pc.Number == "" {
 			return errors.New("Numéro d'opération vide")
@@ -56,9 +56,6 @@ func (p *PrevCommitmentBatch) Save(db *sql.DB) (err error) {
 		if pc.Value == 0 {
 			return errors.New("Prévision nulle")
 		}
-		value = "(" + toSQL(pc.Number) + "," + toSQL(pc.Year) + "," + toSQL(pc.Value) +
-			"," + toSQL(pc.TotalValue) + "," + toSQL(pc.StateRatio) + ")"
-		values = append(values, value)
 	}
 	tx, err := db.Begin()
 	if err != nil {
@@ -73,11 +70,24 @@ func (p *PrevCommitmentBatch) Save(db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	if _, err = tx.Exec(`INSERT INTO temp_prev_commitment (number,year,value,
-		total_value,state_ratio) VALUES ` + strings.Join(values, ",")); err != nil {
-		tx.Rollback()
-		return err
+
+	stmt, err := tx.Prepare(pq.CopyIn("temp_prev_commitment", "number", "year", "value",
+		"total_value", "state_ratio"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
+	defer stmt.Close()
+	for _, r := range p.PrevCommitments {
+		if _, err = stmt.Exec(r.Number, r.Year, r.Value, r.TotalValue, r.StateRatio); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("statement exec flush %v", err)
+	}
+
 	if _, err = tx.Exec(`UPDATE prev_commitment SET value=t.value, total_value=t.total_value, 
 	state_ratio=t.state_ratio FROM temp_prev_commitment t, physical_op op
 	WHERE t.number=op.number AND prev_commitment.physical_op_id = op.id AND
