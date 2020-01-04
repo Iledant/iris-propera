@@ -3,7 +3,9 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"strings"
+	"fmt"
+
+	"github.com/lib/pq"
 )
 
 // BudgetProgram model
@@ -69,9 +71,9 @@ func (b *BudgetPrograms) GetAll(db *sql.DB) (err error) {
 }
 
 // GetAllChapterLinked fetches all budget programs linked to a chapter for json export.
-func (b *BudgetPrograms) GetAllChapterLinked(chapterID int64, db *sql.DB) (err error) {
-	rows, err := db.Query(`SELECT id, code_contract, code_function, code_number, 
-	code_subfunction, name, chapter_id FROM budget_program WHERE chapter_id=$1`, chapterID)
+func (b *BudgetPrograms) GetAllChapterLinked(chapID int64, db *sql.DB) (err error) {
+	rows, err := db.Query(`SELECT id,code_contract,code_function,code_number, 
+	code_subfunction,name,chapter_id FROM budget_program WHERE chapter_id=$1`, chapID)
 	if err != nil {
 		return err
 	}
@@ -93,17 +95,18 @@ func (b *BudgetPrograms) GetAllChapterLinked(chapterID int64, db *sql.DB) (err e
 
 // Create insert an budget program into database returning ID if succeed.
 func (b *BudgetProgram) Create(db *sql.DB) (err error) {
-	err = db.QueryRow(`INSERT INTO budget_program (code_contract, code_function, code_number, 
-		code_subfunction,name, chapter_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING id`, b.CodeContract,
-		b.CodeFunction, b.CodeNumber, b.CodeSubfunction, b.Name, b.ChapterID).Scan(&b.ID)
+	err = db.QueryRow(`INSERT INTO budget_program (code_contract,code_function,
+		code_number,code_subfunction,name,chapter_id) VALUES($1,$2,$3,$4,$5,$6)
+		RETURNING id`, b.CodeContract, b.CodeFunction, b.CodeNumber,
+		b.CodeSubfunction, b.Name, b.ChapterID).Scan(&b.ID)
 	return err
 }
 
 // Update a budget program in the database. All fields are updated.
 func (b *BudgetProgram) Update(db *sql.DB) (err error) {
-	res, err := db.Exec(`UPDATE budget_program SET code_contract = $1, code_function = $2,
-	code_number = $3, code_subfunction = $4, name = $5, chapter_id = $6
-	WHERE id = $7`, b.CodeContract, b.CodeFunction, b.CodeNumber, b.CodeSubfunction, b.Name,
+	res, err := db.Exec(`UPDATE budget_program SET code_contract=$1,code_function=$2,
+	code_number=$3,code_subfunction=$4,name=$5,chapter_id=$6 WHERE id = $7`,
+		b.CodeContract, b.CodeFunction, b.CodeNumber, b.CodeSubfunction, b.Name,
 		b.ChapterID, b.ID)
 	if err != nil {
 		return err
@@ -139,6 +142,13 @@ func (b *BudgetProgramBatch) Save(db *sql.DB) (err error) {
 	if len(b.Lines) == 0 {
 		return nil
 	}
+
+	for _, r := range b.Lines {
+		if len(r.Code) < 7 {
+			return errors.New("Code " + r.Code + " trop court")
+		}
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -147,44 +157,54 @@ func (b *BudgetProgramBatch) Save(db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	if _, err = tx.Exec(`CREATE TABLE temp_programs (code_contract varchar(1), 
-		code_function varchar(2), code_number varchar(3), code_subfunction varchar(1), 
-		name varchar(100),chapter integer)`); err != nil {
+	q := `CREATE TABLE temp_programs (
+		code_contract varchar(1),
+		code_function varchar(2),
+		code_number varchar(3),
+		code_subfunction varchar(1),
+		name varchar(100),
+		chapter integer)`
+	if _, err = tx.Exec(q); err != nil {
 		tx.Rollback()
 		return err
 	}
-	var value string
-	var values []string
-	for _, r := range b.Lines {
-		if r.Subfunction.Valid {
-			if len(r.Subfunction.String) > 2 {
-				r.Subfunction.String = r.Subfunction.String[2:3]
-			} else {
-				r.Subfunction.Valid = false
-			}
-		}
-		if len(r.Code) < 7 {
-			tx.Rollback()
-			return errors.New("Code " + r.Code + " trop court")
-		}
-		value = "(" + toSQL(r.Code[0:1]) + "," + toSQL(r.Code[1:3]) + "," +
-			toSQL(r.Code[3:6]) + "," + toSQL(r.Subfunction) + "," + toSQL(r.Name) + "," +
-			toSQL(r.Chapter) + ")"
-		values = append(values, value)
+
+	stmt, err := tx.Prepare(pq.CopyIn("temp_programs", "code_contract",
+		"code_function", "code_number", "code_subfunction", "name", "chapter"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	queries := []string{`INSERT into temp_programs (code_contract, code_function, 
-		code_number, code_subfunction, name,chapter) VALUES ` + strings.Join(values, ","),
-		`WITH new AS ( SELECT p.id, t.name FROM temp_programs t, budget_program p
-			WHERE p.code_contract = t.code_contract AND p.code_function = t.code_function
-				AND p.code_number = t.code_number )
-		UPDATE budget_program SET name = new.name FROM new WHERE budget_program.id = new.id`,
-		`INSERT INTO budget_program (chapter_id, code_contract, code_function, 
-		code_number, code_subfunction, name)
-		SELECT c.id AS chapter_id, t.code_contract, t.code_function, t.code_number, 
-			t.code_subfunction, t.name FROM temp_programs t, budget_chapter c
-		WHERE c.code = t.chapter AND (t.code_contract, t.code_function, t.code_number)
-		NOT IN (SELECT code_contract, code_function, code_number FROM budget_program)`,
-		`DROP TABLE temp_programs`}
+	defer stmt.Close()
+	var subFunction string
+	for _, r := range b.Lines {
+		if r.Subfunction.Valid && len(r.Subfunction.String) > 2 {
+			r.Subfunction.String = r.Subfunction.String[2:3]
+		} else {
+			r.Subfunction.Valid = false
+		}
+		if _, err = stmt.Exec(r.Code[0:1], r.Code[1:3], r.Code[3:6], subFunction,
+			r.Name, r.Chapter); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("statement exec flush %v", err)
+	}
+
+	queries := []string{
+		`WITH new AS (SELECT p.id,t.name FROM temp_programs t, budget_program p
+			WHERE p.code_contract=t.code_contract AND p.code_function=t.code_function
+				AND p.code_number=t.code_number)
+		UPDATE budget_program SET name=new.name FROM new WHERE budget_program.id=new.id`,
+		`INSERT INTO budget_program (chapter_id,code_contract,code_function, 
+		code_number,code_subfunction,name)
+		SELECT c.id AS chapter_id,t.code_contract,t.code_function,t.code_number, 
+			t.code_subfunction,t.name FROM temp_programs t, budget_chapter c
+		WHERE c.code=t.chapter AND (t.code_contract,t.code_function,t.code_number)
+		NOT IN (SELECT code_contract,code_function,code_number FROM budget_program)`,
+		`DROP TABLE IF EXISTS temp_programs`}
 	for _, qry := range queries {
 		if _, err := tx.Exec(qry); err != nil {
 			tx.Rollback()
