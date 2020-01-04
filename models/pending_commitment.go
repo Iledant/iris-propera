@@ -3,7 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"strings"
+	"fmt"
 	"time"
 
 	"github.com/lib/pq"
@@ -237,20 +237,25 @@ func (p *PendingsBatch) Save(db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	var value string
-	var values []string
-	for _, pc := range p.PendingsBatch {
-		value = "(" + toSQL(pc.Chapter) + ", " + toSQL(pc.Action) + ", " +
-			toSQL(pc.IrisCode) + ", " + toSQL(pc.Name) + ", " + toSQL(pc.Beneficiary) +
-			", " + toSQL(pc.CommissionDate) + ", " + toSQL(int64(100*pc.ProposedValue)) + ")"
-		values = append(values, value)
-	}
-	_, err = tx.Exec(`INSERT INTO temp_pending (chapter, action, iris_code, name, 
-		beneficiary, commission_date,proposed_value) VALUES` + strings.Join(values, ","))
+
+	stmt, err := tx.Prepare(pq.CopyIn("temp_pending", "chapter", "action", "iris_code",
+		"name", "beneficiary", "commission_date", "proposed_value"))
 	if err != nil {
-		tx.Rollback()
-		return
+		return fmt.Errorf("prepare stmt %v", err)
 	}
+	defer stmt.Close()
+	for _, r := range p.PendingsBatch {
+		if _, err = stmt.Exec(r.Chapter, r.Action, r.IrisCode, r.Name, r.Beneficiary,
+			r.CommissionDate.ToDate(), int64(100*r.ProposedValue)); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("statement exec flush %v", err)
+	}
+
 	queries := []string{
 		`UPDATE pending_commitments 
 		SET chapter = tp.chapter, action = tp.action, name = tp.name,
