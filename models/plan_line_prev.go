@@ -23,13 +23,14 @@ func (p *PlanLineAndPrevisions) GetAll(plan *Plan, plID int64, db *sql.DB) (err 
 	}
 	var whereQry, beneficiaryIdsQry string
 	if plID != 0 {
-		whereQry = "p.id=" + toSQL(plID) + " "
+		whereQry = "p.id=" + strconv.FormatInt(plID, 10) + " "
 		beneficiaryIdsQry = `SELECT DISTINCT beneficiary_id FROM plan_line_ratios 
-		WHERE plan_line_id = ` + toSQL(plID) + " "
+		WHERE plan_line_id=` + strconv.FormatInt(plID, 10) + " "
 	} else {
-		whereQry = "p.plan_id=" + toSQL(plan.ID) + " "
+		whereQry = "p.plan_id=" + strconv.FormatInt(plan.ID, 10) + " "
 		beneficiaryIdsQry = `SELECT DISTINCT beneficiary_id FROM plan_line_ratios 
-		WHERE plan_line_id IN (SELECT id FROM plan_line WHERE plan_id=` + toSQL(plan.ID) + ") "
+		WHERE plan_line_id IN (SELECT id FROM plan_line WHERE plan_id=` +
+			strconv.FormatInt(plan.ID, 10) + ") "
 	}
 	bIDs, bID := []int64{}, int64(0)
 	rows, err := db.Query(beneficiaryIdsQry)

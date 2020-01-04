@@ -160,15 +160,15 @@ func (p *PlanLineBatch) Save(planID int64, db *sql.DB) (err error) {
 		if descript, ok := l["descript"]; !ok || descript == nil {
 			sqlDescript = "null"
 		} else {
-			sqlDescript = toSQL(descript.(string))
+			sqlDescript = descript.(string)
 		}
 		if totalValue, ok := l["total_value"]; !ok || totalValue == nil {
 			sqlTotalValue = "null"
 		} else {
-			sqlTotalValue = toSQL(100 * totalValue.(float64))
+			sqlTotalValue = strconv.FormatInt(int64(100*totalValue.(float64)), 10)
 		}
-		value = "(" + toSQL(l["name"].(string)) + "," + sqlDescript + "," +
-			toSQL(int64(100*l["value"].(float64))) + "," + sqlTotalValue + ")"
+		value = "(" + l["name"].(string) + "," + sqlDescript + "," +
+			strconv.FormatInt(int64(100*l["value"].(float64)), 10) + "," + sqlTotalValue + ")"
 		values = append(values, value)
 	}
 	tx, err := db.Begin()
