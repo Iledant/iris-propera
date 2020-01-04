@@ -30,6 +30,16 @@ func (e ExcelDate) ToDate() time.Time {
 	return b.Add(time.Duration(e*24) * time.Hour)
 }
 
+// ToDate calculates the null date according to the int64 ExcelDate if valid
+func (ne NullExcelDate) ToDate() NullTime {
+	if !ne.Valid {
+		return NullTime{Valid: false}
+	}
+	return NullTime{
+		Valid: true,
+		Time:  b.Add(time.Duration(ne.Date*24) * time.Hour)}
+}
+
 // NullTime is used for null time commands
 type NullTime struct {
 	Time  time.Time

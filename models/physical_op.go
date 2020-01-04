@@ -280,6 +280,14 @@ func (op *PhysicalOpsBatch) Save(db *sql.DB) (err error) {
 	if len(op.PhysicalOps) == 0 {
 		return nil
 	}
+	for _, r := range op.PhysicalOps {
+		if r.Name == "" {
+			return errors.New("Name vide")
+		}
+		if len(r.Number) != 7 {
+			return errors.New("Number " + r.Number + " incorrect")
+		}
+	}
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -296,30 +304,27 @@ func (op *PhysicalOpsBatch) Save(db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	var value string
-	var values []string
-	for _, o := range op.PhysicalOps {
-		if len(o.Number) != 7 {
-			tx.Rollback()
-			return errors.New("Number " + o.Number + " incorrect")
-		}
-		if len(o.Name) == 0 {
-			tx.Rollback()
-			return errors.New("Name vide")
-		}
-		value = "(" + toSQL(o.Number) + "," + toSQL(o.Name) + "," + toSQL(o.Descript) + "," +
-			toSQL(o.Isr) + "," + toSQL(o.Value) + "," + toSQL(o.Valuedate) + "," +
-			toSQL(o.Length) + "," + toSQL(o.Step) + "," + toSQL(o.Category) + "," +
-			toSQL(o.TRI) + "," + toSQL(o.VAN) + "," + toSQL(o.Action) + "," +
-			toSQL(o.PaymentTypeID) + "," + toSQL(o.PlanLineID) + ")"
-		values = append(values, value)
+
+	stmt, err := tx.Prepare(pq.CopyIn("temp_physical_op", "number", "name",
+		"descript", "isr", "value", "valuedate", "length", "step", "category", "tri",
+		"van", "action", "payment_types_id", "plan_line_id"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	if _, err = tx.Exec(`INSERT INTO temp_physical_op (number, name, descript, isr, value, 
-		valuedate, length, step, category, tri, van, action, payment_types_id, plan_line_id)
-		VALUES ` + strings.Join(values, ",")); err != nil {
+	defer stmt.Close()
+	for _, r := range op.PhysicalOps {
+		if _, err = stmt.Exec(r.Number, r.Name, r.Descript, r.Isr, r.Value,
+			r.Valuedate.ToDate(), r.Length, r.Step, r.Category, r.TRI, r.VAN, r.Action,
+			r.PaymentTypeID, r.PlanLineID); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("statement exec flush %v", err)
 	}
+
 	queries := []string{
 		`WITH new AS (
 			SELECT p.id, t.number, t.name, t.descript, t.isr, t.value, t.valuedate, t.length, 
