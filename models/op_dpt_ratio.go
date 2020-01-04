@@ -2,9 +2,11 @@ package models
 
 import (
 	"database/sql"
+	"fmt"
 	"strconv"
-	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // OpDptRatio model
@@ -169,16 +171,22 @@ func (o *OpDptRatioBatch) Save(uID int64, db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	var values []string
-	for _, o := range o.OpDptRatioLines {
-		values = append(values, "("+toSQL(o.PhysicalOpID)+","+toSQL(o.R75)+","+
-			toSQL(o.R77)+","+toSQL(o.R78)+","+toSQL(o.R91)+","+toSQL(o.R92)+","+
-			toSQL(o.R93)+","+toSQL(o.R94)+","+toSQL(o.R95)+")")
+	stmt, err := tx.Prepare(pq.CopyIn("temp_op_dpt_ratios", "physical_op_id",
+		"r75", "r77", "r78", "r91", "r92", "r93", "r94", "r95"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	if _, err = tx.Exec(`INSERT INTO temp_op_dpt_ratios VALUES` +
-		strings.Join(values, ",")); err != nil {
+	defer stmt.Close()
+	for _, r := range o.OpDptRatioLines {
+		if _, err = stmt.Exec(r.PhysicalOpID, r.R75, r.R77, r.R78, r.R91, r.R92,
+			r.R93, r.R94, r.R95); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("statement exec flush %v", err)
 	}
 	if _, err = tx.Exec(`DELETE FROM op_dpt_ratios WHERE physical_op_id NOT IN
 		(SELECT physical_op_id FROM temp_op_dpt_ratios)` + andClause); err != nil {
