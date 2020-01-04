@@ -2,7 +2,9 @@ package models
 
 import (
 	"database/sql"
-	"strings"
+	"fmt"
+
+	"github.com/lib/pq"
 )
 
 // ScenarioOffset model
@@ -28,16 +30,24 @@ func (s *ScenarioOffsets) Save(sID int64, db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	var values []string
-	syID := toSQL(sID)
-	for _, o := range s.ScenarioOffsets {
-		values = append(values, `(`+toSQL(o.Offset)+`,`+toSQL(o.PhysicalOpID)+`,`+syID+`)`)
+
+	stmt, err := tx.Prepare(pq.CopyIn("scenario_offset", "offset",
+		"physical_op_id", "scenario_id"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	if _, err = tx.Exec(`INSERT INTO scenario_offset ("offset",physical_op_id,scenario_id)
-	 VALUES ` + strings.Join(values, ",")); err != nil {
+	defer stmt.Close()
+	for _, r := range s.ScenarioOffsets {
+		if _, err = stmt.Exec(r.Offset, r.PhysicalOpID, sID); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("statement exec flush %v", err)
 	}
+
 	err = tx.Commit()
 	return err
 }

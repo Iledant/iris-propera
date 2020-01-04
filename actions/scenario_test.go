@@ -228,7 +228,7 @@ func setScenarioOffsetsText(e *httpexpect.Expect, t *testing.T, ID int) {
 			ID:     "0",
 			Sent: []byte(`{"offsetList":[{"physical_op_id":220,"offset":0},{"physical_op_id":546,"offset":1},
 			{"physical_op_id":9,"offset":0},{"physical_op_id":543,"offset":2}]}`),
-			BodyContains: []string{"Offsets de scénario, requête : pq:"}},
+			BodyContains: []string{"Offsets de scénario, requête : "}},
 		{
 			Token:  testCtx.Admin.Token,
 			Status: http.StatusOK,
