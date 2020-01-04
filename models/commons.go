@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"strconv"
 	"time"
 )
 
@@ -15,11 +14,11 @@ type jsonError struct {
 }
 
 // ExcelDate is used for batch imports to decode an integer and transform it
-// into a SQL date using toSQL function. 0 value is coded to "null" by toSQL
+// into a SQL date
 type ExcelDate int64
 
-// NullExcelDate is used for batch import to decde an nullable integer and
-// transfort it into en nullable SQL date using toSQL function
+// NullExcelDate is used for batch import to decode an nullable integer and
+// transfort it into en nullable SQL date
 type NullExcelDate struct {
 	Valid bool
 	Date  int64
@@ -272,64 +271,4 @@ func (nf NullFloat64) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return nf.Float64, nil
-}
-
-// toSQL convert i to a string used for INSERT VALUES statement.
-func toSQL(i interface{}) string {
-	switch v := i.(type) {
-	case int64:
-		return strconv.FormatInt(v, 10)
-	case float64:
-		return strconv.FormatFloat(v, 'f', -1, 64)
-	case string:
-		return "$$" + v + "$$"
-	case time.Time:
-		return "'" + v.Format("2006-01-02") + "'"
-	case ExcelDate:
-		if v == 0 {
-			return "null"
-		}
-		return "'" + b.Add(time.Duration(v*24)*time.Hour).Format("2006-01-02") + "'"
-	case int:
-		return strconv.Itoa(v)
-	case bool:
-		if v {
-			return "TRUE"
-		}
-		return "FALSE"
-	case NullInt64:
-		if !v.Valid {
-			return "null"
-		}
-		return strconv.FormatInt(v.Int64, 10)
-	case NullString:
-		if !v.Valid {
-			return "null"
-		}
-		return "$$" + v.String + "$$"
-	case NullFloat64:
-		if !v.Valid {
-			return "null"
-		}
-		return strconv.FormatFloat(v.Float64, 'f', -1, 64)
-	case NullBool:
-		if !v.Valid {
-			return "null"
-		}
-		if v.Bool {
-			return "TRUE"
-		}
-		return "FALSE"
-	case NullTime:
-		if !v.Valid {
-			return "null"
-		}
-		return "'" + v.Time.Format("2006-01-02") + "'"
-	case NullExcelDate:
-		if !v.Valid {
-			return "null"
-		}
-		return "'" + b.Add(time.Duration(v.Date*24)*time.Hour).Format("2006-01-02") + "'"
-	}
-	return ""
 }
