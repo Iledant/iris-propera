@@ -2,8 +2,7 @@ package models
 
 import (
 	"database/sql"
-	"errors"
-	"strings"
+	"fmt"
 
 	"github.com/lib/pq"
 )
@@ -38,27 +37,20 @@ func (o *OpRights) UserSet(uID int64, db *sql.DB) (err error) {
 		return err
 	}
 	if len(o.OpIDs) > 0 {
-		var value string
-		var values []string
+		stmt, err := tx.Prepare(pq.CopyIn("rights", "users_id", "physical_op_id"))
+		if err != nil {
+			return fmt.Errorf("prepare stmt %v", err)
+		}
+		defer stmt.Close()
 		for _, opID := range o.OpIDs {
-			value = "(" + toSQL(uID) + "," + toSQL(opID) + ")"
-			values = append(values, value)
+			if _, err = stmt.Exec(uID, opID); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("insertion de %d  %v", opID, err)
+			}
 		}
-		res, err := tx.Exec("INSERT INTO rights (users_id, physical_op_id) VALUES" +
-			strings.Join(values, ","))
-		if err != nil {
+		if _, err = stmt.Exec(); err != nil {
 			tx.Rollback()
-			return err
-		}
-		count, err := res.RowsAffected()
-		if err != nil {
-			tx.Rollback()
-			return err
-		}
-		if count != int64(len(o.OpIDs)) {
-			tx.Rollback()
-			err = errors.New("Erreur d'utilisateur ou d'identifiant d'opérations")
-			return err
+			return fmt.Errorf("statement exec flush %v", err)
 		}
 	}
 	err = tx.Commit()
