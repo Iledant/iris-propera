@@ -3,8 +3,10 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"strconv"
-	"strings"
+
+	"github.com/lib/pq"
 )
 
 // PaymentRatio model
@@ -112,19 +114,24 @@ func (p *PaymentRatiosBatch) Save(paymentTypeID int64, db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	sPtID := toSQL(paymentTypeID)
-	var values []string
-	var value string
-	for _, pr := range p.PaymentRatios {
-		value = "(" + sPtID + ", " + toSQL(pr.Ratio) + "," + toSQL(pr.Index) + ")"
-		values = append(values, value)
+
+	stmt, err := tx.Prepare(pq.CopyIn("payment_ratios", "payment_types_id",
+		"ratio", "index"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	qry := "INSERT into payment_ratios (payment_types_id, ratio, index) VALUES " +
-		strings.Join(values, ",")
-	if _, err = tx.Exec(qry); err != nil {
+	defer stmt.Close()
+	for _, r := range p.PaymentRatios {
+		if _, err = stmt.Exec(paymentTypeID, r.Ratio, r.Index); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("statement exec flush %v", err)
 	}
+
 	err = tx.Commit()
 	return err
 }

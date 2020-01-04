@@ -73,7 +73,7 @@ func setPtRatiosTest(e *httpexpect.Expect, t *testing.T) {
 			Sent: []byte(`{"PaymentRatio":[{"ratio":0.05,"index":0},
 		{"ratio":0.1,"index":1},{"ratio":0.15,"index":2},{"ratio":0.25,"index":3},
 		{"ratio":0.45,"index":4}]}`),
-			BodyContains: []string{"Ratios d'une chronique, requête : pq"}},
+			BodyContains: []string{"Ratios d'une chronique, requête : statement exec flush"}},
 		{
 			Token:         testCtx.Admin.Token,
 			ID:            "5",
