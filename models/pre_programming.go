@@ -3,7 +3,8 @@ package models
 import (
 	"database/sql"
 	"fmt"
-	"strings"
+
+	"github.com/lib/pq"
 )
 
 // PreProgramming model
@@ -120,23 +121,29 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 		commission_id integer NOT NULL, value bigint NOT NULL, total_value bigint,
 		 state_ratio double precision, descript text)`); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("create temptable %v", err)
+		return fmt.Errorf("create temp table %v", err)
 	}
 	if len(p.PreProgrammings) > 0 {
-		var value string
-		var values []string
-		for _, pp := range p.PreProgrammings {
-			value = "(" + toSQL(pp.ID) + "," + toSQL(pp.Year) + "," + toSQL(pp.PhysicalOpID) +
-				"," + toSQL(pp.CommissionID) + "," + toSQL(pp.Value) + "," + toSQL(pp.TotalValue) +
-				"," + toSQL(pp.StateRatio) + ", NULL)"
-			values = append(values, value)
+
+		stmt, err := tx.Prepare(pq.CopyIn("temp_pre_programmings", "id", "year",
+			"physical_op_id", "commission_id", "value", "total_value", "state_ratio",
+			"descript"))
+		if err != nil {
+			return fmt.Errorf("prepare stmt %v", err)
 		}
-		if _, err = tx.Exec(`INSERT INTO temp_pre_programmings (id, year, physical_op_id,
-	commission_id, value, total_value, state_ratio, descript) 
-	VALUES ` + strings.Join(values, ",")); err != nil {
+		defer stmt.Close()
+		for _, r := range p.PreProgrammings {
+			if _, err = stmt.Exec(r.ID, r.Year, r.PhysicalOpID, r.CommissionID, r.Value,
+				r.TotalValue, r.StateRatio, NullString{Valid: false}); err != nil {
+				tx.Rollback()
+				return fmt.Errorf("insertion de %+v  %v", r, err)
+			}
+		}
+		if _, err = stmt.Exec(); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("insert temp %v", err)
+			return fmt.Errorf("statement exec flush %v", err)
 		}
+
 		if _, err = tx.Exec(`UPDATE pre_programmings SET value = t.value, 
 	physical_op_id = t.physical_op_id, commission_id = t.commission_id,
 	year = t.year, total_value = t.total_value, state_ratio = t.state_ratio,
@@ -164,9 +171,9 @@ func (p *PreProgrammingBatch) Save(uID int64, db *sql.DB) (err error) {
 			return fmt.Errorf("delete %v", err)
 		}
 	}
-	if _, err = tx.Exec(`INSERT INTO pre_programmings (value, physical_op_id, commission_id, 
-		year, total_value, state_ratio, descript)
-	(SELECT value, physical_op_id, commission_id, year, total_value, state_ratio, descript 
+	if _, err = tx.Exec(`INSERT INTO pre_programmings (value,physical_op_id,
+		commission_id,year,total_value,state_ratio,descript)
+	(SELECT value,physical_op_id,commission_id,year,total_value,state_ratio,descript 
 		FROM temp_pre_programmings 
 		WHERE id ISNULL OR id NOT IN (SELECT DISTINCT id FROM pre_programmings))`); err != nil {
 		tx.Rollback()
