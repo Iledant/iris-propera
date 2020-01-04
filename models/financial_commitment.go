@@ -3,7 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
-	"strings"
+	"fmt"
 	"time"
 
 	"github.com/lib/pq"
@@ -355,24 +355,26 @@ func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	var values []string
-	var value string
-	for _, fc := range f.FinancialCommitments {
-		value = "(" + toSQL(fc.Chapter) + "," + toSQL(fc.Action) + "," +
-			toSQL(fc.IrisCode) + "," + toSQL(fc.CoriolisYear) + "," +
-			toSQL(fc.CoriolisEgtCode) + "," + toSQL(fc.CoriolisEgtNum) + "," +
-			toSQL(fc.CoriolisEgtLine) + "," + toSQL(fc.Name) + "," +
-			toSQL(fc.Beneficiary) + "," + toSQL(fc.BeneficiaryCode) + "," +
-			toSQL(fc.Date) + "," + toSQL(int64(100*fc.Value)) + "," +
-			toSQL(fc.LapseDate) + "," + toSQL(fc.APP) + ")"
-		values = append(values, value)
+	stmt, err := tx.Prepare(pq.CopyIn("temp_commitment", "chapter", "action",
+		"iris_code", "coriolis_year", "coriolis_egt_code", "coriolis_egt_num",
+		"coriolis_egt_line", "name", "beneficiary", "beneficiary_code", "date",
+		"value", "lapse_date", "app"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	if _, err = tx.Exec(`INSERT INTO temp_commitment (chapter,action,iris_code,
-		coriolis_year,coriolis_egt_code,coriolis_egt_num,coriolis_egt_line,name,
-		beneficiary,beneficiary_code,date,value,lapse_date,app) VALUES ` +
-		strings.Join(values, ",")); err != nil {
+	defer stmt.Close()
+	for _, r := range f.FinancialCommitments {
+		if _, err = stmt.Exec(r.Chapter, r.Action, r.IrisCode, r.CoriolisYear,
+			r.CoriolisEgtCode, r.CoriolisEgtNum, r.CoriolisEgtLine, r.Name, r.Beneficiary,
+			r.BeneficiaryCode, r.Date.ToDate(), int64(100*r.Value), r.LapseDate.ToDate(),
+			r.APP); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("statement exec flush %v", err)
 	}
 	queries := []string{
 		// remove duplicated commitment due to IRIS query bug
@@ -430,16 +432,13 @@ func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
 	FROM budget_action ba, budget_program bp WHERE ba.program_id = bp.id) ba_full
 	WHERE fc_extract.fc_action = ba_full.ba_code)
 	UPDATE financial_commitment SET action_id = correspond.ba_id
-	FROM correspond WHERE financial_commitment.id = correspond.fc_id`}
+	FROM correspond WHERE financial_commitment.id = correspond.fc_id`,
+		`DELETE from temp_commitment`}
 	for _, qry := range queries {
 		if _, err := tx.Exec(qry); err != nil {
 			tx.Rollback()
 			return err
 		}
-	}
-	if _, err := tx.Exec("DELETE from temp_commitment"); err != nil {
-		tx.Rollback()
-		return err
 	}
 	if _, err := tx.Exec(`INSERT INTO import_logs (category,last_date)
 			VALUES ('FinancialCommitments',$1)
