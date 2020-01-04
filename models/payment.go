@@ -3,8 +3,9 @@ package models
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
+
+	"github.com/lib/pq"
 )
 
 // Payment model
@@ -140,21 +141,27 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	var values []string
-	var value string
-	for _, p := range p.PaymentBatch {
-		value = `(` + toSQL(p.CoriolisYear) + `,` + toSQL(p.CoriolisEgtCode) + `,` +
-			toSQL(p.CoriolisEgtNum) + `,` + toSQL(p.CoriolisEgtLine) + `,` + toSQL(p.BeneficiaryCode) +
-			`,` + toSQL(p.Date) + `,` + toSQL(int64(100*p.Value)) + `,` +
-			toSQL(int64(100*p.CancelledValue)) + `,` + toSQL(p.Number) + `)`
-		values = append(values, value)
+
+	stmt, err := tx.Prepare(pq.CopyIn("temp_payment", "coriolis_year",
+		"coriolis_egt_code", "coriolis_egt_num", "coriolis_egt_line",
+		"beneficiary_code", "date", "value", "cancelled_value", "number"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	if _, err = tx.Exec(`INSERT INTO temp_payment (coriolis_year, coriolis_egt_code, 
-		coriolis_egt_num, coriolis_egt_line, beneficiary_code, date, value, 
-		cancelled_value, number) VALUES ` + strings.Join(values, ",")); err != nil {
+	defer stmt.Close()
+	for _, r := range p.PaymentBatch {
+		if _, err = stmt.Exec(r.CoriolisYear, r.CoriolisEgtCode, r.CoriolisEgtNum,
+			r.CoriolisEgtLine, r.BeneficiaryCode, r.Date.ToDate(), int64(100*r.Value),
+			int64(100*r.CancelledValue), r.Number); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("statement exec flush %v", err)
 	}
+
 	queries := []string{`WITH new AS (
 		SELECT p.id, t.number, t.date, t.value, t.cancelled_value FROM temp_payment t
 			LEFT JOIN payment p ON t.number = p.number AND t.date = p.date
