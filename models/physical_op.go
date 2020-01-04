@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/lib/pq"
@@ -413,31 +412,42 @@ func (op *PhysicalOp) SetPrevisions(o *OpPrevisions, db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	var value string
-	var values []string
-	for _, pc := range o.Commitments {
-		value = "(" + toSQL(pc.Year) + "," + toSQL(pc.Value) + "," + toSQL(pc.Descript) +
-			"," + toSQL(pc.TotalValue) + "," + toSQL(pc.StateRatio) + "," + toSQL(op.ID) + ")"
-		values = append(values, value)
+
+	stmt, err := tx.Prepare(pq.CopyIn("prev_commitment", "year", "value", "descript",
+		"total_value", "state_ratio", "physical_op_id"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	if len(values) > 0 {
-		if _, err = tx.Exec("INSERT INTO prev_commitment (year, value, descript, total_value, state_ratio, physical_op_id) VALUES" + strings.Join(values, ",")); err != nil {
+	defer stmt.Close()
+	for _, r := range o.Commitments {
+		if _, err = stmt.Exec(r.Year, r.Value, r.Descript, r.TotalValue,
+			r.StateRatio, op.ID); err != nil {
 			tx.Rollback()
-			return err
+			return fmt.Errorf("insertion de %+v  %v", r, err)
 		}
 	}
-	values = nil
-	for _, p := range o.Payments {
-		value = "(" + toSQL(p.Year) + "," + toSQL(p.Value) + "," + toSQL(p.Descript) +
-			"," + toSQL(op.ID) + ")"
-		values = append(values, value)
+	if _, err = stmt.Exec(); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("statement exec flush %v", err)
 	}
-	if len(values) > 0 {
-		if _, err = tx.Exec("INSERT INTO prev_payment (year, value, descript, physical_op_id) VALUES" + strings.Join(values, ",")); err != nil {
+
+	stmt2, err := tx.Prepare(pq.CopyIn("prev_payment", "year", "value", "descript",
+		"physical_op_id"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt 2 %v", err)
+	}
+	defer stmt2.Close()
+	for _, r := range o.Payments {
+		if _, err = stmt2.Exec(r.Year, r.Value, r.Descript, op.ID); err != nil {
 			tx.Rollback()
-			return err
+			return fmt.Errorf("insertion de %+v  %v", r, err)
 		}
 	}
+	if _, err = stmt2.Exec(); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("statement 2 exec flush %v", err)
+	}
+
 	err = tx.Commit()
 	return err
 }
