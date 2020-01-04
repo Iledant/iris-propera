@@ -2,7 +2,9 @@ package models
 
 import (
 	"database/sql"
-	"strings"
+	"fmt"
+
+	"github.com/lib/pq"
 )
 
 // OpFCLine embeddes a line of operation / commitment link batch request.
@@ -29,26 +31,28 @@ func (o *OpFCsBatch) Save(db *sql.DB) (err error) {
 		tx.Rollback()
 		return err
 	}
-	var values []string
-	var value string
-	for _, o := range o.OpFCs {
-		value = "(" + toSQL(o.OpNumber) + ", " + toSQL(o.CoriolisYear) + ", " +
-			toSQL(o.CoriolisEgtCode) + ", " + toSQL(o.CoriolisEgtNum) + ", " +
-			toSQL(o.CoriolisEgtLine) + ")"
-		values = append(values, value)
+	stmt, err := tx.Prepare(pq.CopyIn("temp_attachment", "op_number", "coriolis_year",
+		"coriolis_egt_code", "coriolis_egt_num", "coriolis_egt_line"))
+	if err != nil {
+		return fmt.Errorf("prepare stmt %v", err)
 	}
-	if _, err = tx.Exec(`INSERT INTO temp_attachment (op_number, coriolis_year,
-		coriolis_egt_code, coriolis_egt_num, coriolis_egt_line) VALUES ` +
-		strings.Join(values, ",")); err != nil {
+	defer stmt.Close()
+	for _, r := range o.OpFCs {
+		if _, err = stmt.Exec(r.OpNumber, r.CoriolisYear, r.CoriolisEgtCode,
+			r.CoriolisEgtNum, r.CoriolisEgtLine); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("insertion de %+v  %v", r, err)
+		}
+	}
+	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return err
+		return fmt.Errorf("statement exec flush %v", err)
 	}
-	if _, err = tx.Exec(`UPDATE financial_commitment SET physical_op_id = op.id
-	FROM physical_op op, temp_attachment WHERE op.number = temp_attachment.op_number AND 
-	financial_commitment.coriolis_year=temp_attachment.coriolis_year AND 
-	financial_commitment.coriolis_egt_code =temp_attachment.coriolis_egt_code AND
-	financial_commitment.coriolis_egt_num=temp_attachment.coriolis_egt_num AND
-	financial_commitment.coriolis_egt_line=temp_attachment.coriolis_egt_line`); err != nil {
+	if _, err = tx.Exec(`UPDATE financial_commitment f SET physical_op_id = op.id
+	FROM physical_op op, temp_attachment t WHERE op.number=t.op_number AND 
+	f.coriolis_year=t.coriolis_year AND f.coriolis_egt_code=t.coriolis_egt_code AND
+	f.coriolis_egt_num=t.coriolis_egt_num AND
+	f.coriolis_egt_line=t.coriolis_egt_line`); err != nil {
 		tx.Rollback()
 		return err
 	}
