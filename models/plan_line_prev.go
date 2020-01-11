@@ -83,6 +83,7 @@ func (p *PlanLineAndPrevisions) GetAll(plan *Plan, plID int64, db *sql.DB) (err 
 	var prevPart string
 	if lastYear >= firstYear {
 		prevQry = "," + prevQry
+		jsonQry = "," + jsonQry
 		prevPart = `
 		LEFT JOIN (SELECT * FROM 
 			crosstab ('SELECT p.plan_line_id, c.year, SUM(c.value) FROM physical_op p, prev_commitment c 
