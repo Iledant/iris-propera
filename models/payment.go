@@ -171,7 +171,7 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 			FROM temp_payment t
 			LEFT JOIN payment p ON t.number = p.number AND t.date = p.date
 		WHERE p.value <> t.value OR p.cancelled_value <> t.cancelled_value
-			OR p.receipt_date <> t.receipt_date)
+			OR (p.receipt_date ISNULL AND t.receipt_date NOTNULL))
 	UPDATE payment SET value = new.value, cancelled_value = new.cancelled_value, 
 		receipt_date=new.receipt_date
 	FROM new WHERE payment.id = new.id`,
@@ -192,7 +192,7 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 			payment.coriolis_egt_code = ref.coriolis_egt_code AND 
 			payment.coriolis_egt_num = ref.coriolis_egt_num AND 
 			payment.coriolis_egt_line = ref.coriolis_egt_line)`,
-		"DELETE from temp_attachment"}
+		"DELETE from temp_payment"}
 	for _, q := range queries {
 		if _, err = tx.Exec(q); err != nil {
 			tx.Rollback()
