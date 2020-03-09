@@ -171,6 +171,14 @@ var migrations = []mig{
 		Batch: 28,
 		Query: `CREATE EXTENSION IF NOT EXISTS fuzzystrmatch`,
 	},
+	{
+		Batch: 29,
+		Query: `ALTER TABLE payment ADD COLUMN receipt_date date`,
+	},
+	{
+		Batch: 30,
+		Query: `ALTER TABLE temp_payment ADD COLUMN receipt_date date`,
+	},
 }
 
 // handleMigrations checks against database if migrations queries must be executed

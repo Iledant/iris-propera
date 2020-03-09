@@ -21,6 +21,7 @@ type Payment struct {
 	Value                 int64     `json:"value"`
 	CancelledValue        int64     `json:"cancelled_value"`
 	BeneficiaryCode       int64     `json:"beneficiary_code"`
+	ReceiptDate           NullTime  `json:"receipt_date"`
 }
 
 // Payments embeddes an array of Payment for json export.
@@ -42,15 +43,16 @@ type PaymentPerMonths struct {
 
 // PaymentLine is used to decode a line of payment batch payload.
 type PaymentLine struct {
-	CoriolisYear    string    `json:"coriolis_year"`
-	CoriolisEgtCode string    `json:"coriolis_egt_code"`
-	CoriolisEgtNum  string    `json:"coriolis_egt_num"`
-	CoriolisEgtLine string    `json:"coriolis_egt_line"`
-	Date            ExcelDate `json:"date"`
-	Number          string    `json:"number"`
-	Value           float64   `json:"value"`
-	CancelledValue  float64   `json:"cancelled_value"`
-	BeneficiaryCode int64     `json:"beneficiary_code"`
+	CoriolisYear    string        `json:"coriolis_year"`
+	CoriolisEgtCode string        `json:"coriolis_egt_code"`
+	CoriolisEgtNum  string        `json:"coriolis_egt_num"`
+	CoriolisEgtLine string        `json:"coriolis_egt_line"`
+	Date            ExcelDate     `json:"date"`
+	Number          string        `json:"number"`
+	Value           float64       `json:"value"`
+	CancelledValue  float64       `json:"cancelled_value"`
+	BeneficiaryCode int64         `json:"beneficiary_code"`
+	ReceiptDate     NullExcelDate `json:"receipt_date"`
 }
 
 // PaymentBatch embeddes an array of PaymentLine for batch request.
@@ -86,7 +88,8 @@ type MonthCumulatedPayments struct {
 func (p *Payments) GetFcAll(fcID int64, db *sql.DB) (err error) {
 	rows, err := db.Query(`SELECT  id, financial_commitment_id, coriolis_year, 
 	coriolis_egt_code, coriolis_egt_num, coriolis_egt_line, date, number, value, 
-	cancelled_value, beneficiary_code FROM payment WHERE financial_commitment_id = $1`, fcID)
+	cancelled_value, beneficiary_code, receipt_date FROM payment 
+	WHERE financial_commitment_id = $1`, fcID)
 	if err != nil {
 		return err
 	}
@@ -95,7 +98,7 @@ func (p *Payments) GetFcAll(fcID int64, db *sql.DB) (err error) {
 	for rows.Next() {
 		if err = rows.Scan(&r.ID, &r.FinancialCommitmentID, &r.CoriolisYear,
 			&r.CoriolisEgtCode, &r.CoriolisEgtNum, &r.CoriolisEgtLine, &r.Date,
-			&r.Number, &r.Value, &r.CancelledValue, &r.BeneficiaryCode); err != nil {
+			&r.Number, &r.Value, &r.CancelledValue, &r.BeneficiaryCode, &r.ReceiptDate); err != nil {
 			return err
 		}
 		p.Payments = append(p.Payments, r)
@@ -144,7 +147,8 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 
 	stmt, err := tx.Prepare(pq.CopyIn("temp_payment", "coriolis_year",
 		"coriolis_egt_code", "coriolis_egt_num", "coriolis_egt_line",
-		"beneficiary_code", "date", "value", "cancelled_value", "number"))
+		"beneficiary_code", "date", "value", "cancelled_value", "number",
+		"receipt_date"))
 	if err != nil {
 		return fmt.Errorf("prepare stmt %v", err)
 	}
@@ -152,7 +156,7 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 	for _, r := range p.PaymentBatch {
 		if _, err = stmt.Exec(r.CoriolisYear, r.CoriolisEgtCode, r.CoriolisEgtNum,
 			r.CoriolisEgtLine, r.BeneficiaryCode, r.Date.ToDate(), int64(100*r.Value),
-			int64(100*r.CancelledValue), r.Number); err != nil {
+			int64(100*r.CancelledValue), r.Number, r.ReceiptDate.ToDate()); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("insertion de %+v  %v", r, err)
 		}
@@ -163,15 +167,20 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 	}
 
 	queries := []string{`WITH new AS (
-		SELECT p.id, t.number, t.date, t.value, t.cancelled_value FROM temp_payment t
+		SELECT p.id, t.number, t.date, t.value, t.cancelled_value,t.receipt_date
+			FROM temp_payment t
 			LEFT JOIN payment p ON t.number = p.number AND t.date = p.date
-		WHERE p.value <> t.value OR p.cancelled_value <> t.cancelled_value)
-	UPDATE payment SET value = new.value, cancelled_value = new.cancelled_value
+		WHERE p.value <> t.value OR p.cancelled_value <> t.cancelled_value
+			OR p.receipt_date <> t.receipt_date)
+	UPDATE payment SET value = new.value, cancelled_value = new.cancelled_value, 
+		receipt_date=new.receipt_date
 	FROM new WHERE payment.id = new.id`,
 		`INSERT INTO PAYMENT (financial_commitment_id, coriolis_year, coriolis_egt_code,
-		coriolis_egt_num, coriolis_egt_line, date, number, value, cancelled_value, beneficiary_code)
+		coriolis_egt_num, coriolis_egt_line, date, number, value, cancelled_value, 
+		beneficiary_code, receipt_date)
 		SELECT NULL, coriolis_year, coriolis_egt_code, coriolis_egt_num, 
-	 coriolis_egt_line, date, number, value, cancelled_value, beneficiary_code FROM temp_payment t
+	 coriolis_egt_line, date, number, value, cancelled_value, beneficiary_code,
+	 receipt_date FROM temp_payment t
 		WHERE (t.number, t.date) NOT IN (SELECT number, date FROM payment)`,
 		`WITH ref AS (
 			SELECT DISTINCT ON (coriolis_year, coriolis_egt_code, coriolis_egt_num, coriolis_egt_line) 

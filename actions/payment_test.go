@@ -160,7 +160,7 @@ func batchPaymentsTest(e *httpexpect.Expect, t *testing.T) {
 		{Token: testCtx.Admin.Token,
 			Status: http.StatusOK,
 			//cSpell:disable
-			Sent: []byte(`{"Payment":[{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"501","date":43168,"number":"4784","value":445899.87,"cancelled_value":445899.87,"beneficiary_code":14154},
+			Sent: []byte(`{"Payment":[{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"501","date":43168,"number":"4784","value":445899.87,"cancelled_value":445899.87,"beneficiary_code":14154,"receipt_date":null},
 			{"coriolis_year":"2000","coriolis_egt_code":"DAVT","coriolis_egt_num":"103323","coriolis_egt_line":"504","date":43132,"number":"6078","value":445899.87,"cancelled_value":0,"beneficiary_code":14154},
 			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":43132,"number":"1667","value":94254.15,"cancelled_value":0,"beneficiary_code":14154},
 			{"coriolis_year":"2003","coriolis_egt_code":"P0385","coriolis_egt_num":"132770","coriolis_egt_line":"501","date":43132,"number":"1668","value":183796.82,"cancelled_value":0,"beneficiary_code":14154},
@@ -169,7 +169,7 @@ func batchPaymentsTest(e *httpexpect.Expect, t *testing.T) {
 			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":43082,"number":"47718","value":430151.97,"cancelled_value":0,"beneficiary_code":14154},
 			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":43082,"number":"47719","value":351340.16,"cancelled_value":0,"beneficiary_code":14154},
 			{"coriolis_year":"2005","coriolis_egt_code":"P0534","coriolis_egt_num":"162726","coriolis_egt_line":"3","date":42867,"number":"47720","value":537107.87,"cancelled_value":0,"beneficiary_code":14154},
-			{"coriolis_year":"2005","coriolis_egt_code":"P0852","coriolis_egt_num":"170678","coriolis_egt_line":"1","date":43215,"number":"15390","value":5623.8,"cancelled_value":0,"beneficiary_code":22844}]}`),
+			{"coriolis_year":"2005","coriolis_egt_code":"P0852","coriolis_egt_num":"170678","coriolis_egt_line":"1","date":43215,"number":"15390","value":5623.8,"cancelled_value":0,"beneficiary_code":22844,"receipt_date":43200}]}`),
 			BodyContains: []string{"Paiements importés"}},
 		//cSpell:enable
 	}
