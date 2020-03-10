@@ -48,6 +48,21 @@ func GetActionPaymentPrevisions(ctx iris.Context) {
 	ctx.JSON(resp)
 }
 
+// GetOpPaymentPrevisions handle the get request to calculate the payment
+// previsions per operation using the past commitments, the programmation of the
+// actual year and the commitment previsions for the coming years
+func GetOpPaymentPrevisions(ctx iris.Context) {
+	var resp models.DifOpPmtPrevisions
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.Get(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Prévisions de paiement par opération, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
+}
+
 // GetCurYearActionPmtPrevisions handle the get request to calculate the payment
 // previsions per action using the past commitments and programmation of the
 // current year and compares it to the payment of the current year

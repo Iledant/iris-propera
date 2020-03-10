@@ -12,6 +12,7 @@ func testPaymentPrevisions(t *testing.T) {
 		t.Parallel()
 		getPaymentPrevisionsTest(testCtx.E, t)
 		getActionPaymentPrevisionsTest(testCtx.E, t)
+		getOpPaymentPrevisionsTest(testCtx.E, t)
 		getCurYearActionPmtPrevisionsTest(testCtx.E, t)
 	})
 }
@@ -54,6 +55,27 @@ func getActionPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
 	for _, r := range chkTestCases(testCases, f, "GetActionPaymentPrevisions") {
+		t.Error(r)
+	}
+}
+
+// getOpPaymentPrevisionsTest check route is protected and pre programmings
+// correctly sent.
+func getOpPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		notLoggedTestCase, // 0 : bad token
+		{
+			Token:         testCtx.User.Token,
+			Status:        http.StatusOK,
+			BodyContains:  []string{`"DifOpPmtPrevision":[`},
+			CountItemName: `"op_id"`,
+			ArraySize:     387},
+	}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/payment_previsions/ops").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	}
+	for _, r := range chkTestCases(testCases, f, "GetOpPaymentPrevisions") {
 		t.Error(r)
 	}
 }
