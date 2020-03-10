@@ -100,6 +100,7 @@ func TestAll(t *testing.T) {
 		testUser(t, &testCtx.Config.Users.User)
 		testPaymentPrevisions(t)
 		testConsistency(t)
+		testAvgPmtTime(t)
 	})
 }
 
