@@ -179,6 +179,10 @@ var migrations = []mig{
 		Batch: 30,
 		Query: `ALTER TABLE temp_payment ADD COLUMN receipt_date date`,
 	},
+	{
+		Batch: 31,
+		Query: `ALTER TABLE temp_commitment ADD COLUMN op_name varchar(250)`,
+	},
 }
 
 // handleMigrations checks against database if migrations queries must be executed

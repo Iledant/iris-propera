@@ -319,7 +319,7 @@ func getOpAndFcsTest(e *httpexpect.Expect, t *testing.T) {
 			Status:        http.StatusOK,
 			BodyContains:  []string{"PhysicalOpFinancialCommitments", "number", "op_name", "iris_code", "iris_name"},
 			CountItemName: `"number"`,
-			ArraySize:     4467},
+			ArraySize:     4466},
 	}
 	f := func(tc testCase) *httpexpect.Response {
 		return e.GET("/api/physical_ops/financial_commitments").WithHeader("Authorization", "Bearer "+tc.Token).Expect()

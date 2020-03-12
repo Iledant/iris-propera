@@ -69,7 +69,7 @@ func getOpPaymentPrevisionsTest(e *httpexpect.Expect, t *testing.T) {
 			Status:        http.StatusOK,
 			BodyContains:  []string{`"DifOpPmtPrevision":[`},
 			CountItemName: `"op_id"`,
-			ArraySize:     387},
+			ArraySize:     388},
 	}
 	f := func(tc testCase) *httpexpect.Response {
 		return e.GET("/api/payment_previsions/ops").

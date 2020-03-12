@@ -119,25 +119,54 @@ type PaginatedPlanLineLinkedItems struct {
 
 // FinancialCommitmentLine embeddes a line of financial commitment batch request.
 type FinancialCommitmentLine struct {
-	Chapter         string    `json:"chapter"`
-	Action          string    `json:"action"`
-	IrisCode        string    `json:"iris_code"`
-	CoriolisYear    string    `json:"coriolis_year"`
-	CoriolisEgtCode string    `json:"coriolis_egt_code"`
-	CoriolisEgtNum  string    `json:"coriolis_egt_num"`
-	CoriolisEgtLine string    `json:"coriolis_egt_line"`
-	Name            string    `json:"name"`
-	Beneficiary     string    `json:"beneficiary"`
-	BeneficiaryCode int       `json:"beneficiary_code"`
-	Date            ExcelDate `json:"date"`
-	Value           float64   `json:"value"`
-	LapseDate       ExcelDate `json:"lapse_date"`
-	APP             bool      `json:"app"`
+	Chapter         string     `json:"chapter"`
+	Action          string     `json:"action"`
+	IrisCode        string     `json:"iris_code"`
+	CoriolisYear    string     `json:"coriolis_year"`
+	CoriolisEgtCode string     `json:"coriolis_egt_code"`
+	CoriolisEgtNum  string     `json:"coriolis_egt_num"`
+	CoriolisEgtLine string     `json:"coriolis_egt_line"`
+	Name            string     `json:"name"`
+	Beneficiary     string     `json:"beneficiary"`
+	BeneficiaryCode int        `json:"beneficiary_code"`
+	Date            ExcelDate  `json:"date"`
+	Value           float64    `json:"value"`
+	LapseDate       ExcelDate  `json:"lapse_date"`
+	APP             bool       `json:"app"`
+	OpName          NullString `json:"op_name"`
 }
 
 // FinancialCommitmentsBatch embeddes the data sent by a financial commitments batch request.
 type FinancialCommitmentsBatch struct {
 	FinancialCommitments []FinancialCommitmentLine `json:"FinancialCommitment"`
+}
+
+// CmtOpProposal is used to propose a link between a newly imported commitment
+// and a physical operation using the name field
+type CmtOpProposal struct {
+	CommitmentID   int64  `json:"commitment_id"`
+	CommitmentName string `json:"commitment_name"`
+	IRISOpName     string `json:"iris_op_name"`
+	OpID           int64  `json:"op_id"`
+	OpNumber       string `json:"op_number"`
+	OpName         string `json:"op_name"`
+}
+
+// CmtOpProposals embeddes an array of CmtOpProposal
+type CmtOpProposals struct {
+	Lines []CmtOpProposal `json:"CmtOpProposal"`
+}
+
+// CmtOpLink is used to link financial commitments and physical operations
+// after a financial commitments batch import and a proposal validation
+type CmtOpLink struct {
+	CommitmentID int64 `json:"commitment_id"`
+	OpID         int64 `json:"op_id"`
+}
+
+// CmtOpLinks embeddes an array of CmtOpLink for json upload
+type CmtOpLinks struct {
+	Lines []CmtOpLink `json:"CmtOpLink"`
 }
 
 // Unlink set to null financial commitments links to a physical operation in database.
@@ -346,35 +375,35 @@ func (p *PaginatedPlanLineLinkedItems) GetLinked(pattern FCSearchPattern, db *sq
 }
 
 // Save a batch of financial commitments into database.
-func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
+func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (*CmtOpProposals, error) {
 	tx, err := db.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if _, err = tx.Exec(`DELETE from temp_commitment`); err != nil {
 		tx.Rollback()
-		return err
+		return nil, err
 	}
 	stmt, err := tx.Prepare(pq.CopyIn("temp_commitment", "chapter", "action",
 		"iris_code", "coriolis_year", "coriolis_egt_code", "coriolis_egt_num",
 		"coriolis_egt_line", "name", "beneficiary", "beneficiary_code", "date",
-		"value", "lapse_date", "app"))
+		"value", "lapse_date", "app", "op_name"))
 	if err != nil {
-		return fmt.Errorf("prepare stmt %v", err)
+		return nil, fmt.Errorf("prepare stmt %v", err)
 	}
 	defer stmt.Close()
 	for _, r := range f.FinancialCommitments {
 		if _, err = stmt.Exec(r.Chapter, r.Action, r.IrisCode, r.CoriolisYear,
 			r.CoriolisEgtCode, r.CoriolisEgtNum, r.CoriolisEgtLine, r.Name, r.Beneficiary,
 			r.BeneficiaryCode, r.Date.ToDate(), int64(100*r.Value), r.LapseDate.ToDate(),
-			r.APP); err != nil {
+			r.APP, r.OpName); err != nil {
 			tx.Rollback()
-			return fmt.Errorf("insertion de %+v  %v", r, err)
+			return nil, fmt.Errorf("insertion de %+v  %v", r, err)
 		}
 	}
 	if _, err = stmt.Exec(); err != nil {
 		tx.Rollback()
-		return fmt.Errorf("statement exec flush %v", err)
+		return nil, fmt.Errorf("statement exec flush %v", err)
 	}
 	queries := []string{
 		// remove duplicated commitment due to IRIS query bug
@@ -432,12 +461,11 @@ func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
 	FROM budget_action ba, budget_program bp WHERE ba.program_id = bp.id) ba_full
 	WHERE fc_extract.fc_action = ba_full.ba_code)
 	UPDATE financial_commitment SET action_id = correspond.ba_id
-	FROM correspond WHERE financial_commitment.id = correspond.fc_id`,
-		`DELETE from temp_commitment`}
+	FROM correspond WHERE financial_commitment.id = correspond.fc_id`}
 	for _, qry := range queries {
 		if _, err := tx.Exec(qry); err != nil {
 			tx.Rollback()
-			return err
+			return nil, err
 		}
 	}
 	if _, err := tx.Exec(`INSERT INTO import_logs (category,last_date)
@@ -445,10 +473,53 @@ func (f *FinancialCommitmentsBatch) Save(db *sql.DB) (err error) {
 			ON CONFLICT (category) DO UPDATE SET last_date = EXCLUDED.last_date;`,
 		time.Now()); err != nil {
 		tx.Rollback()
-		return err
+		return nil, err
+	}
+	rows, err := tx.Query(
+		`SELECT c.id,c.name,t.op_name,op.id,op.number,op.name FROM temp_commitment t
+		JOIN financial_commitment c ON t.iris_code=c.iris_code
+			AND t.coriolis_year=c.coriolis_year
+			AND t.coriolis_egt_code=c.coriolis_egt_code
+			AND t.coriolis_egt_num=c.coriolis_egt_num
+			AND t.coriolis_egt_line=c.coriolis_egt_line AND t.date=c.date
+		JOIN physical_op op ON t.op_name=op.name
+		WHERE c.physical_op_id IS NULL
+		UNION ALL
+		SELECT c.id,c.name,t.op_name,op.id,op.number,op.name FROM temp_commitment t
+		JOIN financial_commitment c ON t.iris_code=c.iris_code
+			AND t.coriolis_year=c.coriolis_year
+			AND t.coriolis_egt_code=c.coriolis_egt_code
+			AND t.coriolis_egt_num=c.coriolis_egt_num
+			AND t.coriolis_egt_line=c.coriolis_egt_line AND t.date=c.date
+		JOIN physical_op op ON t.op_name<>op.name AND levenshtein(t.op_name,op.name)<2
+		WHERE c.physical_op_id IS NULL`)
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("select %v", err)
+	}
+	var (
+		line CmtOpProposal
+		resp CmtOpProposals
+	)
+	for rows.Next() {
+		if err = rows.Scan(&line.CommitmentID, &line.CommitmentName, &line.IRISOpName,
+			&line.OpID, &line.OpNumber, &line.OpName); err != nil {
+			tx.Rollback()
+			return nil, fmt.Errorf("rows scan %v", err)
+		}
+		resp.Lines = append(resp.Lines, line)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows err %v", err)
+	}
+	if len(resp.Lines) == 0 {
+		resp.Lines = []CmtOpProposal{}
+	}
+	if _, err = tx.Query(`DELETE FROM temp_commitment`); err != nil {
+		return nil, fmt.Errorf("delete %v", err)
 	}
 	err = tx.Commit()
-	return err
+	return &resp, err
 }
 
 // GetAll fetches all commitments without a link to a plan line
@@ -484,4 +555,27 @@ func (p *UnlinkedFinancialCommitments) GetAll(db *sql.DB) error {
 		p.Commitments = []UnlinkedFinancialCommitment{}
 	}
 	return err
+}
+
+// Save update the financial commitments to link to the physical operations
+func (c *CmtOpLinks) Save(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("tx begin %v", err)
+	}
+	stmt, err := tx.Prepare(`UPDATE financial_commitment SET physical_op_id=$1
+	WHERE id=$2`)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("statement prepare %v", err)
+	}
+	defer stmt.Close()
+	for _, l := range c.Lines {
+		if _, err = stmt.Exec(l.OpID, l.CommitmentID); err != nil {
+			tx.Rollback()
+			return fmt.Errorf("statement exec %v", err)
+		}
+	}
+	tx.Commit()
+	return nil
 }

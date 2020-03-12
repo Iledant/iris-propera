@@ -20,6 +20,7 @@ func testFinancialCommitment(t *testing.T) {
 		linkFcToPlTest(testCtx.E, t)
 		batchFcsTest(testCtx.E, t)
 		batchOpFcsTest(testCtx.E, t)
+		setCmtOpLinksTest(testCtx.E, t)
 	})
 }
 
@@ -406,7 +407,7 @@ func batchFcsTest(e *httpexpect.Expect, t *testing.T) {
 		{
 			Token:        testCtx.Admin.Token,
 			Status:       http.StatusOK,
-			BodyContains: []string{"Engagements importés et mis à jour"},
+			BodyContains: []string{`CmtOpProposal":[`},
 			//cSpell:disable
 			Sent: []byte(`{"FinancialCommitment":[
 				{"chapter":"907","action":"17700301 - Intégration environnementale des ` +
@@ -415,7 +416,7 @@ func batchFcsTest(e *httpexpect.Expect, t *testing.T) {
 				`"coriolis_egt_line":"1","name":"ROUTE - INNOVATION INFRASTRUCTURE ` +
 				`ROUTIERE - VAL D'OISE","beneficiary":"DEPARTEMENT DU VAL D'OISE",` +
 				`"beneficiary_code":2306,"date":43175,"value":3000000,"lapse_date":44271,` +
-				`"app":false},
+				`"app":false,"op_name":"Route - innovation"},
 				{"chapter":"907","action":"17700301 - Intégration environnementale des ` +
 				`infrastructures de transport","iris_code":"18003295","coriolis_year":` +
 				`"2018","coriolis_egt_code":"IRIS","coriolis_egt_num":"557246",` +
@@ -477,6 +478,44 @@ func batchOpFcsTest(e *httpexpect.Expect, t *testing.T) {
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
 	for _, r := range chkTestCases(testCases, f, "BatchOpFcs") {
+		t.Error(r)
+	}
+}
+
+// setCmtOpLinksTest check if route is admin protected and no error encounters
+// when pattern is good.
+func setCmtOpLinksTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		notAdminTestCase,
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusBadRequest,
+			BodyContains: []string{"Lien engagements / opérations, décodage :"}},
+		{
+			Token:        testCtx.Admin.Token,
+			Status:       http.StatusOK,
+			BodyContains: []string{"Liens engagements / opérations mis à jour"},
+			Sent:         []byte(`{"CmtOpLink":[{"op_id":501,"commitment_id":4319}]}`)},
+	}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.POST("/api/cmt_op_link").
+			WithHeader("Authorization", "Bearer "+tc.Token).
+			WithBytes(tc.Sent).Expect()
+	}
+	for _, r := range chkTestCases(testCases, f, "CmtOpLinks") {
+		t.Error(r)
+	}
+	testCases = []testCase{
+		{
+			Status:       http.StatusOK,
+			Token:        testCtx.Admin.Token,
+			BodyContains: []string{"18003295"}},
+	}
+	f = func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/physical_ops/501/financial_commitments").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	}
+	for _, r := range chkTestCases(testCases, f, "CmtOpLinks check") {
 		t.Error(r)
 	}
 }

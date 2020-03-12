@@ -252,13 +252,14 @@ func BatchFcs(ctx iris.Context) {
 		ctx.JSON(jsonError{"Batch engagements, décodage : " + err.Error()})
 		return
 	}
-	if err := req.Save(db); err != nil {
+	resp, err := req.Save(db)
+	if err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Batch engagements, requête : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
-	ctx.JSON(jsonMessage{"Engagements importés et mis à jour"})
+	ctx.JSON(*resp)
 }
 
 // BatchOpFcs handle the post request to link of an array of physical operations with financial commitments.
@@ -276,4 +277,23 @@ func BatchOpFcs(ctx iris.Context) {
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON("Rattachements importés et réalisés")
+}
+
+// SetCmtOpLinks handle the post request to link financial commitments and physical
+// operations
+func SetCmtOpLinks(ctx iris.Context) {
+	var req models.CmtOpLinks
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := ctx.ReadJSON(&req); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Lien engagements / opérations, décodage : " + err.Error()})
+		return
+	}
+	if err := req.Save(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Lien engagements / opérations, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON("Liens engagements / opérations mis à jour")
 }

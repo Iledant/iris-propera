@@ -85,6 +85,8 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 	adminParty.Post("/financial_commitments", BatchFcs)
 	adminParty.Post("/financial_commitments/attachments", BatchOpFcs)
 
+	adminParty.Post("/cmt_op_link", SetCmtOpLinks)
+
 	adminParty.Post("/payment_types/{ptID:int}/payment_ratios", SetPtRatios)
 	adminParty.Delete("/payment_types/{ptID:int}/payment_ratios", DeleteRatios)
 
