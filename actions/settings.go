@@ -109,7 +109,7 @@ type budgetTablesResp struct {
 	models.BudgetChapters
 	models.BudgetSectors
 	models.BudgetPrograms
-	models.BudgetActions
+	models.FullBudgetActions
 }
 
 // getBudgetTables handles the get request to fetch all budget tables
@@ -131,7 +131,7 @@ func getBudgetTables(ctx iris.Context) {
 		ctx.JSON(jsonError{"BudgetTables program : " + err.Error()})
 		return
 	}
-	if err := resp.BudgetActions.GetAll(db); err != nil {
+	if err := resp.FullBudgetActions.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"BudgetTables action : " + err.Error()})
 		return

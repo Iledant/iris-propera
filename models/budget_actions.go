@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 )
 
 // BudgetAction model
@@ -29,6 +30,26 @@ type BudgetActionsBatch struct {
 // BudgetActions embeddes an array of BudgetActions for json export.
 type BudgetActions struct {
 	BudgetActions []BudgetAction `json:"BudgetAction"`
+}
+
+// FullBudgetAction model is used to give complete fields for program, chapter
+// and sector
+type FullBudgetAction struct {
+	ID        int64  `json:"id"`
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	ProgramID int64  `json:"program_id"`
+	Program   string `json:"program"`
+	SectorID  int64  `json:"sector_id"`
+	Sector    string `json:"sector"`
+	ChapterID int64  `json:"chapter_id"`
+	Chapter   int64  `json:"chapter"`
+}
+
+// FullBudgetActions embeddes an array of FullBudgetAction for json export and
+// dedicated queries
+type FullBudgetActions struct {
+	Lines []FullBudgetAction `json:"BudgetAction"`
 }
 
 // Validate checks if fields are correctly formed.
@@ -181,4 +202,32 @@ func (b *BudgetActionsBatch) Save(db *sql.DB) (err error) {
 	tx.Exec(`DROP TABLE IF EXISTS temp_actions`)
 	tx.Commit()
 	return nil
+}
+
+// GetAll fetches all budget actions of database with complete fiels.
+func (f *FullBudgetActions) GetAll(db *sql.DB) (err error) {
+	rows, err := db.Query(`SELECT ba.id,ba.code,ba.name,ba.program_id,
+		bp.name,ba.sector_id,bs.name,bp.chapter_id,bc.code
+		FROM budget_action ba
+		JOIN budget_program bp ON ba.program_id=bp.id
+		JOIN budget_sector bs ON ba.Sector_id=bs.id
+		JOIN budget_chapter bc ON bp.chapter_id=bc.id`)
+	if err != nil {
+		return fmt.Errorf("select %v", err)
+	}
+	var line FullBudgetAction
+	defer rows.Close()
+	for rows.Next() {
+		if err = rows.Scan(&line.ID, &line.Code, &line.Name, &line.ProgramID,
+			&line.Program, &line.SectorID, &line.Sector, &line.ChapterID,
+			&line.Chapter); err != nil {
+			return fmt.Errorf("scan %v", err)
+		}
+		f.Lines = append(f.Lines, line)
+	}
+	err = rows.Err()
+	if len(f.Lines) == 0 {
+		f.Lines = []FullBudgetAction{}
+	}
+	return err
 }
