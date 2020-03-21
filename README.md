@@ -2,9 +2,9 @@
 
 IrisPropera est la version go du back-end de Propera. Le premier back-end a été écrit en PHP avec le framework Laravel 5.5.
 
-Afin d'accélérer les traitements en particulier sur les imports de données issues d'IRIS, le back-end a été transcrit en Go. Cela permet également de régler les problèmes de tests unitaires qu'il n'était pas possible de faire compte tenu de la manière dont les token ont été implémentés dans la première version du back-end.
+Afin d'accélérer les traitements en particulier sur les imports de données issues d'IRIS, le back-end a été réécrit en Go. Cela permet également de régler les problèmes de tests unitaires qu'il n'était pas possible facilement en PHP en gérant les tokens.
 
-IrisPropera utilise le "framework" iris sous go.
+IrisPropera utilise le *framework* iris sous go.
 
 Le système de configuration est spécifique au projet et utilise le package yaml-v2.
 
@@ -15,13 +15,17 @@ Le projet s'inspire d'une structure MVC :
 
 * `main.go` fichier principal lançant le serveur
 * `config.yml` fichier de configuration de la base de données et des tests unitaires
-* `actions/` package contenant l'ensemble des handlers et des fichiers de test correspondants ainsi que le fichier de routing
+* `actions/` package contenant l'ensemble des handlers et des fichiers de test correspondants ainsi que le fichier de routing. Le package actions contient le fichier `routes.go` de routage de type REST
 * `models/`modèles/tables de la base de données contenant les requêtes en PostgreSQL permettant de fournir les résultats aux actions
 * `config/` configuration d'IrisPropera et de lancement de la base de données
+
+Le back-end respect globalement la logique REST mais profite de l'intégration avec le backend pour optimiser certaines requêtes. Par exemple, certains requêtes comporte une version initiale qui permet de récupérer toutes les données utiles en une seule requête et une version restreinte qui permet de renvoyer les données paginées correspondant à une recherche.
 
 ## Organisation des tests
 
 Les tests respectent globalement la philosophie générale de Go consistant à tester unitairement chaque fichier de chaque package grâce à un fichier test situé dans le même répertoire.
+
+Seul le package actions est soumis à des tests. Ils sont cependant conçus pour tester également les éléments du package *models*.
 
 Compte tenu de son rôle particulier et de la difficulté de faire des tests unitaires, le fichier de lancement `main.go` n'est associé à aucun fichier de test.
 
@@ -55,9 +59,3 @@ Ces sous-tests ne sont pas directement accessibles et n'ont pas le format reconn
 Pratiquement tous les tests ont la même forme et respectent la philosophie générale de Go à savoir un tableau de cas de tests pour chaque fonction et une vérification du retour de la requête. Les assertions sont faites sous une forme basique mentionnant toutefois systématiquement la référence du cas de tests pour un débogage plus rapide.
 
 Les requêtes et le décodage utilisent le système de test du framework IRIS. Cependant, les données sont réinterprétées en Go classique pour faire les assertions et pour afficher les erreurs.
-
-## Différences par rapport à la version PHP du back-end
-
-Quelques routes ont été modifiées par rapport à la première version du back end et nécessiteront une correction dans le front end. Elles sont documentées par des commentaires dans le fichier `actions\routes.go`.
-
-Afin de réduire le temps nécessaire pour l'affichage des pages qui est surtout lié à la latence du réseau, des requêtes sont groupées afin qu'une page du front end ne fasse qu'une requête GET pour l'ensemble de son contenu à chaque fois que cela est possible.
