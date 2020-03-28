@@ -127,9 +127,6 @@ func (p *PaymentDemandBatch) Validate() error {
 		if int64(l.ReceiptDate) == 0 {
 			return fmt.Errorf("ligne %d receipt_date vide", i+1)
 		}
-		if l.DemandValue == 0 {
-			return fmt.Errorf("ligne %d demand_value vide", i+1)
-		}
 	}
 	return nil
 }
