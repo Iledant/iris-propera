@@ -101,6 +101,7 @@ func TestAll(t *testing.T) {
 		testPaymentPrevisions(t)
 		testConsistency(t)
 		testAvgPmtTime(t)
+		testPaymentDemands(t)
 	})
 }
 

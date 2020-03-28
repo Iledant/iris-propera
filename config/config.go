@@ -71,7 +71,8 @@ func logFileOpen(name string, app *iris.Application) (*os.File, error) {
 	return logFile, err
 }
 
-// Get fetches all parameters according to tne context : if proper environment variables are set, assumes beeing in prod, otherwise read the config.yml file
+// Get fetches all parameters according to tne context : if proper environment
+// variables are set, assumes beeing in prod, otherwise read the config.yml file
 func (p *ProperaConf) Get(app *iris.Application) (logFile *os.File, err error) {
 	if config != nil {
 		p = config
@@ -136,53 +137,84 @@ type mig struct {
 var migrations = []mig{
 	{
 		Batch: 21,
-		Query: `ALTER TABLE financial_commitment ADD COLUMN app boolean DEFAULT false`,
-	},
+		Query: `ALTER TABLE financial_commitment ADD COLUMN app boolean DEFAULT false`},
 	{
 		Batch: 22,
-		Query: `ALTER TABLE temp_commitment ADD COLUMN app boolean`,
-	},
+		Query: `ALTER TABLE temp_commitment ADD COLUMN app boolean`},
 	{
 		Batch: 23,
 		Query: `update financial_commitment set coriolis_year='2019',coriolis_egt_code='IRIS',
-  coriolis_egt_num='609297',coriolis_egt_line='1'  where id=4695`,
-	},
+  coriolis_egt_num='609297',coriolis_egt_line='1'  where id=4695`},
 	{
 		Batch: 24,
 		Query: `update financial_commitment set coriolis_egt_num='609307', coriolis_year='2019' 
-  where id=4697`,
-	},
+  where id=4697`},
 	{
 		Batch: 25,
 		Query: `update financial_commitment set coriolis_egt_num='609308', coriolis_year='2019' 
-  where id=4699`,
-	},
+  where id=4699`},
 	{
 		Batch: 26,
 		Query: `update financial_commitment set coriolis_egt_num='609309', coriolis_year='2019' 
-  where id=4701`,
-	},
+  where id=4701`},
 	{
 		Batch: 27,
 		Query: `update financial_commitment set coriolis_egt_num='604865', coriolis_year='2019' 
-  where id=4678`,
-	},
+  where id=4678`},
 	{
 		Batch: 28,
-		Query: `CREATE EXTENSION IF NOT EXISTS fuzzystrmatch`,
-	},
+		Query: `CREATE EXTENSION IF NOT EXISTS fuzzystrmatch`},
 	{
 		Batch: 29,
-		Query: `ALTER TABLE payment ADD COLUMN receipt_date date`,
-	},
+		Query: `ALTER TABLE payment ADD COLUMN receipt_date date`},
 	{
 		Batch: 30,
-		Query: `ALTER TABLE temp_payment ADD COLUMN receipt_date date`,
-	},
+		Query: `ALTER TABLE temp_payment ADD COLUMN receipt_date date`},
 	{
 		Batch: 31,
-		Query: `ALTER TABLE temp_commitment ADD COLUMN op_name varchar(250)`,
-	},
+		Query: `ALTER TABLE temp_commitment ADD COLUMN op_name varchar(250)`},
+	{
+		Batch: 32,
+		Query: `CREATE TABLE IF NOT EXISTS temp_payment_demands (
+			iris_code varchar(32) NOT NULL,
+			iris_name varchar(200) NOT NULL,
+			commitment_date date NOT NULL,
+			beneficiary_code int NOT NULL,
+			demand_number int NOT NULL,
+			demand_date	date NOT NULL,
+			receipt_date date NOT NULL,
+			demand_value bigint NOT NULL,
+			csf_date date,
+			csf_comment text,
+			demand_status varchar(15),
+			status_comment text
+		)`},
+	{
+		Batch: 33,
+		Query: `CREATE OR REPLACE VIEW imported_payment_demands AS
+			SELECT iris_code,iris_name,MAX(commitment_date),beneficiary_code,
+				demand_number,demand_date,receipt_date,demand_value,csf_date,csf_comment,
+				demand_status,status_comment FROM temp_payment_demands
+				GROUP BY 1,2,4,5,6,7,8,9,10,11,12`},
+	{
+		Batch: 34,
+		Query: `CREATE TABLE IF NOT EXISTS payment_demands (
+			id SERIAL PRIMARY KEY,
+			iris_code varchar(32) NOT NULL,
+			iris_name varchar(200) NOT NULL,
+			beneficiary_id int NOT NULL REFERENCES beneficiary(id),
+			demand_number int NOT NULL,
+			demand_date	date NOT NULL,
+			receipt_date date NOT NULL,
+			demand_value bigint NOT NULL,
+			csf_date date,
+			csf_comment text,
+			demand_status varchar(15),
+			status_comment text,
+			excluded boolean,
+			excluded_comment varchar(150),
+			processed_date date
+		)`},
 }
 
 // handleMigrations checks against database if migrations queries must be executed
