@@ -181,39 +181,46 @@ func (p *PaymentDemandBatch) Save(db *sql.DB) error {
 		tx.Rollback()
 		return fmt.Errorf("statement exec flush %v", err)
 	}
-	if _, err = tx.Exec(`INSERT INTO payment_demands (import_date,iris_code,
-		iris_name,beneficiary_id,demand_number,demand_date,receipt_date,demand_value,
-		csf_date,csf_comment,demand_status,status_comment,excluded,excluded_comment,
-		processed_date)
-	SELECT $1,t.iris_code,t.iris_name,b.id,t.demand_number,t.demand_date,
-		t.receipt_date,t.demand_value,t.csf_date,t.csf_comment,t.demand_status,
-		t.status_comment,NULL::boolean,NULL::text,NULL::date
-	FROM imported_payment_demands t
-	JOIN beneficiary b ON b.code=t.beneficiary_code
-	WHERE (t.iris_code,t.beneficiary_code,t.demand_number) NOT IN 
-	(SELECT iris_code,beneficiary_code,demand_number FROM payment_demands)`,
-		p.ImportDate); err != nil {
-		tx.Rollback()
-		return fmt.Errorf("insert %v", err)
+	type query struct {
+		Query string
+		Args  []interface{}
 	}
-	queries := []string{
-		`UPDATE payment_demands SET csf_date=t.csf_date,csf_comment=t.csf_comment,
+	queries := []query{
+		{Query: `INSERT INTO payment_demands (import_date,iris_code,
+			iris_name,beneficiary_id,demand_number,demand_date,receipt_date,demand_value,
+			csf_date,csf_comment,demand_status,status_comment,excluded,excluded_comment,
+			processed_date)
+		SELECT $1,t.iris_code,t.iris_name,b.id,t.demand_number,t.demand_date,
+			t.receipt_date,t.demand_value,t.csf_date,t.csf_comment,t.demand_status,
+			t.status_comment,NULL::boolean,NULL::text,NULL::date
+		FROM imported_payment_demands t
+		JOIN beneficiary b ON b.code=t.beneficiary_code
+		WHERE (t.iris_code,t.beneficiary_code,t.demand_number) NOT IN 
+		(SELECT iris_code,beneficiary_code,demand_number FROM payment_demands)`,
+			Args: []interface{}{p.ImportDate}},
+		{
+			Query: `UPDATE payment_demands SET csf_date=t.csf_date,csf_comment=t.csf_comment,
 			demand_status=t.demand_status,status_comment=t.status_comment,
 			demand_value=t.demand_value
-		FROM (SELECT t.*,b.id AS beneficiary_id FROM imported_payment_demands t
+			FROM (SELECT t.*,b.id AS beneficiary_id FROM imported_payment_demands t
 				JOIN beneficiary b ON t.beneficiary_code=b.code) t
 			WHERE (payment_demands.iris_code=t.iris_code AND
 			payment_demands.beneficiary_id=t.beneficiary_id AND
 			payment_demands.demand_number=t.demand_number)`,
-		`UPDATE payment_demands SET processed_date=CURRENT_DATE
-		WHERE (iris_code,beneficiary_id,demand_number) NOT IN 	
-			(SELECT t.iris_code,b.id,t.demand_number FROM imported_payment_demands t
-				JOIN beneficiary b ON t.beneficiary_code=b.code)
-			AND processed_date IS NULL`,
-		`DELETE from temp_payment_demands`,
+			Args: []interface{}{}},
+		{
+			Query: `UPDATE payment_demands SET processed_date=$1
+			WHERE (iris_code,beneficiary_id,demand_number) NOT IN 	
+				(SELECT t.iris_code,b.id,t.demand_number FROM imported_payment_demands t
+					JOIN beneficiary b ON t.beneficiary_code=b.code)
+				AND processed_date IS NULL`,
+			Args: []interface{}{p.ImportDate}},
+		{
+			Query: `DELETE from temp_payment_demands`,
+			Args:  []interface{}{}},
 	}
 	for i, q := range queries {
-		if _, err := tx.Exec(q); err != nil {
+		if _, err := tx.Exec(q.Query, q.Args...); err != nil {
 			tx.Rollback()
 			return fmt.Errorf("requête %d %v", i+1, err)
 		}
