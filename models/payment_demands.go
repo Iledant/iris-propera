@@ -139,7 +139,9 @@ func (p *PaymentDemandBatch) Validate() error {
 // Save import a batch of PaymentDemandLine and update the database accordingly.
 // The batch must be valid i.e. the Validate() function should be called before
 // using Save().
-// The import process uses a temporary table to store the batch. Only lines
+// The import process uses a temporary table to store the batch. This batch is
+// first modified using a view to select the last beneficiary in case of
+// duplicated lines due to the query the generates the batch. Only lines
 // whose tuples of (iris_code,beneficiary_code,demand_number) are not already
 // in the payment demands tables are added. The ImportDate field of the
 // batch is used to fill the import_date of the newly inserted lines.
