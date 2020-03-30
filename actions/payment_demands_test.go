@@ -12,6 +12,7 @@ func testPaymentDemands(t *testing.T) {
 		batchPaymentDemandsTest(testCtx.E, t)
 		updatePaymentDemandsTest(testCtx.E, t)
 		getAllPaymentDemandsTest(testCtx.E, t)
+		getPaymentDemandCountsTest(testCtx.E, t)
 	})
 }
 
@@ -104,6 +105,26 @@ func getAllPaymentDemandsTest(e *httpexpect.Expect, t *testing.T) {
 			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
 	}
 	for _, r := range chkTestCases(testCases, f, "GetAllPaymentDemands") {
+		t.Error(r)
+	}
+}
+
+// getPaymentDemandCountsTest check route is protected and payment demands correctly sent.
+func getPaymentDemandCountsTest(e *httpexpect.Expect, t *testing.T) {
+	testCases := []testCase{
+		notLoggedTestCase,
+		{
+			Token:         testCtx.User.Token,
+			Status:        http.StatusOK,
+			BodyContains:  []string{`"PaymentDemandCount"`, `"unprocessed"`, `"uncontrolled"`},
+			CountItemName: `"date"`,
+			ArraySize:     31},
+	}
+	f := func(tc testCase) *httpexpect.Response {
+		return e.GET("/api/payment_demand_counts").WithQueryString("Param").
+			WithHeader("Authorization", "Bearer "+tc.Token).Expect()
+	}
+	for _, r := range chkTestCases(testCases, f, "GetPaymentDemandCounts") {
 		t.Error(r)
 	}
 }

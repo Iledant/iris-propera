@@ -20,7 +20,6 @@ func GetAllPaymentDemands(ctx iris.Context) {
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(resp)
-
 }
 
 type paymentDemandReq struct {
@@ -67,4 +66,18 @@ func BatchPaymentDemands(ctx iris.Context) {
 	}
 	ctx.StatusCode(http.StatusOK)
 	ctx.JSON(jsonMessage{"Batch de demande de paiement importé"})
+}
+
+// GetPaymentDemandCounts handle the get request to fetches the unprocessed
+// or uncontrolled payment demands of the past 31 days
+func GetPaymentDemandCounts(ctx iris.Context) {
+	var resp models.PaymentDemandCounts
+	db := ctx.Values().Get("db").(*sql.DB)
+	if err := resp.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"Nombre de demandes de paiement, requête : " + err.Error()})
+		return
+	}
+	ctx.StatusCode(http.StatusOK)
+	ctx.JSON(resp)
 }

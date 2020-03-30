@@ -57,6 +57,19 @@ type PaymentDemands struct {
 	Lines []PaymentDemand `json:"PaymentDemand"`
 }
 
+// PaymentDemandCount model
+type PaymentDemandCount struct {
+	Date         time.Time `json:"date"`
+	UnProcessed  int64     `json:"unprocessed"`
+	UnControlled int64     `json:"uncontrolled"`
+}
+
+// PaymentDemandCounts embeddes an array of PaymentDemandCount for json export
+// and the dedicated query
+type PaymentDemandCounts struct {
+	Lines []PaymentDemandCount `json:"PaymentDemandCount"`
+}
+
 // Update set excluded fields in the database
 func (p *PaymentDemand) Update(db *sql.DB) error {
 	res, err := db.Exec(`UPDATE payment_demands SET excluded=$1, excluded_comment=$2
@@ -226,4 +239,38 @@ func (p *PaymentDemandBatch) Save(db *sql.DB) error {
 		}
 	}
 	return tx.Commit()
+}
+
+// GetAll fetches the count of the unprocessed or uncontrolled payment demands
+// i.e. the number of demands whose receipt date is lower or equal to a date and
+// whose processed or csf date is higher than the same date. It computes this
+// figures for the past 31 days
+func (p *PaymentDemandCounts) GetAll(db *sql.DB) error {
+	rows, err := db.Query(`WITH t AS (SELECT CURRENT_DATE - generate_series(0,30) d ORDER BY 1),
+		unprocessed AS (SELECT t.d,count(1) c FROM payment_demands, t 
+			WHERE receipt_date<=t.d AND (processed_date ISNULL OR processed_date>=t.d) 
+			GROUP BY 1),
+		uncsf AS (SELECT t.d,count(1) c FROM payment_demands, t 
+			WHERE receipt_date<=t.d AND (csf_date ISNULL OR csf_date>=t.d)  GROUP BY 1)
+	SELECT p.d,p.c,c.c FROM unprocessed p
+	JOIN uncsf c ON p.d=c.d
+	ORDER BY 1`)
+	if err != nil {
+		return fmt.Errorf("select %v", err)
+	}
+	var l PaymentDemandCount
+	for rows.Next() {
+		if err = rows.Scan(&l.Date, &l.UnProcessed, &l.UnControlled); err != nil {
+			return fmt.Errorf("scan %v", err)
+		}
+		p.Lines = append(p.Lines, l)
+	}
+	err = rows.Err()
+	if err != nil {
+		return fmt.Errorf("rows err %v", err)
+	}
+	if len(p.Lines) == 0 {
+		p.Lines = []PaymentDemandCount{}
+	}
+	return nil
 }
