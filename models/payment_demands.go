@@ -26,12 +26,14 @@ type PaymentDemandLine struct {
 
 // PaymentDemandBatch embeddes an array of PaymentDemandLine for dedicated query
 type PaymentDemandBatch struct {
-	Lines []PaymentDemandLine `json:"PaymentDemand"`
+	Lines      []PaymentDemandLine `json:"PaymentDemand"`
+	ImportDate time.Time           `json:"ImportDate"`
 }
 
 // PaymentDemand model
 type PaymentDemand struct {
 	ID              int64      `json:"id"`
+	ImportDate      time.Time  `json:"import_date"`
 	IrisCode        string     `json:"iris_code"`
 	IrisName        string     `json:"iris_name"`
 	BeneficiaryID   int64      `json:"beneficiary_code"`
@@ -74,7 +76,7 @@ func (p *PaymentDemand) Update(db *sql.DB) error {
 
 // GetAll fetches all payment demand from database
 func (p *PaymentDemands) GetAll(db *sql.DB) error {
-	rows, err := db.Query(`SELECT p.id,p.iris_code,p.iris_name,
+	rows, err := db.Query(`SELECT p.id,p.import_date,p.iris_code,p.iris_name,
 	p.beneficiary_id,b.name,p.demand_number,p.demand_date,p.receipt_date,
 	p.demand_value,p.csf_date,p.csf_comment,p.demand_status,p.status_comment,
 	p.excluded,p.excluded_comment,p.processed_date
@@ -85,9 +87,9 @@ func (p *PaymentDemands) GetAll(db *sql.DB) error {
 	}
 	var l PaymentDemand
 	for rows.Next() {
-		if err = rows.Scan(&l.ID, &l.IrisCode, &l.IrisName, &l.BeneficiaryID,
-			&l.Beneficiary, &l.DemandNumber, &l.DemandDate, &l.ReceiptDate,
-			&l.DemandValue, &l.CsfDate, &l.CsfComment, &l.DemandStatus,
+		if err = rows.Scan(&l.ID, &l.ImportDate, &l.IrisCode, &l.IrisName,
+			&l.BeneficiaryID, &l.Beneficiary, &l.DemandNumber, &l.DemandDate,
+			&l.ReceiptDate, &l.DemandValue, &l.CsfDate, &l.CsfComment, &l.DemandStatus,
 			&l.StatusComment, &l.Excluded, &l.ExcludedComment, &l.ProcessedDate); err != nil {
 			return fmt.Errorf("scan %v", err)
 		}
@@ -128,14 +130,14 @@ func (p *PaymentDemandBatch) Validate() error {
 			return fmt.Errorf("ligne %d receipt_date vide", i+1)
 		}
 	}
+	if p.ImportDate.IsZero() {
+		return fmt.Errorf("date d'import non définie")
+	}
 	return nil
 }
 
 // Save import a batch of PaymentDemandLine and update the database accordingly
 func (p *PaymentDemandBatch) Save(db *sql.DB) error {
-	if err := p.Validate(); err != nil {
-		return err
-	}
 	tx, err := db.Begin()
 	if err != nil {
 		return fmt.Errorf("transaction begin %v", err)
@@ -167,20 +169,25 @@ func (p *PaymentDemandBatch) Save(db *sql.DB) error {
 		tx.Rollback()
 		return fmt.Errorf("statement exec flush %v", err)
 	}
+	if _, err = tx.Exec(`INSERT INTO payment_demands (import_date,iris_code,
+		iris_name,beneficiary_id,demand_number,demand_date,receipt_date,demand_value,
+		csf_date,csf_comment,demand_status,status_comment,excluded,excluded_comment,
+		processed_date)
+	SELECT $1,t.iris_code,t.iris_name,b.id,t.demand_number,t.demand_date,
+		t.receipt_date,t.demand_value,t.csf_date,t.csf_comment,t.demand_status,
+		t.status_comment,NULL::boolean,NULL::text,NULL::date
+	FROM imported_payment_demands t
+	JOIN beneficiary b ON b.code=t.beneficiary_code
+	WHERE (t.iris_code,t.beneficiary_code,t.demand_number) NOT IN 
+	(SELECT iris_code,beneficiary_code,demand_number FROM payment_demands)`,
+		p.ImportDate); err != nil {
+		tx.Rollback()
+		return fmt.Errorf("insert %v", err)
+	}
 	queries := []string{
-		`INSERT INTO payment_demands (iris_code,iris_name,beneficiary_id,
-			demand_number,demand_date,receipt_date,demand_value,csf_date,
-			csf_comment,demand_status,status_comment,excluded,excluded_comment,
-			processed_date)
-		SELECT t.iris_code,t.iris_name,b.id,t.demand_number,t.demand_date,
-			t.receipt_date,t.demand_value,t.csf_date,t.csf_comment,t.demand_status,
-			t.status_comment,NULL::boolean,NULL::text,NULL::date
-		FROM imported_payment_demands t
-		JOIN beneficiary b ON b.code=t.beneficiary_code
-		WHERE (t.iris_code,t.beneficiary_code,t.demand_number) NOT IN 
-		(SELECT iris_code,beneficiary_code,demand_number FROM payment_demands)`,
 		`UPDATE payment_demands SET csf_date=t.csf_date,csf_comment=t.csf_comment,
-			demand_status=t.demand_status,status_comment=t.status_comment
+			demand_status=t.demand_status,status_comment=t.status_comment,
+			demand_value=t.demand_value
 		FROM (SELECT t.*,b.id AS beneficiary_id FROM imported_payment_demands t
 				JOIN beneficiary b ON t.beneficiary_code=b.code) t
 			WHERE (payment_demands.iris_code=t.iris_code AND
@@ -191,6 +198,7 @@ func (p *PaymentDemandBatch) Save(db *sql.DB) error {
 			(SELECT t.iris_code,b.id,t.demand_number FROM imported_payment_demands t
 				JOIN beneficiary b ON t.beneficiary_code=b.code)
 			AND processed_date IS NULL`,
+		`DELETE from temp_payment_demands`,
 	}
 	for i, q := range queries {
 		if _, err := tx.Exec(q); err != nil {

@@ -200,6 +200,7 @@ var migrations = []mig{
 		Batch: 34,
 		Query: `CREATE TABLE IF NOT EXISTS payment_demands (
 			id SERIAL PRIMARY KEY,
+			import_date date NOT NULL,
 			iris_code varchar(32) NOT NULL,
 			iris_name varchar(200) NOT NULL,
 			beneficiary_id int NOT NULL REFERENCES beneficiary(id),

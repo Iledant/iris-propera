@@ -54,6 +54,11 @@ func BatchPaymentDemands(ctx iris.Context) {
 		ctx.JSON(jsonError{"Batch de demandes de paiement, décodage : " + err.Error()})
 		return
 	}
+	if err := req.Validate(); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Batch de demandes de paiement : " + err.Error()})
+		return
+	}
 	db := ctx.Values().Get("db").(*sql.DB)
 	if err := req.Save(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
