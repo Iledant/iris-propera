@@ -136,7 +136,17 @@ func (p *PaymentDemandBatch) Validate() error {
 	return nil
 }
 
-// Save import a batch of PaymentDemandLine and update the database accordingly
+// Save import a batch of PaymentDemandLine and update the database accordingly.
+// The batch must be valid i.e. the Validate() function should be called before
+// using Save().
+// The import process uses a temporary table to store the batch. Only lines
+// whose tuples of (iris_code,beneficiary_code,demand_number) are not already
+// in the payment demands tables are added. The ImportDate field of the
+// batch is used to fill the import_date of the newly inserted lines.
+// For the existing lines, the csf_date, csf_comment,demand_status,status_comment
+// and demand_value are updated.
+// The null process_date are updated when the corresponding row in the database
+// is missing in the batch.
 func (p *PaymentDemandBatch) Save(db *sql.DB) error {
 	tx, err := db.Begin()
 	if err != nil {
