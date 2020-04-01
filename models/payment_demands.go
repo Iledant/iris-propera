@@ -242,25 +242,28 @@ func (p *PaymentDemandBatch) Save(db *sql.DB) error {
 }
 
 // GetAll fetches the count of the unprocessed or uncontrolled payment demands
-// i.e. the number of demands whose receipt date is lower or equal to a date and
-// whose processed or csf date is higher than the same date. It computes this
-// figures for the past 31 days
+// i.e. the number of the difference between the count of newly arrived demands
+// and the count of controlled or processed demands for the 30 last days
 func (p *PaymentDemandCounts) GetAll(db *sql.DB) error {
 	rows, err := db.Query(`WITH t AS (SELECT CURRENT_DATE - generate_series(0,30) d ORDER BY 1),
-		unprocessed AS (SELECT t.d,count(1) c FROM payment_demands, t 
-			WHERE receipt_date<=t.d AND (processed_date ISNULL OR processed_date>=t.d) 
-			GROUP BY 1),
-		uncsf AS (SELECT t.d,count(1) c FROM payment_demands, t 
-			WHERE receipt_date<=t.d AND (csf_date ISNULL OR csf_date>=t.d)  GROUP BY 1)
-	SELECT p.d,p.c,c.c FROM unprocessed p
-	JOIN uncsf c ON p.d=c.d
+  arrived AS (SELECT t.d,count(1) nb FROM payment_demands p, t
+   WHERE p.receipt_date>t.d-30 AND p.receipt_date <= t.d GROUP BY 1),
+  processed AS (SELECT t.d,count(1) nb FROM payment_demands p, t
+   WHERE p.processed_date>t.d-30 AND p.processed_date <= t.d GROUP BY 1),
+  controlled AS (SELECT t.d,count(1) nb FROM payment_demands p, t
+   WHERE p.csf_date>t.d-30 AND p.csf_date <= t.d GROUP BY 1)
+SELECT t.d, COALESCE(a.nb,0)-COALESCE(c.nb,0), COALESCE(a.nb,0)-COALESCE(p.nb,0)
+  FROM t 
+  LEFT JOIN arrived a ON a.d=t.d
+  LEFT JOIN processed p ON p.d=t.d
+	LEFT JOIN controlled c ON c.d=t.d
 	ORDER BY 1`)
 	if err != nil {
 		return fmt.Errorf("select %v", err)
 	}
 	var l PaymentDemandCount
 	for rows.Next() {
-		if err = rows.Scan(&l.Date, &l.UnProcessed, &l.UnControlled); err != nil {
+		if err = rows.Scan(&l.Date, &l.UnControlled, &l.UnProcessed); err != nil {
 			return fmt.Errorf("scan %v", err)
 		}
 		p.Lines = append(p.Lines, l)
