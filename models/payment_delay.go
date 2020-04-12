@@ -22,7 +22,7 @@ type PaymentDelays struct {
 // given date
 func (p *PaymentDelays) GetSome(after time.Time, db *sql.DB) error {
 	query := `SELECT d.d,count(1) FROM payment p,
-	 (SELECT * FROM (VALUES (45),(90),(135),(180),(365),(730),(3000)) as d (d)) d
+	 (SELECT * FROM (VALUES (15),(30),(45),(60),(75),(90),(105),(120),(135),(180),(365),(730),(3000)) as d (d)) d
 	WHERE p.date-p.receipt_date<= d.d AND p.date>=$1
 	GROUP BY 1 ORDER BY 1`
 	rows, err := db.Query(query, after)
@@ -31,7 +31,7 @@ func (p *PaymentDelays) GetSome(after time.Time, db *sql.DB) error {
 	}
 	var l PaymentDelay
 	for rows.Next() {
-		if err := rows.Scan(&l.Number, &l.Delay); err != nil {
+		if err := rows.Scan(&l.Delay, &l.Number); err != nil {
 			return fmt.Errorf("scan %v", err)
 		}
 		p.Lines = append(p.Lines, l)
