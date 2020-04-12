@@ -265,6 +265,8 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	userParty.Get("/payment_demands", GetAllPaymentDemands)
 	userParty.Get("/payment_demand_counts", GetPaymentDemandCounts)
+
+	userParty.Get("/payment_delays", GetPaymentDelays)
 }
 
 // setDBMiddleware return a middleware to add db to context values
