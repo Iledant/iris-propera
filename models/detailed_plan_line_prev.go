@@ -61,18 +61,22 @@ func (d *DetailedPlanLineAndPrevisions) GetAll(plan *Plan, db *sql.DB) (err erro
 	'op_name', q.op_name, 'value', q.value, 'total_value', q.total_value,
 	'op_number',q.op_number,'step',q.step,'category',q.category, 'commitment_name', q.commitment_name, 
 	'commitment_code', q.commitment_code, 'commitment_date', q.commitment_date, 
-	'commitment_value', q.commitment_value, 'programmings_value', q.programmings_value, 
+	'commitment_value', q.commitment_value, 'beneficiary_name', q.beneficiary_name,
+	'programmings_value', q.programmings_value, 
 	'programmings_date', q.programmings_date	` + jsonQry + `) FROM
 	(SELECT pl.id, pl.name, pl.total_value, pl.value, fc.op_number, fc.op_name,fc.Step,fc.category,
 		fc.commitment_name, fc.commitment_code, fc.commitment_date, fc.commitment_value,   
+		fc.beneficiary_name,
 		fc.programmings_value, fc.programmings_date ` + prevQry + ` FROM plan_line pl
 	LEFT OUTER JOIN 
 	(SELECT op.number AS op_number, op.name as op_name, step.name AS step,
 		category.name as category, f.name AS commitment_name, 
 		f.iris_code AS commitment_code, f.date AS commitment_date, f.value AS commitment_value, 
+		b.name AS beneficiary_name,
 		NULL AS programmings_value,NULL AS programmings_date ` + nullQry + `, f.plan_line_id 
 		FROM financial_commitment f
 		JOIN physical_op op ON f.physical_op_id = op.id 
+		JOIN beneficiary b ON f.beneficiary_code=b.code
 		LEFT OUTER JOIN step ON op.step_id=step.id
 		LEFT OUTER JOIN category ON op.category_id=category.id
 	WHERE EXTRACT(year FROM f.date) < ` + actualYear + ` AND f.plan_line_id NOTNULL 
@@ -80,6 +84,7 @@ func (d *DetailedPlanLineAndPrevisions) GetAll(plan *Plan, db *sql.DB) (err erro
 	SELECT op.number AS op_number, op.name as op_name,step.name AS step,
 	category.name as category,  NULL AS commitment_name, 
 		NULL AS commitment_code, NULL AS commitment_date, NULL AS commitment_value, 
+		NULL AS beneficiary_name,
 		p.value AS programmings_value, c.date AS programmings_date ` + nullQry + `, 
 		op.plan_line_id
 	FROM programmings p
