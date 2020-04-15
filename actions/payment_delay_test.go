@@ -31,7 +31,7 @@ func getPaymentDelaysTest(e *httpexpect.Expect, t *testing.T) {
 			Param:         "1514764800000",
 			BodyContains:  []string{`"payment_delay":[`, `"number":1`},
 			CountItemName: `"delay"`,
-			ArraySize:     7},
+			ArraySize:     13},
 		{
 			Token:        testCtx.User.Token,
 			Status:       http.StatusOK,
