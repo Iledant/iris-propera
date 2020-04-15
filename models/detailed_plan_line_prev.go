@@ -42,7 +42,8 @@ func (d *DetailedPlanLineAndPrevisions) GetAll(plan *Plan, db *sql.DB) (err erro
 		SELECT op.number AS op_number, op.name as op_name, step.name AS step,
 		category.name as category, NULL AS commitment_name, 
 			NULL AS commitment_code, NULL AS commitment_date, NULL AS commitment_value, 
-			NULL AS programmings_value, NULL AS programmings_date, ` + colQry + `, op.plan_line_id
+			NULL AS beneficiary_name,
+		NULL AS programmings_value, NULL AS programmings_date, ` + colQry + `, op.plan_line_id
 		FROM crosstab (
 			'SELECT physical_op_id, year, value FROM prev_commitment ORDER BY 1,2',
 			'SELECT m FROM generate_series(` + strconv.FormatInt(firstYear, 10) + `, ` +
