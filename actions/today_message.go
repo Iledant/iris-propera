@@ -57,6 +57,7 @@ type homeResp struct {
 	models.PaymentCredits
 	models.AvgPmtTimes
 	models.PaymentDemandCounts
+	models.PaymentDemandsStocks
 }
 
 // GetHomeDatas handles the get request for the home page.
@@ -124,6 +125,11 @@ func GetHomeDatas(ctx iris.Context) {
 	if err = resp.PaymentDemandCounts.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, PaymentDemandCount : " + err.Error()})
+		return
+	}
+	if err = resp.PaymentDemandsStocks.GetAll(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"HomeDatas, PaymentDemandsStock : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
