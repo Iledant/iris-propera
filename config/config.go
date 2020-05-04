@@ -216,6 +216,11 @@ var migrations = []mig{
 			excluded_comment varchar(150),
 			processed_date date
 		)`},
+	{
+		Batch: 35,
+		Query: `ALTER TABLE payment_demands 
+			ALTER excluded SET DEFAULT FALSE,
+			ALTER excluded SET NOT NULL`},
 }
 
 // handleMigrations checks against database if migrations queries must be executed
