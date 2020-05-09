@@ -103,6 +103,7 @@ func TestAll(t *testing.T) {
 		testAvgPmtTime(t)
 		testPaymentDemands(t)
 		testPaymentDelays(t)
+		testWeekPaymentCounts(t)
 	})
 }
 
