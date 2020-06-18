@@ -10,24 +10,24 @@ import (
 
 // PlanForecast model
 type PlanForecast struct {
-	Number    string
-	Name      string
-	TRI       NullInt64
-	VAN       NullInt64
-	Value     NullInt64
-	ValueDate NullInt64
-	Step      NullString
-	Category  NullString
-	R75       NullFloat64
-	R77       NullFloat64
-	R78       NullFloat64
-	R91       NullFloat64
-	R92       NullFloat64
-	R93       NullFloat64
-	R94       NullFloat64
-	R95       NullFloat64
-	TotalPrev []int64
-	Prev      []int64
+	Number    string      `json:"number"`
+	Name      string      `json:"name"`
+	TRI       NullInt64   `json:"tri"`
+	VAN       NullInt64   `json:"van"`
+	Value     NullInt64   `json:"value"`
+	ValueDate NullInt64   `json:"value_date"`
+	Step      NullString  `json:"step"`
+	Category  NullString  `json:"category"`
+	R75       NullFloat64 `json:"r75"`
+	R77       NullFloat64 `json:"r77"`
+	R78       NullFloat64 `json:"r78"`
+	R91       NullFloat64 `json:"r91"`
+	R92       NullFloat64 `json:"r92"`
+	R93       NullFloat64 `json:"r93"`
+	R94       NullFloat64 `json:"r94"`
+	R95       NullFloat64 `json:"r95"`
+	TotalPrev []int64     `json:"total_prev"`
+	Prev      []int64     `json:"prev"`
 }
 
 // PlanForecasts embeddes an array of PlanForecast for json export and dedicated
