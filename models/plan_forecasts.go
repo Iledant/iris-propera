@@ -60,11 +60,11 @@ func (p *PlanForecasts) GetAll(db *sql.DB, firstYear, lastYear int64) error {
 		(SELECT q1.op_id,ARRAY[%s] as value,ARRAY[%s] as total_value
 		FROM
 			(SELECT * FROM crosstab('SELECT physical_op_id,year,value
-				FROM prev_commitment WHERE year>=%d AND year<=%d')
+				FROM prev_commitment WHERE year>=%d AND year<=%d ORDER BY 1,2')
 			AS ct(op_id integer,%s))q1
 		JOIN
 			(SELECT * FROM crosstab('SELECT physical_op_id,year,total_value
-				FROM prev_commitment WHERE year>=%d AND year<=%d')
+				FROM prev_commitment WHERE year>=%d AND year<=%d ORDER BY 1,2')
 			AS ct(op_id integer,%s))q2
 		ON q1.op_id=q2.op_id) q ON q.op_id=op.id
 	LEFT JOIN op_dpt_ratios odr ON op.id=odr.physical_op_id`,
