@@ -84,6 +84,7 @@ func (p *PaymentDemand) Update(db *sql.DB) error {
 	if count == 0 {
 		return fmt.Errorf("demande de paiement introuvable")
 	}
+	update(paymentDemandsUpdate)
 	return nil
 }
 
@@ -238,6 +239,7 @@ func (p *PaymentDemandBatch) Save(db *sql.DB) error {
 			return fmt.Errorf("requête %d %v", i+1, err)
 		}
 	}
+	update(paymentDemandsUpdate)
 	return tx.Commit()
 }
 
