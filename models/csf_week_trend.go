@@ -15,14 +15,18 @@ type CsfWeekTrend struct {
 
 var cwt CsfWeekTrend
 
+func (c *CsfWeekTrend) copy(src *CsfWeekTrend) {
+	c.LastWeekCount.Valid = src.LastWeekCount.Valid
+	c.LastWeekCount.Int64 = src.LastWeekCount.Int64
+	c.ThisWeekCount.Valid = src.ThisWeekCount.Valid
+	c.ThisWeekCount.Int64 = src.ThisWeekCount.Int64
+}
+
 // Get fetches count of payments demands with no csf from last and current week
 // from database
 func (c *CsfWeekTrend) Get(db *sql.DB) error {
 	if !needUpdate(csfWeekTrendUpdate, paymentDemandsUpdate) {
-		c.LastWeekCount.Valid = cwt.LastWeekCount.Valid
-		c.LastWeekCount.Int64 = cwt.LastWeekCount.Int64
-		c.ThisWeekCount.Valid = cwt.ThisWeekCount.Valid
-		c.ThisWeekCount.Int64 = cwt.ThisWeekCount.Int64
+		c.copy(&cwt)
 		return nil
 	}
 	if err := db.QueryRow(`SELECT last_week.c,this_week.c
@@ -37,10 +41,7 @@ func (c *CsfWeekTrend) Get(db *sql.DB) error {
 	var mutex = &sync.Mutex{}
 	mutex.Lock()
 	defer mutex.Unlock()
-	cwt.LastWeekCount.Valid = c.LastWeekCount.Valid
-	cwt.LastWeekCount.Int64 = c.LastWeekCount.Int64
-	cwt.ThisWeekCount.Valid = c.ThisWeekCount.Valid
-	cwt.ThisWeekCount.Int64 = c.ThisWeekCount.Int64
+	cwt.copy(c)
 	update(csfWeekTrendUpdate)
 	return nil
 }

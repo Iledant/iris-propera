@@ -61,7 +61,7 @@ func getHomeDatasTest(e *httpexpect.Expect, t *testing.T) {
 			Status: http.StatusOK,
 			BodyContains: []string{"TodayMessage", "Event", "BudgetCredits",
 				"FinancialCommitmentsPerMonth", "ProgrammingsPerMonth",
-				"PaymentsPerMonth", "PaymentDemandsStock", "CsfWeekTrend"}},
+				"PaymentsPerMonth", "PaymentDemandsStock", "CsfWeekTrend", `"FlowStockDelays":`}},
 	}
 	f := func(tc testCase) *httpexpect.Response {
 		return e.GET("/api/home").WithHeader("Authorization", "Bearer "+tc.Token).Expect()

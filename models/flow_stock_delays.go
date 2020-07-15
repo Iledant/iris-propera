@@ -3,25 +3,70 @@ package models
 import (
 	"database/sql"
 	"fmt"
+	"sync"
 )
 
 // FlowStockDelays model
 type FlowStockDelays struct {
-	StockCount        NullInt64   `json:"stock_count"`
-	StockAverageDelay NullFloat64 `json:"stock_average_delay"`
-	FlowCount         NullInt64   `json:"flow_count"`
-	FlowAverageDelay  NullFloat64 `json:"flow_average_delay"`
+	ActualStockCount        NullInt64   `json:"actual_stock_count"`
+	ActualStockAverageDelay NullFloat64 `json:"actual_stock_average_delay"`
+	ActualFlowCount         NullInt64   `json:"actual_flow_count"`
+	ActualFlowAverageDelay  NullFloat64 `json:"actual_flow_average_delay"`
+	FormerStockCount        NullInt64   `json:"former_stock_count"`
+	FormerStockAverageDelay NullFloat64 `json:"former_stock_average_delay"`
+	FormerFlowCount         NullInt64   `json:"former_flow_count"`
+	FormerFlowAverageDelay  NullFloat64 `json:"former_flow_average_delay"`
+}
+
+var fsd FlowStockDelays
+
+func (f *FlowStockDelays) copy(src *FlowStockDelays) {
+	f.ActualStockCount.Valid = src.ActualStockCount.Valid
+	f.ActualStockCount.Int64 = src.ActualStockCount.Int64
+	f.ActualStockAverageDelay.Valid = src.ActualStockAverageDelay.Valid
+	f.ActualStockAverageDelay.Float64 = src.ActualStockAverageDelay.Float64
+	f.ActualFlowCount.Valid = src.ActualFlowCount.Valid
+	f.ActualFlowCount.Int64 = src.ActualFlowCount.Int64
+	f.ActualFlowAverageDelay.Valid = src.ActualFlowAverageDelay.Valid
+	f.ActualFlowAverageDelay.Float64 = src.ActualFlowAverageDelay.Float64
+	f.FormerStockCount.Valid = src.FormerStockCount.Valid
+	f.FormerStockCount.Int64 = src.FormerStockCount.Int64
+	f.FormerStockAverageDelay.Valid = src.FormerStockAverageDelay.Valid
+	f.FormerStockAverageDelay.Float64 = src.FormerStockAverageDelay.Float64
+	f.FormerFlowCount.Valid = src.FormerFlowCount.Valid
+	f.FormerFlowCount.Int64 = src.FormerFlowCount.Int64
+	f.FormerFlowAverageDelay.Valid = src.FormerFlowAverageDelay.Valid
+	f.FormerFlowAverageDelay.Float64 = src.FormerFlowAverageDelay.Float64
 }
 
 // Get fetches from database flow and stock count and average delay
 func (f *FlowStockDelays) Get(days int64, db *sql.DB) error {
-	if err := db.QueryRow(`SELECT stock.c,stock.avg,flow.c,flow.avg FROM 
-  (SELECT count(1) c,avg(CURRENT_DATE-receipt_date) 
-  FROM payment_demands WHERE excluded=FALSE AND processed_date ISNULL) stock,
-  (SELECT count(1) c,avg(date-receipt_date) 
-	FROM payment WHERE date>CURRENT_DATE-90) flow;`).Scan(&f.StockCount,
-		&f.StockAverageDelay, &f.FlowCount, &f.FlowAverageDelay); err != nil {
+	if !needUpdate(flowStockDelaysUpdate, paymentDemandsUpdate, paymentUpdate,
+		everyDayUpdate) {
+		f.copy(&fsd)
+		return nil
+	}
+
+	query := fmt.Sprintf(`SELECT actual_stock.c,actual_stock.avg,actual_flow.c,
+	actual_flow.avg, former_stock.c,former_stock.avg,former_flow.c,former_flow.avg FROM 
+	(SELECT count(1) c,avg(CURRENT_DATE-receipt_date) 
+	FROM payment_demands WHERE excluded=FALSE AND processed_date ISNULL) actual_stock,
+	(SELECT count(1) c,avg(date-receipt_date)
+	FROM payment WHERE date>CURRENT_DATE-%d) actual_flow,
+	(SELECT count(1) c,avg(CURRENT_DATE-receipt_date) 
+	FROM payment_demands WHERE excluded=FALSE AND 
+		(processed_date ISNULL OR processed_date>= CURRENT_DATE-7)) former_stock,
+	(SELECT count(1) c,avg(date-receipt_date) 
+	FROM payment WHERE date>CURRENT_DATE-%d-7 AND date<=CURRENT_DATE-7) former_flow;`, days, days)
+	if err := db.QueryRow(query).Scan(&f.ActualStockCount, &f.ActualStockAverageDelay, &f.ActualFlowCount,
+		&f.ActualFlowAverageDelay, &f.FormerStockCount, &f.FormerStockAverageDelay,
+		&f.FormerFlowCount, &f.FormerFlowAverageDelay); err != nil {
 		return fmt.Errorf("select %v ", err)
 	}
+	var mutex = &sync.Mutex{}
+	mutex.Lock()
+	defer mutex.Unlock()
+	fsd.copy(f)
+	update(csfWeekTrendUpdate)
 	return nil
 }

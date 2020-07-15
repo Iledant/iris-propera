@@ -207,6 +207,7 @@ func (p *PaymentBatch) Save(db *sql.DB) (err error) {
 		return err
 	}
 	err = tx.Commit()
+	update(paymentUpdate)
 	return err
 }
 
@@ -291,5 +292,6 @@ func (p *Payment) LinkCmt(cmtID int64, db *sql.DB) error {
 	if count != 1 {
 		return fmt.Errorf("payment not found")
 	}
+	update(paymentUpdate)
 	return nil
 }
