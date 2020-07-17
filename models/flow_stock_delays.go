@@ -8,14 +8,14 @@ import (
 
 // FlowStockDelays model
 type FlowStockDelays struct {
-	ActualStockCount        NullInt64   `json:"actual_stock_count"`
-	ActualStockAverageDelay NullFloat64 `json:"actual_stock_average_delay"`
-	ActualFlowCount         NullInt64   `json:"actual_flow_count"`
-	ActualFlowAverageDelay  NullFloat64 `json:"actual_flow_average_delay"`
-	FormerStockCount        NullInt64   `json:"former_stock_count"`
-	FormerStockAverageDelay NullFloat64 `json:"former_stock_average_delay"`
-	FormerFlowCount         NullInt64   `json:"former_flow_count"`
-	FormerFlowAverageDelay  NullFloat64 `json:"former_flow_average_delay"`
+	ActualStockCount        NullInt64   `json:"ActualStockCount"`
+	ActualStockAverageDelay NullFloat64 `json:"ActualStockAverageDelay"`
+	ActualFlowCount         NullInt64   `json:"ActualFlowCount"`
+	ActualFlowAverageDelay  NullFloat64 `json:"ActualFlowAverageDelay"`
+	FormerStockCount        NullInt64   `json:"FormerStockCount"`
+	FormerStockAverageDelay NullFloat64 `json:"FormerStockAverageDelay"`
+	FormerFlowCount         NullInt64   `json:"FormerFlowCount"`
+	FormerFlowAverageDelay  NullFloat64 `json:"FormerFlowAverageDelay"`
 }
 
 var fsd FlowStockDelays
