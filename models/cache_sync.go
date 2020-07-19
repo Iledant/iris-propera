@@ -13,6 +13,7 @@ const (
 	csfWeekTrendUpdate
 	flowStockDelaysUpdate
 	everyDayUpdate
+	paymentRateUpdate
 )
 
 var cache = make(map[updateKind]int64)

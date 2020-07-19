@@ -60,6 +60,7 @@ type homeResp struct {
 	models.PaymentDemandsStocks
 	models.CsfWeekTrend    `json:"CsfWeekTrend"`
 	models.FlowStockDelays `json:"FlowStockDelays"`
+	models.PaymentRate     `json:"PaymentRate"`
 }
 
 // GetHomeDatas handles the get request for the home page.
@@ -142,6 +143,11 @@ func GetHomeDatas(ctx iris.Context) {
 	if err = resp.FlowStockDelays.Get(90, db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, CsfWeekTrend : " + err.Error()})
+		return
+	}
+	if err = resp.PaymentRate.Get(db); err != nil {
+		ctx.StatusCode(http.StatusInternalServerError)
+		ctx.JSON(jsonError{"HomeDatas, PaymentRate : " + err.Error()})
 		return
 	}
 	ctx.StatusCode(http.StatusOK)
