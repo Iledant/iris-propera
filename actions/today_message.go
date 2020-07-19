@@ -56,8 +56,6 @@ type homeResp struct {
 	models.ImportLogs
 	models.PaymentCredits
 	models.AvgPmtTimes
-	models.PaymentDemandCounts
-	models.PaymentDemandsStocks
 	models.CsfWeekTrend    `json:"CsfWeekTrend"`
 	models.FlowStockDelays `json:"FlowStockDelays"`
 	models.PaymentRate     `json:"PaymentRate"`
@@ -123,16 +121,6 @@ func GetHomeDatas(ctx iris.Context) {
 	if err = resp.AvgPmtTimes.GetAll(db); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"HomeDatas, AvgPmtTimes : " + err.Error()})
-		return
-	}
-	if err = resp.PaymentDemandCounts.GetAll(db); err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"HomeDatas, PaymentDemandCount : " + err.Error()})
-		return
-	}
-	if err = resp.PaymentDemandsStocks.GetAll(db); err != nil {
-		ctx.StatusCode(http.StatusInternalServerError)
-		ctx.JSON(jsonError{"HomeDatas, PaymentDemandsStock : " + err.Error()})
 		return
 	}
 	if err = resp.CsfWeekTrend.Get(db); err != nil {

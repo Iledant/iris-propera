@@ -61,7 +61,7 @@ func getHomeDatasTest(e *httpexpect.Expect, t *testing.T) {
 			Status: http.StatusOK,
 			BodyContains: []string{"TodayMessage", "Event", "BudgetCredits",
 				"FinancialCommitmentsPerMonth", "ProgrammingsPerMonth",
-				"PaymentsPerMonth", "PaymentDemandsStock", "CsfWeekTrend",
+				"PaymentsPerMonth", "CsfWeekTrend",
 				`"FlowStockDelays":`, `"PaymentRate":`}},
 	}
 	f := func(tc testCase) *httpexpect.Response {
