@@ -45,7 +45,7 @@ func (p *PaymentRate) Get(db *sql.DB) error {
 	var mutex = &sync.Mutex{}
 	mutex.Lock()
 	defer mutex.Unlock()
-	p.copy(&pr)
-	update(csfWeekTrendUpdate)
+	pr.copy(p)
+	update(paymentRateUpdate)
 	return nil
 }
