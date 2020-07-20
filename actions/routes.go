@@ -256,6 +256,7 @@ func SetRoutes(app *iris.Application, db *sql.DB) {
 
 	userParty.Get("/payment_demands", GetAllPaymentDemands)
 	userParty.Get("/payment_demand_counts", GetPaymentDemandCounts)
+	userParty.Get("/payment_demand_stocks", GetPaymentDemandStocks)
 
 	userParty.Get("/payment_delays", GetPaymentDelays)
 

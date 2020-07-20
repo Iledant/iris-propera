@@ -106,6 +106,7 @@ func TestAll(t *testing.T) {
 		testWeekPaymentCounts(t)
 		testPlanForecasts(t)
 		testFlowStockDelays(t)
+		testPaymentDemandsStocks(t)
 	})
 }
 
