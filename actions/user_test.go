@@ -142,23 +142,28 @@ func chgPwd(e *httpexpect.Expect, t *testing.T) {
 	testCases := []testCase{
 		{
 			Token:        testCtx.User.Token,
-			Sent:         []byte("current_password=fake&password=tutu"),
+			Sent:         []byte(`{tutu}`),
+			Status:       http.StatusBadRequest,
+			BodyContains: []string{"Changement de mot de passe : impossible de lire les mots de passe"}},
+		{
+			Token:        testCtx.User.Token,
+			Sent:         []byte(`{"current_password":"fake","password":"tutu"}`),
 			Status:       http.StatusBadRequest,
 			BodyContains: []string{"Erreur de mot de passe"}},
 		{
 			Token:        testCtx.User.Token,
-			Sent:         []byte("current_password=toto&password=tutu"),
+			Sent:         []byte(`{"current_password":"toto","password":"tutu"}`),
 			Status:       http.StatusOK,
 			BodyContains: []string{"Mot de passe changé"}},
 		{
 			Token:        testCtx.User.Token,
-			Sent:         []byte("current_password=tutu&password=toto"),
+			Sent:         []byte(`{"current_password":"tutu","password":"toto"}`),
 			Status:       http.StatusOK,
 			BodyContains: []string{"Mot de passe changé"}},
 	}
 	f := func(tc testCase) *httpexpect.Response {
 		return e.POST("/api/user/password").WithHeader("Authorization", "Bearer "+tc.Token).
-			WithQueryString(string(tc.Sent)).Expect()
+			WithBytes(tc.Sent).Expect()
 	}
 	for _, r := range chkTestCases(testCases, f, "ChangePassword") {
 		t.Error(r)

@@ -249,8 +249,17 @@ func SignUp(ctx iris.Context) {
 
 // ChangeUserPwd handles the request of a user to change his password.
 func ChangeUserPwd(ctx iris.Context) {
-	currentPwd, newPwd := ctx.URLParam("current_password"), ctx.URLParam("password")
-	if currentPwd == "" || newPwd == "" {
+	type changePwdReq struct {
+		Current string `json:"current_password"`
+		New     string `json:"password"`
+	}
+	var req changePwdReq
+	if err := ctx.ReadJSON(&req); err != nil {
+		ctx.StatusCode(http.StatusBadRequest)
+		ctx.JSON(jsonError{"Changement de mot de passe : impossible de lire les mots de passe"})
+		return
+	}
+	if req.Current == "" || req.New == "" {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Changement de mot de passe : Ancien et nouveau mots de passe requis"})
 		return
@@ -262,12 +271,12 @@ func ChangeUserPwd(ctx iris.Context) {
 		ctx.JSON(jsonError{"Changement de mot de passe, get : " + err.Error()})
 		return
 	}
-	if err := user.ValidatePwd(currentPwd); err != nil {
+	if err := user.ValidatePwd(req.Current); err != nil {
 		ctx.StatusCode(http.StatusBadRequest)
 		ctx.JSON(jsonError{"Changement de mot de passe : Erreur de mot de passe"})
 		return
 	}
-	user.Password = newPwd
+	user.Password = req.New
 	if err := user.CryptPwd(); err != nil {
 		ctx.StatusCode(http.StatusInternalServerError)
 		ctx.JSON(jsonError{"Changement de mot de passe, password : " + err.Error()})
